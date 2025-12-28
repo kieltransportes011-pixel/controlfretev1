@@ -3,17 +3,17 @@ import { Freight } from '../types';
 import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
-import { 
-  ChevronLeft, 
-  Copy, 
-  CheckCircle, 
-  Truck, 
-  RefreshCcw, 
-  Share2, 
-  Fuel, 
-  Coins, 
-  AlertCircle, 
-  Plus, 
+import {
+  ChevronLeft,
+  Copy,
+  CheckCircle,
+  Truck,
+  RefreshCcw,
+  Share2,
+  Fuel,
+  Coins,
+  AlertTriangle,
+  Plus,
   Trash2,
   CircleDollarSign
 } from 'lucide-react';
@@ -33,7 +33,7 @@ export const FreightCalculator: React.FC<FreightCalculatorProps> = ({ onCancel, 
   // Dados Principais
   const [distance, setDistance] = useState<string>('');
   const [pricePerKm, setPricePerKm] = useState<string>('');
-  
+
   // Lista dinâmica de extras
   const [extraItems, setExtraItems] = useState<ExtraItem[]>([
     { id: generateId(), label: 'Pedágio', value: '' }
@@ -52,7 +52,7 @@ export const FreightCalculator: React.FC<FreightCalculatorProps> = ({ onCancel, 
     const km = Math.max(0, parseFloat(distance) || 0);
     const price = Math.max(0, parseFloat(pricePerKm) || 0);
     const freightBase = km * price;
-    
+
     const extrasTotal = extraItems.reduce((acc, item) => acc + (Math.max(0, parseFloat(item.value) || 0)), 0);
     const total = freightBase + extrasTotal;
 
@@ -122,15 +122,15 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
 ----------------
 ✅ *VALOR TOTAL: ${formatCurrency(totals.total)}*
     `.trim();
-    
+
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handleRegister = () => {
     onRegister({
-        totalValue: totals.total,
-        client: `Frete de ${distance}km`,
-        date: new Date().toISOString().split('T')[0]
+      totalValue: totals.total,
+      client: `Frete de ${distance}km`,
+      date: new Date().toISOString().split('T')[0]
     });
   };
 
@@ -139,73 +139,73 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-            <button onClick={onCancel} className="p-2 -ml-2 text-slate-400 hover:text-brand transition-colors">
-                <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-white ml-2">Calculadora Rápida</h1>
+          <button onClick={onCancel} className="p-2 -ml-2 text-slate-400 hover:text-brand transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-white ml-2">Calculadora Rápida</h1>
         </div>
-        <button 
+        <button
           onClick={() => {
-            setDistance(''); setPricePerKm(''); 
+            setDistance(''); setPricePerKm('');
             setExtraItems([{ id: generateId(), label: 'Pedágio', value: '' }]);
-          }} 
+          }}
           className="p-2 text-slate-300 hover:text-brand-secondary transition-colors"
         >
-            <RefreshCcw className="w-5 h-5" />
+          <RefreshCcw className="w-5 h-5" />
         </button>
       </div>
 
       <div className="space-y-6">
-        
+
         {/* Display Principal - Visibilidade Máxima */}
         <div className="bg-brand rounded-3xl p-8 text-white shadow-xl flex flex-col items-center justify-center text-center relative overflow-hidden border border-white/10">
-            <span className="text-blue-200 text-[10px] font-roboto font-bold uppercase tracking-[0.2em] mb-2 opacity-80">Valor Total Estimado</span>
-            <div className="text-5xl font-bold tracking-tighter tabular-nums mb-1">
-                {formatCurrency(totals.total)}
-            </div>
-            <div className="h-1 w-12 bg-brand-secondary rounded-full mt-2"></div>
-            
-            {/* BG Decorativo */}
-            <CircleDollarSign className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 -rotate-12" />
+          <span className="text-blue-200 text-[10px] font-roboto font-bold uppercase tracking-[0.2em] mb-2 opacity-80">Valor Total Estimado</span>
+          <div className="text-5xl font-bold tracking-tighter tabular-nums mb-1">
+            {formatCurrency(totals.total)}
+          </div>
+          <div className="h-1 w-12 bg-brand-secondary rounded-full mt-2"></div>
+
+          {/* BG Decorativo */}
+          <CircleDollarSign className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 -rotate-12" />
         </div>
 
         {/* Inputs Principais */}
         <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-                <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Distância (Km)</label>
-                <div className="relative group">
-                    <Truck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-brand-secondary transition-colors" />
-                    <input
-                        type="number"
-                        value={distance}
-                        onChange={(e) => setDistance(e.target.value)}
-                        placeholder="0"
-                        className="w-full pl-11 pr-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-lg font-bold text-slate-800 dark:text-white transition-all tabular-nums"
-                    />
-                </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Distância (Km)</label>
+            <div className="relative group">
+              <Truck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-brand-secondary transition-colors" />
+              <input
+                type="number"
+                value={distance}
+                onChange={(e) => setDistance(e.target.value)}
+                placeholder="0"
+                className="w-full pl-11 pr-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-lg font-bold text-slate-800 dark:text-white transition-all tabular-nums"
+              />
             </div>
+          </div>
 
-            <div className="space-y-2">
-                <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Valor por Km</label>
-                <div className="relative group">
-                    <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-brand-secondary transition-colors" />
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={pricePerKm}
-                        onChange={(e) => setPricePerKm(e.target.value)}
-                        placeholder="0,00"
-                        className="w-full pl-11 pr-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-lg font-bold text-slate-800 dark:text-white transition-all tabular-nums"
-                    />
-                </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Valor por Km</label>
+            <div className="relative group">
+              <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-brand-secondary transition-colors" />
+              <input
+                type="number"
+                step="0.01"
+                value={pricePerKm}
+                onChange={(e) => setPricePerKm(e.target.value)}
+                placeholder="0,00"
+                className="w-full pl-11 pr-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-lg font-bold text-slate-800 dark:text-white transition-all tabular-nums"
+              />
             </div>
+          </div>
         </div>
 
         {/* Múltiplos Custos Extras */}
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-[0.2em]">Custos Extras e Pedágios</h3>
-            <button 
+            <button
               onClick={addExtraItem}
               className="flex items-center gap-1 text-[10px] font-roboto font-bold text-brand-secondary uppercase hover:bg-brand-secondary/10 px-2 py-1 rounded-lg transition-all"
             >
@@ -237,7 +237,7 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
                     />
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => removeExtraItem(item.id)}
                   className="p-3 text-slate-300 hover:text-accent-error hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all"
                 >
@@ -250,82 +250,82 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
 
         {/* Estimativa de Lucro */}
         <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 transition-all">
-            <button 
-                onClick={() => setShowFuel(!showFuel)}
-                className="flex items-center justify-between w-full text-[10px] font-roboto font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest"
-            >
-                <span className="flex items-center gap-2"><Fuel className="w-4 h-4" /> Custo Combustível Estimado</span>
-                <span className={`px-2 py-1 rounded-lg ${showFuel ? 'bg-brand text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
-                  {showFuel ? 'OCULTAR' : 'CALCULAR'}
-                </span>
-            </button>
+          <button
+            onClick={() => setShowFuel(!showFuel)}
+            className="flex items-center justify-between w-full text-[10px] font-roboto font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest"
+          >
+            <span className="flex items-center gap-2"><Fuel className="w-4 h-4" /> Custo Combustível Estimado</span>
+            <span className={`px-2 py-1 rounded-lg ${showFuel ? 'bg-brand text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
+              {showFuel ? 'OCULTAR' : 'CALCULAR'}
+            </span>
+          </button>
 
-            {showFuel && (
-                <div className="mt-5 space-y-4 animate-fadeIn">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Média (Km/L)</label>
-                            <input 
-                                type="number"
-                                step="0.1"
-                                value={consumption}
-                                onChange={(e) => setConsumption(e.target.value)}
-                                className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-none shadow-sm text-sm font-bold text-slate-700 dark:text-white"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Preço Diesel (L)</label>
-                            <input 
-                                type="number" 
-                                step="0.01"
-                                value={dieselPrice}
-                                onChange={(e) => setDieselPrice(e.target.value)}
-                                placeholder="0.00"
-                                className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-none shadow-sm text-sm font-bold text-slate-700 dark:text-white"
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl border border-red-100 dark:border-red-900/20">
-                            <p className="text-[9px] text-accent-error font-black uppercase mb-1">Custo Diesel</p>
-                            <p className="text-xl font-black text-accent-error tabular-nums">
-                                {formatCurrency(totals.fuelCost)}
-                            </p>
-                        </div>
-                        <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-2xl border border-green-100 dark:border-green-900/20">
-                             <p className="text-[9px] text-accent-success font-black uppercase mb-1">Lucro Estimado</p>
-                             <p className="text-xl font-black text-accent-success tabular-nums">
-                                {formatCurrency(totals.estimatedProfit)}
-                             </p>
-                        </div>
-                    </div>
+          {showFuel && (
+            <div className="mt-5 space-y-4 animate-fadeIn">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Média (Km/L)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={consumption}
+                    onChange={(e) => setConsumption(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-none shadow-sm text-sm font-bold text-slate-700 dark:text-white"
+                  />
                 </div>
-            )}
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Preço Diesel (L)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={dieselPrice}
+                    onChange={(e) => setDieselPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-none shadow-sm text-sm font-bold text-slate-700 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl border border-red-100 dark:border-red-900/20">
+                  <p className="text-[9px] text-accent-error font-black uppercase mb-1">Custo Diesel</p>
+                  <p className="text-xl font-black text-accent-error tabular-nums">
+                    {formatCurrency(totals.fuelCost)}
+                  </p>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-2xl border border-green-100 dark:border-green-900/20">
+                  <p className="text-[9px] text-accent-success font-black uppercase mb-1">Lucro Estimado</p>
+                  <p className="text-xl font-black text-accent-success tabular-nums">
+                    {formatCurrency(totals.estimatedProfit)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Ações */}
         <div className="grid grid-cols-2 gap-3 pt-4">
-            <button 
-              onClick={handleShareWhatsapp} 
-              className="flex items-center justify-center gap-2 bg-[#25D366] text-white py-4 rounded-2xl font-roboto font-bold text-xs uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all"
-            >
-                <Share2 className="w-4 h-4" /> WhatsApp
-            </button>
-            <button 
-              onClick={handleCopy}
-              className="flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-white py-4 rounded-2xl font-roboto font-bold text-xs uppercase tracking-widest active:scale-95 transition-all"
-            >
-                <Copy className="w-4 h-4" /> Copiar
-            </button>
-            <Button 
-              onClick={handleRegister} 
-              disabled={totals.total <= 0} 
-              className="col-span-2 h-16 text-sm font-black"
-            >
-                <CheckCircle className="w-5 h-5 mr-2" />
-                REGISTRAR VALOR NO FRETE
-            </Button>
+          <button
+            onClick={handleShareWhatsapp}
+            className="flex items-center justify-center gap-2 bg-[#25D366] text-white py-4 rounded-2xl font-roboto font-bold text-xs uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all"
+          >
+            <Share2 className="w-4 h-4" /> WhatsApp
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-white py-4 rounded-2xl font-roboto font-bold text-xs uppercase tracking-widest active:scale-95 transition-all"
+          >
+            <Copy className="w-4 h-4" /> Copiar
+          </button>
+          <Button
+            onClick={handleRegister}
+            disabled={totals.total <= 0}
+            className="col-span-2 h-16 text-sm font-black"
+          >
+            <CheckCircle className="w-5 h-5 mr-2" />
+            REGISTRAR VALOR NO FRETE
+          </Button>
         </div>
       </div>
     </div>

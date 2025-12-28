@@ -76,7 +76,10 @@ export default function App() {
       setCurrentUser({
         ...data,
         email: data.email || '',
+        createdAt: data.created_at || new Date().toISOString(),
         isPremium: data.is_premium,
+        premiumUntil: data.premium_until,
+        lastPaymentId: data.last_payment_id,
         trialStart: data.trial_start,
         trialEnd: data.trial_end,
         referralCode: data.referral_code,
@@ -216,6 +219,7 @@ export default function App() {
   }
 
   if (view === 'PAYMENT') {
+    console.log("App: Switching to PAYMENT view", { hasUser: !!currentUser });
     return <Paywall
       user={currentUser}
       onPaymentSuccess={() => {

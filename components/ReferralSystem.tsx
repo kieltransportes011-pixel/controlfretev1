@@ -3,7 +3,7 @@ import { User } from '../types';
 import { formatCurrency, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
-import { ChevronLeft, Gift, Sparkles, CheckCircle2, Copy, MessageCircle, ArrowRight, Zap, Users, DollarSign, Filter, Loader2, Calendar, Info } from 'lucide-react';
+import { ChevronLeft, Gift, Sparkles, CheckCircle, Copy, MessageCircle, ArrowRight, Zap, Users, DollarSign, Filter, Loader2, Calendar, Info } from 'lucide-react';
 import { supabase } from '../supabase';
 
 interface ReferralSystemProps {
@@ -143,7 +143,7 @@ export const ReferralSystem: React.FC<ReferralSystemProps> = ({ user, onUpdateUs
                   </span>
                   {copied ? (
                     <div className="flex items-center gap-1 text-accent-success animate-fadeIn">
-                      <CheckCircle2 className="w-3 h-3" />
+                      <CheckCircle className="w-3 h-3" />
                       <span className="text-[9px] font-bold uppercase">Copiado!</span>
                     </div>
                   ) : (

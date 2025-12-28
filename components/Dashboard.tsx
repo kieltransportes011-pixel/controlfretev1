@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Freight, Expense, DashboardStats, User } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
-import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertCircle, Zap } from 'lucide-react';
+import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 
 interface DashboardProps {
@@ -119,7 +119,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-xl">
-                <AlertCircle className="w-5 h-5" />
+                <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="font-bold text-sm uppercase tracking-tight">Plano Gratuito</h3>
@@ -140,7 +140,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       {isExpired && !user.isPremium && (
         <div className="bg-red-500 p-4 rounded-2xl shadow-lg shadow-red-500/20 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5" />
+            <AlertTriangle className="w-5 h-5" />
             <div>
               <h3 className="font-bold text-sm uppercase">Período Expirado</h3>
               <p className="text-[10px] font-medium">Faça o upgrade para continuar usando.</p>

@@ -3,13 +3,13 @@ import { Freight } from '../types';
 import { formatCurrency, formatDate } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
-import { 
-  CalendarClock, 
-  CheckCircle, 
-  AlertCircle, 
-  Clock, 
-  Loader2, 
-  ArrowRight, 
+import {
+  CalendarClock,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Loader2,
+  ArrowRight,
   Search,
   Wallet,
   CalendarDays
@@ -31,22 +31,22 @@ export const Schedule: React.FC<ScheduleProps> = ({ freights, onReceivePayment }
     if (!dueDateStr) return 999;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const [y, m, d] = dueDateStr.split('-').map(Number);
     const due = new Date(y, m - 1, d);
     due.setHours(0, 0, 0, 0);
 
     const diffTime = due.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const allPending = useMemo(() => {
     return freights
       .filter(f => f.status !== 'PAID' && (f.pendingValue > 0 || f.receivedValue === 0))
       .sort((a, b) => {
-          const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
-          const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
-          return dateA - dateB;
+        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+        return dateA - dateB;
       });
   }, [freights]);
 
@@ -54,7 +54,7 @@ export const Schedule: React.FC<ScheduleProps> = ({ freights, onReceivePayment }
     return allPending.filter(item => {
       const days = getDaysUntilDue(item.dueDate);
       const matchesSearch = item.client?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       let matchesFilter = true;
       if (activeFilter === 'OVERDUE') matchesFilter = days < 0;
       if (activeFilter === 'SOON') matchesFilter = days >= 0 && days <= 3;
@@ -72,15 +72,15 @@ export const Schedule: React.FC<ScheduleProps> = ({ freights, onReceivePayment }
 
   const handleConfirm = async (id: string, value: number) => {
     if (window.confirm(`Confirmar recebimento de ${formatCurrency(value)}?`)) {
-        try {
-            setConfirmingId(id);
-            await onReceivePayment(id);
-        } catch (error) {
-            console.error("Erro ao confirmar:", error);
-            alert("Não foi possível confirmar. Tente novamente.");
-        } finally {
-            setConfirmingId(null);
-        }
+      try {
+        setConfirmingId(id);
+        await onReceivePayment(id);
+      } catch (error) {
+        console.error("Erro ao confirmar:", error);
+        alert("Não foi possível confirmar. Tente novamente.");
+      } finally {
+        setConfirmingId(null);
+      }
     }
   };
 
@@ -107,7 +107,7 @@ export const Schedule: React.FC<ScheduleProps> = ({ freights, onReceivePayment }
       {/* Filters */}
       <div className="px-1 space-y-4">
         <div className="relative">
-          <input 
+          <input
             type="text"
             placeholder="Buscar por cliente..."
             value={searchTerm}
@@ -126,11 +126,10 @@ export const Schedule: React.FC<ScheduleProps> = ({ freights, onReceivePayment }
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id as FilterStatus)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-roboto font-bold tracking-widest transition-all ${
-                activeFilter === f.id 
-                ? 'bg-brand text-white shadow-md shadow-brand/20' 
+              className={`px-4 py-2 rounded-xl text-[10px] font-roboto font-bold tracking-widest transition-all ${activeFilter === f.id
+                ? 'bg-brand text-white shadow-md shadow-brand/20'
                 : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-              }`}
+                }`}
             >
               {f.label}
             </button>
@@ -141,12 +140,12 @@ export const Schedule: React.FC<ScheduleProps> = ({ freights, onReceivePayment }
       {/* List */}
       <div className="space-y-4 px-1">
         <div className="px-1 border-b border-slate-100 dark:border-slate-800 pb-2">
-            <h2 className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-[0.2em]">Lista de Recebíveis</h2>
+          <h2 className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-[0.2em]">Lista de Recebíveis</h2>
         </div>
 
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-            <CheckCircle className="w-12 h-12 text-slate-300 mb-3" />
+            <AlertTriangle className="w-12 h-12 text-slate-300 mb-3" />
             <p className="font-roboto font-bold text-xs uppercase tracking-widest text-slate-500">Nada pendente</p>
           </div>
         ) : (
@@ -181,20 +180,20 @@ export const Schedule: React.FC<ScheduleProps> = ({ freights, onReceivePayment }
                   </div>
 
                   <div className="space-y-1.5 pt-2">
-                     <div className="flex justify-between text-[8px] font-roboto font-bold text-slate-400 uppercase tracking-widest">
-                        <span>Pago: {formatCurrency(item.receivedValue)}</span>
-                        <span>Total: {formatCurrency(item.totalValue)}</span>
-                     </div>
-                     <div className="h-1 w-full bg-slate-50 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div 
-                           className="h-full bg-brand-secondary transition-all duration-1000"
-                           style={{ width: `${(item.receivedValue / item.totalValue) * 100}%` }}
-                        />
-                     </div>
+                    <div className="flex justify-between text-[8px] font-roboto font-bold text-slate-400 uppercase tracking-widest">
+                      <span>Pago: {formatCurrency(item.receivedValue)}</span>
+                      <span>Total: {formatCurrency(item.totalValue)}</span>
+                    </div>
+                    <div className="h-1 w-full bg-slate-50 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-brand-secondary transition-all duration-1000"
+                        style={{ width: `${(item.receivedValue / item.totalValue) * 100}%` }}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex justify-end pt-1">
-                    <Button 
+                    <Button
                       disabled={isConfirming}
                       onClick={() => handleConfirm(item.id, item.pendingValue)}
                       className="px-6 py-2.5 rounded-xl text-[10px]"

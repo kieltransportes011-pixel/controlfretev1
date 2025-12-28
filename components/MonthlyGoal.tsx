@@ -4,21 +4,21 @@ import { formatCurrency, formatDate } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
 import { CalendarPicker } from './CalendarPicker';
-import { 
-  Target, 
-  TrendingUp, 
-  Calendar, 
-  ArrowRight, 
-  CheckCircle, 
-  Info, 
-  Trophy, 
-  Zap, 
+import {
+  Target,
+  TrendingUp,
+  Calendar,
+  ArrowRight,
+  CheckCircle,
+  Info,
+  Trophy,
+  Zap,
   History as HistoryIcon,
   XCircle,
   ChevronRight,
   ChevronLeft,
   Trash2,
-  AlertCircle,
+  AlertTriangle,
   Clock
 } from 'lucide-react';
 
@@ -38,18 +38,18 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     // Deadline logic
     let remainingDays = 0;
     if (deadlineInput) {
-        const [y, m, d] = deadlineInput.split('-').map(Number);
-        const deadlineDate = new Date(y, m - 1, d);
-        deadlineDate.setHours(23, 59, 59);
-        const diff = deadlineDate.getTime() - now.getTime();
-        remainingDays = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      const [y, m, d] = deadlineInput.split('-').map(Number);
+      const deadlineDate = new Date(y, m - 1, d);
+      deadlineDate.setHours(23, 59, 59);
+      const diff = deadlineDate.getTime() - now.getTime();
+      remainingDays = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
     } else {
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        remainingDays = Math.max(1, lastDayOfMonth - now.getDate() + 1);
+      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      remainingDays = Math.max(1, lastDayOfMonth - now.getDate() + 1);
     }
 
     const monthTotal = freights.reduce((acc, curr) => {
@@ -79,10 +79,10 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
   const historyStats = useMemo(() => {
     const months = [];
     const now = new Date();
-    
+
     // Check saved history first
     const savedHistory = settings.goalHistory || [];
-    
+
     // Generate derived history if not in saved history for last 3 months
     for (let i = 1; i <= 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -100,18 +100,18 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
       }, 0);
 
       const historicalEntry = savedHistory.find(h => h.month === monthKey);
-      
+
       // Se tivermos fretes no mês ou uma meta salva, incluímos
       if (totalAchieved > 0 || historicalEntry) {
         const goal = historicalEntry?.goal || 0;
         months.push({
-            monthKey,
-            label: monthLabel,
-            goal: goal,
-            achieved: totalAchieved,
-            percent: goal > 0 ? (totalAchieved / goal) * 100 : 0,
-            success: goal > 0 && totalAchieved >= goal,
-            isSaved: !!historicalEntry
+          monthKey,
+          label: monthLabel,
+          goal: goal,
+          achieved: totalAchieved,
+          percent: goal > 0 ? (totalAchieved / goal) * 100 : 0,
+          success: goal > 0 && totalAchieved >= goal,
+          isSaved: !!historicalEntry
         });
       }
     }
@@ -120,10 +120,10 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
 
   const handleSaveGoal = () => {
     const newGoal = parseFloat(goalInput) || 0;
-    onUpdateSettings({ 
-        ...settings, 
-        monthlyGoal: newGoal,
-        monthlyGoalDeadline: deadlineInput 
+    onUpdateSettings({
+      ...settings,
+      monthlyGoal: newGoal,
+      monthlyGoalDeadline: deadlineInput
     });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
@@ -131,8 +131,8 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
 
   const handleDeleteHistory = (monthKey: string) => {
     if (window.confirm('Deseja excluir este registro do histórico de metas?')) {
-        const newHistory = (settings.goalHistory || []).filter(h => h.month !== monthKey);
-        onUpdateSettings({ ...settings, goalHistory: newHistory });
+      const newHistory = (settings.goalHistory || []).filter(h => h.month !== monthKey);
+      onUpdateSettings({ ...settings, goalHistory: newHistory });
     }
   };
 
@@ -143,13 +143,13 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
     <div className="pb-24 space-y-6 animate-fadeIn">
       <header className="flex justify-between items-center relative px-1">
         <div className="flex items-center">
-            <button onClick={onBack} className="p-2 -ml-2 text-slate-500 hover:text-brand transition-colors">
-                <ChevronLeft className="w-6 h-6" />
-            </button>
-            <div className="ml-2">
-                <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight uppercase">Meta Mensal</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-[10px] font-roboto font-bold uppercase tracking-widest mt-0.5">Desempenho e Foco</p>
-            </div>
+          <button onClick={onBack} className="p-2 -ml-2 text-slate-500 hover:text-brand transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="ml-2">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight uppercase">Meta Mensal</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-[10px] font-roboto font-bold uppercase tracking-widest mt-0.5">Desempenho e Foco</p>
+          </div>
         </div>
         {isGoalReached && (
           <div className="bg-accent-warning/20 p-2 rounded-full animate-bounce">
@@ -185,10 +185,10 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
 
           <div>
             <label className="block text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Prazo Final da Meta</label>
-            <CalendarPicker 
-                selectedDate={deadlineInput} 
-                onChange={setDeadlineInput} 
-                className="z-20"
+            <CalendarPicker
+              selectedDate={deadlineInput}
+              onChange={setDeadlineInput}
+              className="z-20"
             />
             <p className="text-[9px] text-slate-400 font-medium mt-2 px-1 italic">Dica: Define até quando você quer bater esse valor.</p>
           </div>
@@ -214,39 +214,39 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
         </div>
 
         <div className="relative h-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
-          <div 
+          <div
             className={`h-full rounded-full transition-all duration-1000 ease-out ${isGoalReached ? 'bg-accent-success' : 'bg-brand-secondary'}`}
             style={{ width: `${Math.min(100, stats.progress)}%` }}
           />
         </div>
 
         <div className="flex flex-col items-center gap-1.5 relative z-10">
-           {isGoalReached ? (
-             <span className="text-[10px] font-black text-accent-success uppercase flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" /> Objetivo Batido
-             </span>
-           ) : (
-             <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                <Clock className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-black uppercase tracking-widest">
-                    Faltam {formatCurrency(stats.remaining)}
-                </span>
-             </div>
-           )}
+          {isGoalReached ? (
+            <span className="text-[10px] font-black text-accent-success uppercase flex items-center gap-1">
+              <CheckCircle className="w-3.5 h-3.5" /> Objetivo Batido
+            </span>
+          ) : (
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <Clock className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Faltam {formatCurrency(stats.remaining)}
+              </span>
+            </div>
+          )}
         </div>
       </Card>
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 gap-4">
         <Card className="py-4 text-center border-slate-100">
-            <p className="text-[9px] font-roboto font-bold text-slate-400 uppercase tracking-widest mb-1">Já Faturado</p>
-            <p className="text-lg font-black text-slate-800 dark:text-white tabular-nums">{formatCurrency(stats.monthTotal)}</p>
+          <p className="text-[9px] font-roboto font-bold text-slate-400 uppercase tracking-widest mb-1">Já Faturado</p>
+          <p className="text-lg font-black text-slate-800 dark:text-white tabular-nums">{formatCurrency(stats.monthTotal)}</p>
         </Card>
         <Card className="py-4 text-center border-slate-100">
-            <p className="text-[9px] font-roboto font-bold text-slate-400 uppercase tracking-widest mb-1">Média/Dia Necessária</p>
-            <p className="text-lg font-black text-brand-secondary tabular-nums">
-                {stats.goal > 0 && stats.remainingDays > 0 ? formatCurrency(stats.dailyNeeded) : '---'}
-            </p>
+          <p className="text-[9px] font-roboto font-bold text-slate-400 uppercase tracking-widest mb-1">Média/Dia Necessária</p>
+          <p className="text-lg font-black text-brand-secondary tabular-nums">
+            {stats.goal > 0 && stats.remainingDays > 0 ? formatCurrency(stats.dailyNeeded) : '---'}
+          </p>
         </Card>
       </div>
 
@@ -261,7 +261,7 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
 
         <div className="space-y-3">
           {historyStats.map((item, idx) => (
-            <div 
+            <div
               key={idx}
               className={`bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border flex items-center justify-between animate-fadeIn ${item.success ? 'border-green-100 dark:border-green-900/20' : 'border-slate-50 dark:border-slate-700'}`}
             >
@@ -276,20 +276,20 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                    <span className={`text-xs font-black tabular-nums ${item.success ? 'text-accent-success' : 'text-slate-400'}`}>
-                        {item.percent.toFixed(0)}%
-                    </span>
+                  <span className={`text-xs font-black tabular-nums ${item.success ? 'text-accent-success' : 'text-slate-400'}`}>
+                    {item.percent.toFixed(0)}%
+                  </span>
                 </div>
                 {item.isSaved && (
-                    <button 
-                        onClick={() => handleDeleteHistory(item.monthKey)}
-                        className="p-2 text-slate-300 hover:text-accent-error hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
+                  <button
+                    onClick={() => handleDeleteHistory(item.monthKey)}
+                    className="p-2 text-slate-300 hover:text-accent-error hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 )}
               </div>
             </div>
@@ -297,8 +297,8 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
 
           {historyStats.length === 0 && (
             <div className="text-center py-10 opacity-30">
-               <HistoryIcon className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-               <p className="text-[10px] font-roboto font-bold uppercase tracking-widest">Sem histórico disponível</p>
+              <HistoryIcon className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+              <p className="text-[10px] font-roboto font-bold uppercase tracking-widest">Sem histórico disponível</p>
             </div>
           )}
         </div>

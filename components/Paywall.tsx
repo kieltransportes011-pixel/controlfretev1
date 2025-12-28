@@ -5,7 +5,6 @@ import { Card } from './Card';
 import { Truck, CheckCircle, Shield, CreditCard, Sparkles, Loader2, ArrowRight, Zap, Info, Lock, AlertTriangle, ChevronLeft, Copy, QrCode, Clock } from 'lucide-react';
 import { supabase } from '../supabase';
 
-
 // Mercado Pago Public Key Oficial (Produção)
 const MP_PUBLIC_KEY = "APP_USR-8e0c75cf-c860-4efa-80ef-122c95d41d7c";
 
@@ -34,125 +33,129 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
 
   useEffect(() => {
     if (paymentStep === 'CHECKOUT' && window.MercadoPago) {
+      console.log("Paywall: Iniciando configuração do checkout...");
       const mp = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
       const bricksBuilder = mp.bricks();
       bricksBuilderRef.current = bricksBuilder;
 
-      const renderPaymentBrick = async () => {
-        const settings = {
-          initialization: {
-            amount: 49.90,
-            payer: {
-              email: user.email,
+      const settings = {
+        initialization: {
+          amount: 49.90,
+          payer: {
+            email: user.email,
+          },
+        },
+        customization: {
+          paymentMethods: {
+            ticket: "all",
+            bankTransfer: "all",
+            creditCard: "all",
+            maxInstallments: 1
+          },
+          visual: {
+            style: {
+              theme: 'flat',
             },
           },
-          customization: {
-            paymentMethods: {
-              ticket: "all",
-              bankTransfer: "all",
-              creditCard: "all",
-              maxInstallments: 1 // Força pagamento à vista
-            },
-            visual: {
-              style: {
-                theme: 'flat',
-              },
-              hidePaymentMethods: [], // Garante que todos os habilitados apareçam
-            },
+        },
+        callbacks: {
+          onReady: () => {
+            console.log("Paywall: Brick pronto para renderização");
+            setLoading(false);
           },
-          callbacks: {
-            onReady: () => {
-              setLoading(false);
-            },
-            onSubmit: ({ selectedPaymentMethod, formData }: any) => {
-              return new Promise(async (resolve, reject) => {
-                setLoading(true);
-                setError(null);
+          onSubmit: ({ selectedPaymentMethod, formData }: any) => {
+            return new Promise(async (resolve, reject) => {
+              setLoading(true);
+              setError(null);
 
-                try {
-                  const sanitizedData = {
-                    transaction_amount: Number(formData.transaction_amount || 49.90),
-                    token: formData.token ? String(formData.token) : null,
-                    installments: 1, // Garantindo à vista no envio
-                    payment_method_id: String(formData.payment_method_id),
-                    issuer_id: formData.issuer_id ? String(formData.issuer_id) : null,
-                    payer: {
-                      email: String(formData.payer?.email || user.email),
-                      identification: formData.payer?.identification ? {
-                        type: String(formData.payer.identification.type),
-                        number: String(formData.payer.identification.number)
-                      } : null
-                    }
-                  };
-
-                  console.log("Sending data to Edge Function:", sanitizedData);
-
-                  const { data, error } = await supabase.functions.invoke('process-payment', {
-                    body: {
-                      formData: sanitizedData,
-                      userId: user.id
-                    }
-                  });
-
-                  if (error) throw error;
-
-                  console.log("Edge Function Response:", data);
-
-                  if (data.status === 'success') {
-                    onPaymentSuccess();
-                    resolve(true);
-                  } else if (data.status === 'pending') {
-                    if (data.paymentMethod === 'pix' && data.pixData) {
-                      setPixData(data.pixData);
-                      setPaymentStep('PIX_INSTRUCTIONS');
-                      resolve(true);
-                    } else {
-                      // Para boleto ou outros pendentes
-                      setPaymentStep('OFFER');
-                      setError("Pagamento em processamento. Boletos podem levar até 3 dias úteis para compensar.");
-                      resolve(true);
-                    }
-                  } else {
-                    setError(data.message || 'Pagamento recusado pelo Mercado Pago.');
-                    reject();
+              try {
+                const sanitizedData = {
+                  transaction_amount: Number(formData.transaction_amount || 49.90),
+                  token: formData.token ? String(formData.token) : null,
+                  installments: 1,
+                  payment_method_id: String(formData.payment_method_id),
+                  issuer_id: formData.issuer_id ? String(formData.issuer_id) : null,
+                  payer: {
+                    email: String(formData.payer?.email || user.email),
+                    identification: formData.payer?.identification ? {
+                      type: String(formData.payer.identification.type),
+                      number: String(formData.payer.identification.number)
+                    } : null
                   }
+                };
 
-                } catch (err: any) {
-                  console.error("Erro detalhado:", err);
-                  setError("Erro interno no sistema de pagamento.");
-                  reject();
-                } finally {
-                  setLoading(false);
+                console.log("Paywall: Enviando dados para processamento", sanitizedData);
+
+                const { data, error: funcError } = await supabase.functions.invoke('process-payment', {
+                  body: {
+                    formData: sanitizedData,
+                    userId: user.id
+                  }
+                });
+
+                if (funcError) throw funcError;
+
+                if (data.status === 'success') {
+                  console.log("Paywall: Pagamento aprovado");
+                  onPaymentSuccess();
+                  resolve(true);
+                } else if (data.status === 'pending') {
+                  if (data.paymentMethod === 'pix' && data.pixData) {
+                    setPixData(data.pixData);
+                    setPaymentStep('PIX_INSTRUCTIONS');
+                    resolve(true);
+                  } else {
+                    setPaymentStep('OFFER');
+                    setError("Pagamento em processamento. Aguarde a compensação.");
+                    resolve(true);
+                  }
+                } else {
+                  throw new Error(data.message || 'Pagamento recusado.');
                 }
-              });
-            },
-            onError: (error: any) => {
-              console.error("Erro MP Bricks:", error);
-              setError("Erro ao processar checkout do Mercado Pago.");
-              setLoading(false);
-            },
+
+              } catch (err: any) {
+                console.error("Paywall: Erro no processamento", err);
+                setError("Erro ao processar pagamento: " + (err.message || "Tente novamente."));
+                reject();
+              } finally {
+                setLoading(false);
+              }
+            });
           },
-        };
-
-        if (paymentBrickControllerRef.current) {
-          await paymentBrickControllerRef.current.unmount();
-        }
-
-        paymentBrickControllerRef.current = await bricksBuilder.create(
-          'payment',
-          'paymentBrick_container',
-          settings
-        );
+          onError: (error: any) => {
+            console.error("Paywall: Erro interno do Brick", error);
+            setError("Erro técnico no checkout. Por favor, tente recarregar.");
+            setLoading(false);
+          },
+        },
       };
 
-      renderPaymentBrick();
-    }
+      const initBrick = async () => {
+        try {
+          if (paymentBrickControllerRef.current) {
+            await paymentBrickControllerRef.current.unmount();
+          }
 
-    return () => {
-      if (paymentBrickControllerRef.current) {
-        paymentBrickControllerRef.current.unmount();
-      }
-    };
+          paymentBrickControllerRef.current = await bricksBuilder.create(
+            'payment',
+            'paymentBrick_container',
+            settings
+          );
+        } catch (err) {
+          console.error("Paywall: Falha ao montar o brick", err);
+          setError("Não foi possível carregar o formulário de pagamento.");
+          setLoading(false);
+        }
+      };
+
+      initBrick();
+
+      return () => {
+        if (paymentBrickControllerRef.current) {
+          paymentBrickControllerRef.current.unmount();
+        }
+      };
+    }
   }, [paymentStep, user]);
 
   const handleCopyPix = () => {
@@ -164,6 +167,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
   };
 
   const handleStartCheckout = () => {
+    setError(null);
     setPaymentStep('CHECKOUT');
     setLoading(true);
   };
@@ -189,12 +193,13 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
         </header>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-2xl flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-accent-error flex-shrink-0" />
-            <div className="flex flex-col">
-              <p className="text-[10px] font-black text-accent-error uppercase">Aviso de Pagamento</p>
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{error}</p>
-            </div>
+          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-100 dark:border-red-900/30 p-6 rounded-3xl text-center mb-0 animate-fadeIn">
+            <AlertTriangle className="w-12 h-12 text-accent-error mx-auto mb-3" />
+            <h3 className="text-red-800 dark:text-red-400 font-bold mb-2">Ops! Algo deu errado</h3>
+            <p className="text-red-600/80 dark:text-red-400/60 text-xs mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="outline" className="text-xs">
+              Recarregar Página
+            </Button>
           </div>
         )}
 
