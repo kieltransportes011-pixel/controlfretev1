@@ -93,7 +93,23 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
                   }
                 });
 
-                if (funcError) throw funcError;
+                if (funcError) {
+                  console.error("Paywall: Edge Function Error", funcError);
+                  // Tenta extrair a mensagem de erro do corpo da resposta se disponível
+                  let errorMsg = "Erro ao processar pagamento.";
+                  if (funcError instanceof Error && funcError.message.includes('non-2xx')) {
+                    try {
+                      // O supabase-js as vezes coloca o corpo em propriedades customizadas dependendo da versão
+                      const details = (funcError as any).context?.message || (funcError as any).message;
+                      errorMsg = `Erro: ${details}`;
+                    } catch (e) {
+                      errorMsg = "Erro na comunicação com o servidor de pagamento.";
+                    }
+                  } else {
+                    errorMsg = funcError.message;
+                  }
+                  throw new Error(errorMsg);
+                }
 
                 if (data.status === 'success') {
                   console.log("Paywall: Pagamento aprovado");
