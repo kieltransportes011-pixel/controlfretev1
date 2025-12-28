@@ -3,7 +3,6 @@ import { User } from '../types';
 import { Button } from './Button';
 import { Card } from './Card';
 import { Truck, CheckCircle2, ShieldCheck, CreditCard, Sparkles, Loader2, ArrowRight, Zap, Info, Lock, AlertCircle, ChevronLeft, Copy, QrCode, Clock } from 'lucide-react';
-import { auth } from '../utils'; // changed to utils or removed if not needed. Actually, auth is not used directly except for signOut which is now Supabase.
 import { supabase } from '../supabase';
 
 
