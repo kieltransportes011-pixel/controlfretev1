@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { Button } from './Button';
 import { Card } from './Card';
-import { Truck, CheckCircle, Shield, CreditCard, Sparkles, Loader2, ArrowRight, Zap, Info, Lock, AlertTriangle, ChevronLeft, Copy, QrCode, Clock } from 'lucide-react';
+import { Truck, CheckCircle, Shield, CreditCard, Sparkles, Loader2, ArrowRight, Zap, Info, Lock, AlertTriangle, ChevronLeft, Copy, QrCode, Clock, ExternalLink } from 'lucide-react';
 import { supabase } from '../supabase';
 
 // Mercado Pago Public Key Oficial (Produção)
@@ -90,8 +90,6 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
                   }
                 };
 
-                console.log("Paywall: Enviando dados para processamento", sanitizedData);
-
                 const { data, error: funcError } = await supabase.functions.invoke('process-payment', {
                   body: {
                     formData: sanitizedData,
@@ -99,26 +97,9 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
                   }
                 });
 
-                if (funcError) {
-                  console.error("Paywall: Edge Function Error", funcError);
-                  // Tenta extrair a mensagem de erro do corpo da resposta se disponível
-                  let errorMsg = "Erro ao processar pagamento.";
-                  if (funcError instanceof Error && funcError.message.includes('non-2xx')) {
-                    try {
-                      // O supabase-js as vezes coloca o corpo em propriedades customizadas dependendo da versão
-                      const details = (funcError as any).context?.message || (funcError as any).message;
-                      errorMsg = `Erro: ${details}`;
-                    } catch (e) {
-                      errorMsg = "Erro na comunicação com o servidor de pagamento.";
-                    }
-                  } else {
-                    errorMsg = funcError.message;
-                  }
-                  throw new Error(errorMsg);
-                }
+                if (funcError) throw funcError;
 
                 if (data.status === 'success') {
-                  console.log("Paywall: Pagamento aprovado");
                   onPaymentSuccess();
                   resolve(true);
                 } else if (data.status === 'pending') {
@@ -137,7 +118,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
 
               } catch (err: any) {
                 console.error("Paywall: Erro no processamento", err);
-                setError("Erro ao processar pagamento: " + (err.message || "Tente novamente."));
+                setError(err.message || "Erro ao processar pagamento.");
                 reject();
               } finally {
                 setLoading(false);
@@ -146,7 +127,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
           },
           onError: (error: any) => {
             console.error("Paywall: Erro interno do Brick", error);
-            setError("Erro técnico no checkout. Por favor, tente recarregar.");
+            setError("Erro técnico no checkout.");
             setLoading(false);
           },
         },
@@ -157,15 +138,9 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
           if (paymentBrickControllerRef.current) {
             await paymentBrickControllerRef.current.unmount();
           }
-
-          paymentBrickControllerRef.current = await bricksBuilder.create(
-            'payment',
-            'paymentBrick_container',
-            settings
-          );
+          paymentBrickControllerRef.current = await bricksBuilder.create('payment', 'paymentBrick_container', settings);
         } catch (err) {
-          console.error("Paywall: Falha ao montar o brick", err);
-          setError("Não foi possível carregar o formulário de pagamento.");
+          setError("Não foi possível carregar o formulário.");
           setLoading(false);
         }
       };
@@ -180,6 +155,26 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
     }
   }, [paymentStep, user]);
 
+  const handleLinkPayment = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: funcError } = await supabase.functions.invoke('process-payment', {
+        body: { action: 'create-preference' }
+      });
+      if (funcError) throw funcError;
+      if (data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("Link de pagamento não gerado.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Erro ao gerar link de pagamento.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCopyPix = () => {
     if (pixData?.qrCode) {
       navigator.clipboard.writeText(pixData.qrCode);
@@ -188,19 +183,13 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
     }
   };
 
-  const handleStartCheckout = () => {
-    setError(null);
-    setPaymentStep('CHECKOUT');
-    setLoading(true);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-fadeIn">
       <div className="max-w-md w-full space-y-6">
         <header className="text-center space-y-2 relative">
           {(onCancel || paymentStep !== 'OFFER') && (
             <button
-              onClick={paymentStep === 'PIX_INSTRUCTIONS' ? () => setPaymentStep('OFFER') : onCancel}
+              onClick={paymentStep === 'PIX_INSTRUCTIONS' || paymentStep === 'CHECKOUT' ? () => setPaymentStep('OFFER') : onCancel}
               className="absolute -top-4 -left-2 p-2 text-slate-400 hover:text-brand transition-colors"
             >
               <ChevronLeft className="w-6 h-6" />
@@ -219,8 +208,8 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
             <AlertTriangle className="w-12 h-12 text-accent-error mx-auto mb-3" />
             <h3 className="text-red-800 dark:text-red-400 font-bold mb-2">Ops! Algo deu errado</h3>
             <p className="text-red-600/80 dark:text-red-400/60 text-xs mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()} variant="outline" className="text-xs">
-              Recarregar Página
+            <Button onClick={() => setPaymentStep('OFFER')} variant="outline" className="text-xs">
+              Tentar Novamente
             </Button>
           </div>
         )}
@@ -252,17 +241,26 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
                 ))}
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl flex items-start gap-2 text-left">
-                <Clock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase leading-tight">
-                  Boleto bancário: compensação em até 3 dias úteis. Cartão e Pix são imediatos.
-                </p>
+              <div className="space-y-3 pt-4">
+                <Button fullWidth onClick={handleLinkPayment} disabled={loading} className="h-16 text-lg group bg-brand hover:bg-brand-600">
+                  {loading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <ExternalLink className="w-6 h-6 mr-2" />}
+                  PAGAR COM LINK (MAIS SEGURO)
+                </Button>
+
+                <button
+                  onClick={() => setPaymentStep('CHECKOUT')}
+                  className="w-full text-[10px] text-slate-400 font-bold uppercase hover:text-brand transition-colors py-2"
+                >
+                  Outras formas de pagamento (Pix/Cartão Direto)
+                </button>
               </div>
 
-              <Button fullWidth onClick={handleStartCheckout} className="h-16 text-lg group">
-                ASSINAR AGORA
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl flex items-start gap-2 text-left">
+                <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase leading-tight">
+                  O Link de Pagamento é o método mais estável. Você será redirecionado para o site oficial do Mercado Pago.
+                </p>
+              </div>
             </div>
           )}
 
@@ -280,40 +278,18 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
           {paymentStep === 'PIX_INSTRUCTIONS' && pixData && (
             <div className="animate-fadeIn space-y-6 flex flex-col items-center text-center">
               <div className="bg-white p-4 rounded-2xl shadow-inner border border-slate-100">
-                <img
-                  src={`data:image/png;base64,${pixData.qrCodeBase64}`}
-                  alt="QR Code Pix"
-                  className="w-48 h-48"
-                />
+                <img src={`data:image/png;base64,${pixData.qrCodeBase64}`} alt="QR Code Pix" className="w-48 h-48" />
               </div>
-
               <div className="w-full space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase">Copia e Cola</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={pixData.qrCode}
-                    className="flex-1 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono overflow-hidden"
-                  />
-                  <button
-                    onClick={handleCopyPix}
-                    className={`p-3 rounded-xl ${copied ? 'bg-accent-success' : 'bg-brand'} text-white transition-colors`}
-                  >
+                  <input readOnly value={pixData.qrCode} className="flex-1 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono overflow-hidden" />
+                  <button onClick={handleCopyPix} className={`p-3 rounded-xl ${copied ? 'bg-accent-success' : 'bg-brand'} text-white transition-colors`}>
                     {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
-
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-start gap-3 text-left">
-                <Info className="w-5 h-5 text-brand shrink-0" />
-                <p className="text-[10px] text-brand-700 dark:text-brand-300 font-bold uppercase">
-                  Após o pagamento, sua conta será ativada automaticamente em alguns minutos.
-                </p>
-              </div>
-
-              <Button fullWidth variant="outline" onClick={() => setPaymentStep('OFFER')}>
-                Voltar
-              </Button>
+              <Button fullWidth variant="outline" onClick={() => setPaymentStep('OFFER')}>Voltar</Button>
             </div>
           )}
         </Card>

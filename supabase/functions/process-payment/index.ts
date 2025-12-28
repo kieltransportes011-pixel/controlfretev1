@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { MercadoPagoConfig, Payment } from 'npm:mercadopago'
+import { MercadoPagoConfig, Payment, Preference } from 'npm:mercadopago'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -33,64 +33,90 @@ serve(async (req) => {
         }
 
         const body = await req.json();
-        const { formData } = body;
+        const { action, formData } = body;
 
-        console.log("Processing payment for user:", user.email, "Method:", formData.payment_method_id);
-
-        // 2. Setup Mercado Pago
         const client = new MercadoPagoConfig({ accessToken: mpAccessToken });
-        const payment = new Payment(client);
 
-        // 3. Create Payment Body
+        // NOVO FLOW: CHECKOUT PRO (LINK DE PAGAMENTO)
+        if (action === 'create-preference') {
+            console.log("Creating preference for:", user.email);
+            const preference = new Preference(client);
+            const origin = req.headers.get('origin') || 'http://localhost:5173';
+
+            const result = await preference.create({
+                body: {
+                    items: [
+                        {
+                            id: 'PRO-ANNUAL',
+                            title: 'Assinatura Profissional - Control Frete',
+                            quantity: 1,
+                            unit_price: 49.90,
+                            currency_id: 'BRL'
+                        }
+                    ],
+                    payer: {
+                        email: user.email,
+                    },
+                    metadata: {
+                        user_id: user.id
+                    },
+                    back_urls: {
+                        success: `${origin}?payment=success`,
+                        failure: `${origin}?payment=failure`,
+                        pending: `${origin}?payment=pending`
+                    },
+                    auto_return: 'approved'
+                }
+            });
+
+            return new Response(JSON.stringify({ checkoutUrl: result.init_point }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200,
+            });
+        }
+
+        // FLOW BASE/BRICK: PROCESSAMENTO DIRETO
+        const payment = new Payment(client);
         const paymentBody: any = {
-            transaction_amount: Number(formData.transaction_amount || 49.90),
+            transaction_amount: Number(formData?.transaction_amount || 49.90),
             description: "Assinatura Profissional - Control Frete",
-            payment_method_id: String(formData.payment_method_id),
+            payment_method_id: String(formData?.payment_method_id),
             payer: {
-                email: String(formData.payer?.email || user.email),
-                identification: formData.payer?.identification ? {
+                email: String(formData?.payer?.email || user.email),
+                identification: formData?.payer?.identification ? {
                     type: String(formData.payer.identification.type),
                     number: String(formData.payer.identification.number)
                 } : undefined,
-                first_name: formData.payer?.first_name || "Usuario",
-                last_name: formData.payer?.last_name || "Control Frete"
+                first_name: formData?.payer?.first_name || "Usuario",
+                last_name: formData?.payer?.last_name || "Control Frete"
             },
             metadata: {
                 user_id: user.id
             }
         };
 
-        if (formData.token) {
+        if (formData?.token) {
             paymentBody.token = String(formData.token);
             paymentBody.installments = Number(formData.installments || 1);
             paymentBody.issuer_id = formData.issuer_id ? String(formData.issuer_id) : undefined;
         }
 
-        // 4. Create Payment
         const response = await payment.create({
             body: paymentBody,
             requestOptions: { idempotencyKey: `pay_${user.id}_${Date.now()}` }
         });
 
-        console.log("MP Response Status:", response.status);
-
         const status = String(response.status);
         const paymentId = String(response.id);
 
-        // 5. Handle Success
         if (status === "approved") {
             const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-            const { error: updateError } = await supabaseAdmin.from('profiles').update({
+            await supabaseAdmin.from('profiles').update({
                 is_premium: true,
                 premium_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
                 last_payment_id: paymentId
             }).eq('id', user.id);
-
-            if (updateError) {
-                console.error("Database Update Error:", updateError);
-                // We still returned success because payment was approved, but warned in logs
-            }
 
             return new Response(JSON.stringify({ status: "success", paymentId }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -98,39 +124,28 @@ serve(async (req) => {
             })
         }
 
-        // 6. Handle Pending (Pix)
         if (status === "pending" || status === "in_process") {
-            const result: any = { status: "pending", paymentId, paymentMethod: String(formData.payment_method_id) };
-
-            if (formData.payment_method_id === "pix") {
+            const result: any = { status: "pending", paymentId, paymentMethod: String(formData?.payment_method_id) };
+            if (formData?.payment_method_id === "pix") {
                 result.pixData = {
                     qrCode: response.point_of_interaction?.transaction_data?.qr_code,
                     qrCodeBase64: response.point_of_interaction?.transaction_data?.qr_code_base64
                 };
             }
-
             return new Response(JSON.stringify(result), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200,
             })
         }
 
-        // 7. Handle Other MP Statuses (rejected, nullified, etc.)
-        return new Response(JSON.stringify({
-            status: "error",
-            message: response.status_detail || "Pagamento recusado.",
-            mp_status: status
-        }), {
+        return new Response(JSON.stringify({ status: "error", message: response.status_detail }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
         })
 
     } catch (error: any) {
         console.error("Global Catch Error:", error);
-        return new Response(JSON.stringify({
-            error: error.message,
-            stack: error.stack
-        }), {
+        return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
         })
