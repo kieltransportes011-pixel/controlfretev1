@@ -57,6 +57,12 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
               theme: 'flat',
             },
           },
+          payer: {
+            email: user.email,
+            identification: {
+              docType: "CPF",
+            },
+          },
         },
         callbacks: {
           onReady: () => {
