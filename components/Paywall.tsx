@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { Button } from './Button';
 import { Card } from './Card';
-import { Truck, CheckCircle2, ShieldCheck, CreditCard, Sparkles, Loader2, ArrowRight, Zap, Info, Lock, AlertCircle, ChevronLeft, Copy, QrCode, Clock } from 'lucide-react';
+import { Truck, CheckCircle, Shield, CreditCard, Sparkles, Loader2, ArrowRight, Zap, Info, Lock, AlertTriangle, ChevronLeft, Copy, QrCode, Clock } from 'lucide-react';
 import { supabase } from '../supabase';
 
 
@@ -22,6 +22,8 @@ declare global {
 }
 
 export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCancel }) => {
+  if (!user) return <div className="p-10 text-center">Erro: Usuário não encontrado.</div>;
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<'OFFER' | 'CHECKOUT' | 'PIX_INSTRUCTIONS'>('OFFER');
@@ -188,7 +190,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
 
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-2xl flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-accent-error flex-shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-accent-error flex-shrink-0" />
             <div className="flex flex-col">
               <p className="text-[10px] font-black text-accent-error uppercase">Aviso de Pagamento</p>
               <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{error}</p>
@@ -217,7 +219,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
                   "Backup na Nuvem"
                 ].map((feature, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 font-medium">
-                    <CheckCircle2 className="w-5 h-5 text-accent-success shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-accent-success shrink-0" />
                     {feature}
                   </div>
                 ))}
@@ -270,7 +272,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
                     onClick={handleCopyPix}
                     className={`p-3 rounded-xl ${copied ? 'bg-accent-success' : 'bg-brand'} text-white transition-colors`}
                   >
-                    {copied ? <CheckCircle2 className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
@@ -291,7 +293,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onPaymentSuccess, onCanc
 
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold uppercase">
-            <ShieldCheck className="w-4 h-4 text-accent-success" />
+            <Shield className="w-4 h-4 text-accent-success" />
             Checkout Seguro Mercado Pago
           </div>
         </div>

@@ -76,6 +76,7 @@ export default function App() {
       setCurrentUser({
         ...data,
         email: data.email || '',
+        isPremium: data.is_premium,
         trialStart: data.trial_start,
         trialEnd: data.trial_end,
         referralCode: data.referral_code,
