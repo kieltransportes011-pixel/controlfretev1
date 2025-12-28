@@ -122,7 +122,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               cpf: newUser.cpf,
               email: newUser.email,
               is_premium: newUser.isPremium,
-              is_premium: newUser.isPremium,
               referred_by: newUser.referredBy || null,
               referral_code: newUser.referralCode,
               referral_balance: 0,
