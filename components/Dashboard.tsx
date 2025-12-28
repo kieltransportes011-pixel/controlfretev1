@@ -3,6 +3,7 @@ import { Freight, Expense, DashboardStats, User } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertCircle, Zap } from 'lucide-react';
+import { useSubscription } from '../hooks/useSubscription';
 
 interface DashboardProps {
   user: User;
@@ -13,9 +14,11 @@ interface DashboardProps {
   onViewSchedule: () => void;
   onOpenCalculator: () => void;
   onViewGoals: () => void;
+  onUpgrade: () => void;
+  onViewAgenda: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const trialDaysRemaining = useMemo(() => {
@@ -106,12 +109,51 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     ? Math.min(100, Math.round((receivableStats.next7Total / stats.totalPending) * 100))
     : 0;
 
+  const { daysRemaining, isTrial, isExpired } = useSubscription(user);
+
   return (
     <div className="pb-24 space-y-6">
       {/* Trial Banner */}
+      {isTrial && (
+        <div className="bg-gradient-to-r from-brand to-brand-secondary p-4 rounded-2xl shadow-lg shadow-brand/20 text-white relative overflow-hidden animate-pulse-slow">
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-xl">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm uppercase tracking-tight">Plano Gratuito</h3>
+                <p className="text-[10px] font-medium opacity-90">Sua avaliação termina em <span className="font-black text-white">{daysRemaining} dias</span></p>
+              </div>
+            </div>
+            <button
+              onClick={onUpgrade}
+              className="bg-white text-brand px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              Fazer Upgrade Agora
+            </button>
+          </div>
+          <Zap className="absolute -right-2 -bottom-2 w-16 h-16 opacity-10 rotate-12" />
+        </div>
+      )}
 
-
-      {/* Header */}
+      {isExpired && !user.isPremium && (
+        <div className="bg-red-500 p-4 rounded-2xl shadow-lg shadow-red-500/20 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5" />
+            <div>
+              <h3 className="font-bold text-sm uppercase">Período Expirado</h3>
+              <p className="text-[10px] font-medium">Faça o upgrade para continuar usando.</p>
+            </div>
+          </div>
+          <button
+            onClick={onUpgrade}
+            className="bg-white text-red-500 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider"
+          >
+            Renovar Acesso
+          </button>
+        </div>
+      )}
       <header className="flex items-center justify-between py-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight uppercase">Visão Geral</h1>

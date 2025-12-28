@@ -214,6 +214,17 @@ export default function App() {
     }} />;
   }
 
+  if (view === 'PAYMENT') {
+    return <Paywall
+      user={currentUser}
+      onPaymentSuccess={() => {
+        handleUpdateUser({ ...currentUser, isPremium: true });
+        setView('DASHBOARD');
+      }}
+      onCancel={() => setView('DASHBOARD')}
+    />;
+  }
+
   return (
     <Layout currentView={view} onNavigate={(v) => {
       setView(v);
@@ -237,6 +248,7 @@ export default function App() {
           onViewSchedule={() => setView('RECEIVABLES')}
           onOpenCalculator={() => setView('CALCULATOR')}
           onViewGoals={() => setView('GOALS')}
+          onUpgrade={() => setView('PAYMENT')}
           onViewAgenda={() => setView('AGENDA')}
         />
       )}

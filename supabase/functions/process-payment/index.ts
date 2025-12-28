@@ -2,31 +2,26 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { MercadoPagoConfig, Payment } from 'npm:mercadopago'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// You should set this in Supabase Secrets
-// supabase secrets set MP_ACCESS_TOKEN=APP_USR-...
-const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') || "APP_USR-5220193210096311-122719-be527becb762558ba471f0fcdaa4fdd5-2034012095"
+const MP_ACCESS_TOKEN = "APP_USR-5220193210096311-122719-be527becb762558ba471f0fcdaa4fdd5-2034012095"
+
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
-    // CORS Headers
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    }
-
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
 
     try {
-        // 1. Auth Check (Supabase Auth)
-        // Create a Supabase client with the Auth context of the logged in user
+        // 1. Auth Check
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
             { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
         )
 
-        // Get the user from the token
         const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
 
         if (authError || !user) {
@@ -39,7 +34,7 @@ serve(async (req) => {
         const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
         const payment = new Payment(client);
 
-        // 3. Create Payment Body
+        // 3. Create Payment
         const paymentBody: any = {
             transaction_amount: Number(formData.transaction_amount),
             description: "Assinatura Profissional - Control Frete",
@@ -56,17 +51,7 @@ serve(async (req) => {
             paymentBody.token = String(formData.token);
             paymentBody.installments = Number(formData.installments || 1);
             paymentBody.issuer_id = formData.issuer_id ? String(formData.issuer_id) : undefined;
-
-            // Identification required for Card payments
-            if (formData.payer && formData.payer.identification) {
-                paymentBody.payer.identification = {
-                    type: String(formData.payer.identification.type),
-                    number: String(formData.payer.identification.number)
-                }
-            }
         }
-
-        console.log("Creating payment with body:", JSON.stringify(paymentBody));
 
         const response = await payment.create({
             body: paymentBody,
@@ -78,25 +63,16 @@ serve(async (req) => {
 
         // 4. Handle Success
         if (status === "approved") {
-            // Use Service Role to write to profiles (bypassing RLS if necessary, or just ensuring stability)
             const supabaseAdmin = createClient(
                 Deno.env.get('SUPABASE_URL') ?? '',
                 Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
             )
 
-            const oneYearFromNow = new Date();
-            oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-
-            const { error: updateError } = await supabaseAdmin.from('profiles').update({
+            await supabaseAdmin.from('profiles').update({
                 is_premium: true,
-                premium_until: oneYearFromNow.toISOString(),
+                premium_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
                 last_payment_id: paymentId
             }).eq('id', user.id);
-
-            if (updateError) {
-                console.error("Error updating profile:", updateError);
-                throw new Error("Payment approved but failed to update profile");
-            }
 
             return new Response(JSON.stringify({ status: "success", paymentId }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -104,7 +80,7 @@ serve(async (req) => {
             })
         }
 
-        // 5. Handle Pending (Pix/Boleto)
+        // 5. Handle Pending (Pix)
         if (status === "pending" || status === "in_process") {
             const result: any = { status: "pending", paymentId, paymentMethod: String(formData.payment_method_id) };
 
@@ -128,7 +104,7 @@ serve(async (req) => {
         })
 
     } catch (error: any) {
-        console.error("Function error:", error);
+        console.error(error);
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,

@@ -106,7 +106,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           isPremium: false,
           referralCode: generateReferralCode(formData.name),
           referralBalance: 0,
-          referralCount: 0
+          referralCount: 0,
+          trialStart: new Date().toISOString(),
+          trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         };
 
         if (formData.referralCode) {
@@ -125,7 +127,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               referred_by: newUser.referredBy || null,
               referral_code: newUser.referralCode,
               referral_balance: 0,
-              referral_count: 0
+              referral_count: 0,
+              trial_start: newUser.trialStart,
+              trial_end: newUser.trialEnd
             }
           ]);
 
