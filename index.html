@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <title>Control Frete</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              roboto: ['Roboto', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                DEFAULT: '#0F2A44',
+                primary: '#0F2A44',
+                secondary: '#2F80ED',
+                hover: '#163a5d',
+                50: '#f0f5fa',
+                100: '#e1ebf5',
+                200: '#bcd3eb',
+                300: '#8bb3db',
+                400: '#5a90c5',
+                500: '#3873ac',
+                600: '#285b8c',
+                700: '#1F3A5F',
+                800: '#1d3452',
+                900: '#1b2d45',
+              },
+              base: {
+                bg: '#F4F6F8',
+                card: '#FFFFFF',
+                text: '#1F2933',
+                subtext: '#6B7280',
+              },
+              accent: {
+                success: '#27AE60',
+                warning: '#F2994A',
+                error: '#EB5757',
+              }
+            },
+            animation: {
+              fadeIn: 'fadeIn 0.3s ease-out',
+              slideUp: 'slideUp 0.3s ease-out',
+              'bounce-short': 'bounce-short 0.5s ease-in-out 1',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              'bounce-short': {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      html {
+        -webkit-tap-highlight-color: transparent;
+        scroll-behavior: smooth;
+      }
+      body {
+        background-color: #F4F6F8;
+        color: #1F2933;
+        font-family: 'Inter', sans-serif;
+      }
+      .dark body {
+        background-color: #0f172a;
+        color: #f8fafc;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/functions": "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
