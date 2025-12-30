@@ -77,7 +77,11 @@ export default function App() {
         ...data,
         email: data.email || '',
         createdAt: data.created_at || new Date().toISOString(),
-        isPremium: data.is_premium,
+        isPremium: data.is_premium || data.plano === 'pro',
+        plano: data.plano || 'free',
+        status_assinatura: data.status_assinatura || 'ativa',
+        stripe_customer_id: data.stripe_customer_id,
+        stripe_subscription_id: data.stripe_subscription_id,
         premiumUntil: data.premium_until,
         lastPaymentId: data.last_payment_id,
         trialStart: data.trial_start,
@@ -91,6 +95,17 @@ export default function App() {
     }
     setInitializing(false);
   };
+
+  // Handle successful payment redirection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      // Clear the query param
+      window.history.replaceState(null, '', window.location.pathname);
+      alert('Parabéns! Sua assinatura Pro foi ativada com sucesso.');
+      if (currentUser) fetchUserProfile(currentUser.id);
+    }
+  }, [currentUser?.id]);
 
   const fetchData = async () => {
     if (!currentUser) return;
@@ -232,6 +247,14 @@ export default function App() {
 
   return (
     <Layout currentView={view} onNavigate={(v) => {
+      // Pro Features Guard
+      const proFeatures: ViewState[] = ['AGENDA', 'GOALS'];
+      if (proFeatures.includes(v) && currentUser?.plano !== 'pro') {
+        alert('Esta é uma funcionalidade exclusiva do Plano Pro. Faça seu upgrade para acessar!');
+        setView('SETTINGS');
+        return;
+      }
+
       setView(v);
       if (v !== 'ADD_FREIGHT') setFormData(undefined);
       if (window.location.hash) window.history.replaceState(null, '', ' ');

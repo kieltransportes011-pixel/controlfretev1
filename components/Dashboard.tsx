@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Freight, Expense, DashboardStats, User } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
-import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap } from 'lucide-react';
+import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 
 interface DashboardProps {
@@ -113,53 +113,77 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
 
   return (
     <div className="pb-24 space-y-6">
-      {/* Trial Banner */}
-      {isTrial && (
-        <div className="bg-gradient-to-r from-brand to-brand-secondary p-4 rounded-2xl shadow-lg shadow-brand/20 text-white relative overflow-hidden animate-pulse-slow">
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-xl">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm uppercase tracking-tight">Plano Gratuito</h3>
-                <p className="text-[10px] font-medium opacity-90">Sua avaliação termina em <span className="font-black text-white">{daysRemaining} dias</span></p>
-              </div>
+      {/* Pro Badge / Upgrade Banner */}
+      {user.plano === 'pro' ? (
+        <div className="bg-gradient-to-r from-accent-success/10 to-accent-success/5 border border-accent-success/20 p-4 rounded-2xl flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="bg-accent-success text-white p-2 rounded-xl">
+              <Shield className="w-5 h-5" />
             </div>
-            <button
-              onClick={onUpgrade}
-              className="bg-white text-brand px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              Fazer Upgrade Agora
-            </button>
+            <div>
+              <h3 className="font-bold text-sm text-accent-success uppercase tracking-tight">Plano Profissional Ativo</h3>
+              <p className="text-[10px] text-accent-success/70 font-medium uppercase tracking-wider">Acesso Total Liberado</p>
+            </div>
           </div>
-          <Zap className="absolute -right-2 -bottom-2 w-16 h-16 opacity-10 rotate-12" />
+          <Sparkles className="w-5 h-5 text-accent-success animate-pulse" />
         </div>
+      ) : (
+        <>
+          {isTrial && (
+            <div className="bg-gradient-to-r from-brand to-brand-secondary p-4 rounded-2xl shadow-lg shadow-brand/20 text-white relative overflow-hidden animate-pulse-slow">
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-xl">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight">Plano Gratuito</h3>
+                    <p className="text-[10px] font-medium opacity-90">Avaliação termina em <span className="font-black text-white">{daysRemaining} dias</span></p>
+                  </div>
+                </div>
+                <button
+                  onClick={onUpgrade}
+                  className="bg-white text-brand px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-slate-50 transition-colors shadow-sm"
+                >
+                  Assinar Pro
+                </button>
+              </div>
+              <Zap className="absolute -right-2 -bottom-2 w-16 h-16 opacity-10 rotate-12" />
+            </div>
+          )}
+
+          {isExpired && (
+            <div className="bg-red-500 p-4 rounded-2xl shadow-lg shadow-red-500/20 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5" />
+                <div>
+                  <h3 className="font-bold text-sm uppercase">Acesso Bloqueado</h3>
+                  <p className="text-[10px] font-medium">Sua avaliação expirou. Assine o Pro para continuar.</p>
+                </div>
+              </div>
+              <button
+                onClick={onUpgrade}
+                className="bg-white text-red-500 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider"
+              >
+                Assinar Agora
+              </button>
+            </div>
+          )}
+        </>
       )}
 
-      {isExpired && !user.isPremium && (
-        <div className="bg-red-500 p-4 rounded-2xl shadow-lg shadow-red-500/20 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5" />
-            <div>
-              <h3 className="font-bold text-sm uppercase">Período Expirado</h3>
-              <p className="text-[10px] font-medium">Faça o upgrade para continuar usando.</p>
-            </div>
-          </div>
-          <button
-            onClick={onUpgrade}
-            className="bg-white text-red-500 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider"
-          >
-            Renovar Acesso
-          </button>
-        </div>
-      )}
       <header className="flex items-center justify-between py-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight uppercase">Visão Geral</h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs font-roboto uppercase tracking-widest mt-0.5">Gestão Financeira</p>
         </div>
         <div className="flex items-center gap-2">
+          {user.plano === 'pro' && (
+            <div className="bg-accent-success/10 text-accent-success px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-accent-success/20 flex items-center gap-1.5 ring-4 ring-accent-success/5">
+              <div className="w-1.5 h-1.5 bg-accent-success rounded-full animate-pulse" />
+              PRO
+            </div>
+          )}
           <div className="h-10 w-10 bg-brand/5 dark:bg-slate-800 rounded-xl flex items-center justify-center border border-slate-100 dark:border-slate-700">
             <Truck className="w-5 h-5 text-brand dark:text-brand-300" />
           </div>
@@ -314,6 +338,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             >
               <span className="font-roboto font-bold text-xs uppercase tracking-wider">Calculadora</span>
               <Calculator className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => {
+                if (user.plano !== 'pro') {
+                  alert('A Agenda é uma funcionalidade Pro!');
+                  onUpgrade();
+                  return;
+                }
+                setIsMenuOpen(false);
+                onViewAgenda();
+              }}
+              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-brand-secondary py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
+            >
+              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Agenda {user.plano !== 'pro' && '🔒'}</span>
+              <Calendar className="w-5 h-5" />
             </button>
             <button
               onClick={() => { setIsMenuOpen(false); onAddExpense(); }}

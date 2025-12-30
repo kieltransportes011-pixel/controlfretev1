@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { AppSettings, User, ViewState } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Clock, Gift } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Clock, Gift, Loader2 } from 'lucide-react';
+import { supabase } from '../supabase';
 
 interface SettingsProps {
   settings: AppSettings;
@@ -12,6 +13,23 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNavigate }) => {
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const handleStripeUpgrade = async () => {
+    setIsUpgrading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-checkout');
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      console.error('Error initiating stripe checkout:', err);
+      alert('Erro ao iniciar checkout. Tente novamente.');
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
   const [company, setCompany] = useState(settings.defaultCompanyPercent);
   const [driver, setDriver] = useState(settings.defaultDriverPercent);
   const [reserve, setReserve] = useState(settings.defaultReservePercent);
@@ -93,17 +111,17 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           <Crown className="w-4 h-4 text-brand" />
           Assinatura
         </h2>
-        <Card className={`relative overflow-hidden border-2 transition-all ${user.isPremium ? 'border-accent-success bg-green-50/50 dark:bg-green-900/10' : 'border-brand/20'}`}>
+        <Card className={`relative overflow-hidden border-2 transition-all ${user.plano === 'pro' ? 'border-accent-success bg-green-50/50 dark:bg-green-900/10' : 'border-brand/20'}`}>
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="font-black text-slate-800 dark:text-white uppercase text-sm">
-                Plano {user.isPremium ? 'Profissional' : 'Gratuito'}
+                Plano {user.plano === 'pro' ? 'Profissional' : 'Gratuito'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {user.isPremium ? 'Acesso total liberado' : 'Período de teste limitado'}
+                {user.plano === 'pro' ? `Status: ${user.status_assinatura === 'ativa' ? 'Ativa' : 'Inadimplente'}` : 'Upgrade para liberar todas as funções'}
               </p>
             </div>
-            {user.isPremium ? (
+            {user.plano === 'pro' ? (
               <div className="bg-accent-success text-white p-2 rounded-full shadow-lg shadow-accent-success/30">
                 <Shield className="w-5 h-5" />
               </div>
@@ -112,14 +130,21 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
             )}
           </div>
 
-          {!user.isPremium && (
+          {user.plano !== 'pro' && (
             <div className="space-y-4">
               <button
-                onClick={() => onNavigate('PAYMENT')}
-                className="w-full bg-brand text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 transition-all active:scale-95 shadow-lg shadow-brand/20"
+                onClick={handleStripeUpgrade}
+                disabled={isUpgrading}
+                className="w-full bg-brand text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 transition-all active:scale-95 shadow-lg shadow-brand/20 disabled:opacity-50"
               >
-                Fazer Upgrade Agora
-                <ArrowRight className="w-4 h-4" />
+                {isUpgrading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    Assinar Plano Pro
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           )}
