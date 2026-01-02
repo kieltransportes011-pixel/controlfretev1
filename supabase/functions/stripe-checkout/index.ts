@@ -84,9 +84,9 @@ serve(async (req) => {
                             name: 'Plano Pro - Control Frete',
                             description: 'Acesso total a todas as funcionalidades do sistema.',
                         },
-                        unit_amount: 4990, // R$ 49,90
+                        unit_amount: 4999, // R$ 49,99
                         recurring: {
-                            interval: 'month',
+                            interval: 'year',
                         },
                     },
                     quantity: 1,
