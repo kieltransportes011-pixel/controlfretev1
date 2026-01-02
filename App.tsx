@@ -251,7 +251,7 @@ export default function App() {
       const proFeatures: ViewState[] = ['AGENDA', 'GOALS'];
       if (proFeatures.includes(v) && currentUser?.plano !== 'pro') {
         alert('Esta é uma funcionalidade exclusiva do Plano Pro. Faça seu upgrade para acessar!');
-        setView('SETTINGS');
+        setView('PAYMENT');
         return;
       }
 
