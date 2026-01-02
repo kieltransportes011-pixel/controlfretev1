@@ -5,6 +5,8 @@ import { Button } from './Button';
 import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Clock, Gift, Loader2 } from 'lucide-react';
 import { supabase } from '../supabase';
 
+import { useSubscription } from '../hooks/useSubscription';
+
 interface SettingsProps {
   settings: AppSettings;
   user: User;
@@ -14,6 +16,7 @@ interface SettingsProps {
 
 export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNavigate }) => {
   /* Removed handleStripeUpgrade */
+  const { isTrial, isActive, daysRemaining } = useSubscription(user);
   const [company, setCompany] = useState(settings.defaultCompanyPercent);
   const [driver, setDriver] = useState(settings.defaultDriverPercent);
   const [reserve, setReserve] = useState(settings.defaultReservePercent);
@@ -95,30 +98,46 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           <Crown className="w-4 h-4 text-brand" />
           Assinatura
         </h2>
-        <Card className={`relative overflow-hidden border-2 transition-all ${user.plano === 'pro' ? 'border-accent-success bg-green-50/50 dark:bg-green-900/10' : 'border-brand/20'}`}>
+        <Card className={`relative overflow-hidden border-2 transition-all ${isActive ? 'border-accent-success bg-green-50/50 dark:bg-green-900/10' : 'border-brand/20'}`}>
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="font-black text-slate-800 dark:text-white uppercase text-sm">
-                Plano {user.plano === 'pro' ? 'Profissional' : 'Gratuito'}
+                Plano {user.plano === 'pro' ? 'Profissional' : (isTrial ? 'Período de Teste' : 'Gratuito')}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {user.plano === 'pro' ? `Status: ${user.status_assinatura === 'ativa' ? 'Ativa' : 'Inadimplente'}` : 'Upgrade para liberar todas as funções'}
+                {isActive
+                  ? (isTrial ? `Status: Ativo (${daysRemaining} dias restantes)` : `Status: ${user.status_assinatura === 'ativa' ? 'Ativa' : 'Inadimplente'}`)
+                  : 'Upgrade para liberar todas as funções'}
               </p>
             </div>
-            {user.plano === 'pro' ? (
-              <div className="bg-accent-success text-white p-2 rounded-full shadow-lg shadow-accent-success/30">
-                <Shield className="w-5 h-5" />
+            {isActive ? (
+              <div className={`p-2 rounded-full shadow-lg ${isTrial ? 'bg-brand text-white' : 'bg-accent-success text-white shadow-accent-success/30'}`}>
+                {isTrial ? <Zap className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
               </div>
             ) : (
               <Zap className="w-6 h-6 text-brand animate-pulse" />
             )}
           </div>
 
-          {user.plano !== 'pro' && (
+          {!isActive && (
             <div className="space-y-4">
               <button
                 onClick={() => onNavigate('PAYMENT')}
                 className="w-full bg-brand text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 transition-all active:scale-95 shadow-lg shadow-brand/20"
+              >
+                <>
+                  Assinar Plano Pro
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              </button>
+            </div>
+          )}
+
+          {isTrial && (
+            <div className="space-y-4">
+              <button
+                onClick={() => onNavigate('PAYMENT')}
+                className="w-full bg-white text-brand border border-brand/20 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
               >
                 <>
                   Assinar Plano Pro

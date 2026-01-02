@@ -226,12 +226,7 @@ export default function App() {
     return <Auth onLogin={setCurrentUser} />;
   }
 
-  if (isExpired && !currentUser.isPremium) {
-    return <Paywall user={currentUser} onPaymentSuccess={() => {
-      handleUpdateUser({ ...currentUser, isPremium: true });
-      setView('DASHBOARD');
-    }} />;
-  }
+  // Blocking Paywall removed to comply with "No forced redirect" rule.
 
   if (view === 'PAYMENT') {
     console.log("App: Switching to PAYMENT view", { hasUser: !!currentUser });
@@ -249,8 +244,10 @@ export default function App() {
     <Layout currentView={view} onNavigate={(v) => {
       // Pro Features Guard
       const proFeatures: ViewState[] = ['AGENDA', 'GOALS'];
-      if (proFeatures.includes(v) && currentUser?.plano !== 'pro') {
-        alert('Esta é uma funcionalidade exclusiva do Plano Pro. Faça seu upgrade para acessar!');
+      const hasProAccess = isActive; // isActive is true if Pro OR Trial
+
+      if (proFeatures.includes(v) && !hasProAccess) {
+        alert('Seu período de teste acabou. Assine o Plano Pro para continuar acessando este recurso!');
         setView('PAYMENT');
         return;
       }
