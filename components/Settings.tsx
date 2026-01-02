@@ -13,23 +13,7 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNavigate }) => {
-  const [isUpgrading, setIsUpgrading] = useState(false);
-
-  const handleStripeUpgrade = async () => {
-    setIsUpgrading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('stripe-checkout');
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: any) {
-      console.error('Error initiating stripe checkout:', err);
-      alert('Erro ao iniciar checkout. Tente novamente.');
-    } finally {
-      setIsUpgrading(false);
-    }
-  };
+  /* Removed handleStripeUpgrade */
   const [company, setCompany] = useState(settings.defaultCompanyPercent);
   const [driver, setDriver] = useState(settings.defaultDriverPercent);
   const [reserve, setReserve] = useState(settings.defaultReservePercent);
@@ -133,18 +117,13 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           {user.plano !== 'pro' && (
             <div className="space-y-4">
               <button
-                onClick={handleStripeUpgrade}
-                disabled={isUpgrading}
-                className="w-full bg-brand text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 transition-all active:scale-95 shadow-lg shadow-brand/20 disabled:opacity-50"
+                onClick={() => onNavigate('PAYMENT')}
+                className="w-full bg-brand text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 transition-all active:scale-95 shadow-lg shadow-brand/20"
               >
-                {isUpgrading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    Assinar Plano Pro
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                <>
+                  Assinar Plano Pro
+                  <ArrowRight className="w-4 h-4" />
+                </>
               </button>
             </div>
           )}

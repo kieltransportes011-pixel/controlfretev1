@@ -80,19 +80,15 @@ serve(async (req) => {
             customer: customerId,
             line_items: [
                 {
-                    // You should replace this with your actual Price ID from Stripe Dashboard
-                    // For now, I'll use a placeholder or create a dynamic one if possible, 
-                    // but usually it's better to have a fixed Price ID.
-                    // Since I can't know the exact Price ID, I'll use a dummy one or instructions for the user.
                     price_data: {
                         currency: 'brl',
                         product_data: {
                             name: 'Plano Pro - Control Frete',
                             description: 'Acesso total a todas as funcionalidades do sistema.',
                         },
-                        unit_amount: 4999, // R$ 49,99
+                        unit_amount: 2990, // R$ 29,90
                         recurring: {
-                            interval: 'year',
+                            interval: 'month',
                         },
                     },
                     quantity: 1,
