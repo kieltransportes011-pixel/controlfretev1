@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useSupabaseError } from '../hooks/useSupabaseError';
 import { User } from '../types';
 import { Button } from './Button';
 import { validateCPF, maskCPF, generateReferralCode } from '../utils';
 import { Truck, Mail, Lock, User as UserIcon, Eye, EyeOff, FileText, ArrowRight, Loader2, Ticket, CheckCircle, ChevronLeft } from 'lucide-react';
 import { supabase } from '../supabase';
+import { useSupabaseError } from '../hooks/useSupabaseError';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -14,7 +16,8 @@ type AuthView = 'LOGIN_OFFER' | 'REGISTER_FLOW' | 'FORGOT' | 'REGISTER_SUCCESS';
 export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [view, setView] = useState<AuthView>('LOGIN_OFFER');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const handleSupabaseError = useSupabaseError(setError);
   const [showPassword, setShowPassword] = useState(false);
   const [registeredUser, setRegisteredUser] = useState<User | null>(null);
 
@@ -49,7 +52,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         password: formData.password
       });
 
-      if (error) throw error;
+      handleSupabaseError(error);
 
       if (data.user) {
         const { data: profile } = await supabase
@@ -72,8 +75,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         }
       }
     } catch (err: any) {
-      console.error(err);
-      setError('E-mail ou senha incorretos.');
+      handleSupabaseError(err);
     } finally {
       setLoading(false);
     }
