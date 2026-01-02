@@ -83,12 +83,12 @@ serve(async (req) => {
                     price_data: {
                         currency: 'brl',
                         product_data: {
-                            name: 'Plano Pro - Control Frete',
-                            description: 'Acesso total a todas as funcionalidades do sistema.',
+                            name: 'Plano Pro - Control Frete (Anual)',
+                            description: 'Acesso total: Histórico ilimitado, Metas, Relatórios e mais.',
                         },
-                        unit_amount: 2990, // R$ 29,90
+                        unit_amount: 4999, // R$ 49,99
                         recurring: {
-                            interval: 'month',
+                            interval: 'year',
                         },
                     },
                     quantity: 1,

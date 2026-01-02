@@ -5,7 +5,7 @@ import { Button } from './Button';
 import { validateCPF, maskCPF, generateReferralCode } from '../utils';
 import { Truck, Mail, Lock, User as UserIcon, Eye, EyeOff, FileText, ArrowRight, Loader2, Ticket, CheckCircle, ChevronLeft } from 'lucide-react';
 import { supabase } from '../supabase';
-import { useSupabaseError } from '../hooks/useSupabaseError';
+
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -221,10 +221,12 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     return (
       <div className="min-h-screen bg-base-bg dark:bg-slate-950 flex flex-col justify-center p-6 animate-fadeIn">
         <div className="max-w-md mx-auto w-full space-y-10">
-          <header className="text-center space-y-3">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand rounded-2xl shadow-xl shadow-brand/20 mb-4">
-              <Truck className="w-8 h-8 text-white" />
-            </div>
+          <header className="text-center space-y-3 flex flex-col items-center">
+            <img
+              src="/logo.png"
+              alt="Control Frete"
+              className="h-20 w-auto object-contain mb-2 dark:brightness-110 drop-shadow-xl"
+            />
             <h1 className="text-3xl font-bold text-base-text dark:text-white tracking-tight uppercase">CONTROL FRETE</h1>
             <p className="text-base-subtext dark:text-slate-400 text-[10px] font-roboto font-bold uppercase tracking-[0.2em]">Gestão Profissional para Autônomos</p>
           </header>

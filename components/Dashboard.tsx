@@ -191,7 +191,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       </header>
 
       {/* Main Stats Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-brand text-white border-none shadow-lg shadow-brand/20 relative overflow-hidden">
           <div className="flex items-center gap-2 mb-2">
             <Calendar className="w-3.5 h-3.5 text-blue-200" />
@@ -275,7 +275,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       {/* Cash Flow Section */}
       <div className="space-y-3">
         <h2 className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Saldo Líquido (Disponível)</h2>
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <Card className="flex items-center justify-between py-3.5 border-slate-100">
             <div className="flex items-center gap-3">
               <div className="bg-slate-50 dark:bg-slate-700 p-2 rounded-lg">
@@ -290,7 +290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             </div>
           </Card>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:contents">
             <Card className="flex flex-col py-3.5 border-slate-100">
               <p className="text-[10px] text-slate-500 dark:text-slate-400 font-roboto font-bold uppercase mb-1">Motorista</p>
               <p className={`text-lg font-bold tabular-nums ${stats.totalDriver < 0 ? 'text-accent-error' : 'text-slate-800 dark:text-white'}`}>
