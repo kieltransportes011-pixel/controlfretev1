@@ -26,7 +26,13 @@ serve(async (req) => {
         });
 
         // Initialize Supabase Client
-        const authHeader = req.headers.get('Authorization')!;
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+            return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 401
+            });
+        }
         const supabaseClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
             global: { headers: { Authorization: authHeader } }
         });
