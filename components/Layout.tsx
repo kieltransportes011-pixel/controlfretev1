@@ -17,7 +17,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
     <div className="min-h-screen bg-base-bg dark:bg-slate-900 text-base-text dark:text-slate-100 font-sans w-full max-w-screen-xl mx-auto relative shadow-2xl transition-colors duration-200">
       <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-center transition-colors duration-200">
         <img
-          src="/logo.png"
+          src="/logo-control-frete.png"
           alt="Control Frete"
           className="h-10 w-auto max-w-[180px] object-contain dark:brightness-110"
         />

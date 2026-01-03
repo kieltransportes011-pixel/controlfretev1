@@ -60,7 +60,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-2">
                             <img
-                                src="/logo.png"
+                                src="/logo-control-frete.png"
                                 alt="Control Frete"
                                 className="h-10 w-auto object-contain"
                             />
@@ -279,7 +279,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <div className="flex items-center justify-center mb-4">
                         <img
-                            src="/logo.png"
+                            src="/logo-control-frete.png"
                             alt="Control Frete"
                             className="h-8 w-auto object-contain"
                         />
