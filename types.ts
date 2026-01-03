@@ -62,6 +62,8 @@ export interface User {
   referredBy?: string;
   referralBalance?: number;
   referralCount?: number;
+  profile_photo_url?: string;
+  profile_photo_changes_used?: number;
   premiumUntil?: string; // ISO Date string
   lastPaymentId?: string;
   trialStart?: string; // ISO Date string

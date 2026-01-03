@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AppSettings, User, ViewState } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Clock, Gift, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Clock, Gift, Loader2, Camera, User as UserIcon } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -12,9 +12,10 @@ interface SettingsProps {
   user: User;
   onSave: (newSettings: AppSettings) => void;
   onNavigate: (view: ViewState) => void;
+  onUpdateUser?: (user: User) => Promise<void>;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNavigate }) => {
+export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNavigate, onUpdateUser }) => {
   /* Removed handleStripeUpgrade */
   const { isTrial, isActive, daysRemaining } = useSubscription(user);
   const [company, setCompany] = useState(settings.defaultCompanyPercent);
@@ -33,6 +34,126 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   const [issuerCity, setIssuerCity] = useState(settings.issuerAddressCity || '');
   const [issuerState, setIssuerState] = useState(settings.issuerAddressState || '');
   const [issuerZip, setIssuerZip] = useState(settings.issuerAddressZip || '');
+
+  // Profile Photo Logic
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const changesUsed = user.profile_photo_changes_used || 0;
+  const freeChangesRemaining = Math.max(0, 3 - changesUsed);
+  const isPaidChange = freeChangesRemaining === 0;
+
+  const processImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const size = 300;
+        canvas.width = size;
+        canvas.height = size;
+        const minDim = Math.min(img.width, img.height);
+        const sx = (img.width - minDim) / 2;
+        const sy = (img.height - minDim) / 2;
+        if (ctx) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, size, size);
+          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+        }
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Canvas blob error'));
+        }, 'image/webp', 0.85);
+      };
+      img.onerror = reject;
+    });
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      alert('Formato inválido. Use JPG ou PNG.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Arquivo muito grande. Máximo 2MB.');
+      return;
+    }
+
+    // Check dimensions
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = async () => {
+      if (img.width < 150 || img.height < 150) {
+        alert('A imagem deve ter pelo menos 150x150 pixels.');
+        return;
+      }
+      try {
+        const processed = await processImage(file);
+        setPreviewBlob(processed);
+        setPreviewUrl(URL.createObjectURL(processed));
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao processar imagem.');
+      }
+    };
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!previewBlob) return;
+
+    const cost = isPaidChange ? 50 : 0;
+    if (cost > 0) {
+      if ((user.referralBalance || 0) < cost) {
+        alert('Saldo de CF insuficiente para alterar a foto de perfil.');
+        handleCancelPreview();
+        return;
+      }
+    }
+
+    try {
+      setUploading(true);
+      const filePath = `avatars/${user.id}.webp`;
+      const processedFile = new File([previewBlob], 'avatar.webp', { type: 'image/webp' });
+
+      // Upload
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, processedFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      // RPC
+      const { error: rpcError } = await supabase.rpc('update_profile_avatar', {
+        new_photo_url: `${publicUrl}?t=${Date.now()}`,
+        cost: cost
+      });
+
+      if (rpcError) throw rpcError;
+
+      if (onUpdateUser) onUpdateUser(user);
+      handleCancelPreview();
+      alert('Foto de perfil atualizada com sucesso!');
+    } catch (error: any) {
+      console.error(error);
+      alert('Erro ao salvar foto: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCancelPreview = () => {
+    setPreviewUrl(null);
+    setPreviewBlob(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const [isSaved, setIsSaved] = useState(false);
 
@@ -70,6 +191,94 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           <p className="text-slate-500 dark:text-slate-400 text-sm">Preferências do usuário</p>
         </div>
       </header>
+
+      {/* Profile Photo Section */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <UserIcon className="w-4 h-4 text-brand" />
+          Foto de Perfil
+        </h2>
+        <Card className="flex flex-col sm:flex-row items-center gap-6 p-6">
+          <div className="relative group">
+            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-800 shadow-lg">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              ) : user.profile_photo_url ? (
+                <img src={user.profile_photo_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600">
+                  <UserIcon className="w-12 h-12" />
+                </div>
+              )}
+            </div>
+            {uploading && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full z-10">
+                <Loader2 className="w-8 h-8 text-white animate-spin" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 text-center sm:text-left space-y-3 w-full">
+            <div>
+              <h3 className="font-bold text-lg text-base-text dark:text-white mb-1">
+                {previewUrl ? 'Confirmar Alteração?' : 'Sua Foto de Perfil'}
+              </h3>
+              {!previewUrl && (
+                <p className={`text-xs font-medium px-2 py-1 rounded inline-block ${freeChangesRemaining > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                  {freeChangesRemaining > 0
+                    ? `${freeChangesRemaining} de 3 trocas gratuitas`
+                    : 'Trocas gratuitas esgotadas'
+                  }
+                </p>
+              )}
+            </div>
+
+            {previewUrl ? (
+              <div className="flex items-center justify-center sm:justify-start gap-3">
+                <button
+                  onClick={handleConfirmUpload}
+                  disabled={uploading}
+                  className="flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-600 transition-colors"
+                >
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  {freeChangesRemaining > 0 ? 'Salvar (Grátis)' : 'Salvar (50 CF)'}
+                </button>
+                <button
+                  onClick={handleCancelPreview}
+                  disabled={uploading}
+                  className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-200 transition-colors dark:bg-slate-800 dark:text-slate-400"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/jpeg, image/png"
+                  onChange={handleFileSelect}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full sm:w-auto"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  {isPaidChange ? 'Alterar Foto (50 CF)' : 'Alterar Foto'}
+                </Button>
+                {isPaidChange && (
+                  <p className="text-[10px] text-slate-400 mt-2">
+                    Você atingiu o limite de trocas. Será cobrado 50 CF.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+      </section>
 
       {/* Referral Link (Indique e Ganhe) - Integrado aqui */}
       <section className="space-y-3">

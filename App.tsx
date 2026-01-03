@@ -90,7 +90,9 @@ export default function App() {
         trialEnd: data.trial_end,
         referralCode: data.referral_code,
         referralBalance: data.referral_balance || 0,
-        referralCount: data.referral_count || 0
+        referralCount: data.referral_count || 0,
+        profile_photo_url: data.profile_photo_url,
+        profile_photo_changes_used: data.profile_photo_changes_used || 0
       });
     } else if (error) {
       console.error("Error fetching profile", error);
@@ -443,6 +445,10 @@ export default function App() {
               });
             }}
             onNavigate={setView}
+            onUpdateUser={async (u) => {
+              // We refresh profile to get latest data from DB (changes_used, url)
+              if (currentUser) fetchUserProfile(currentUser.id);
+            }}
           />
           <div className="px-4 pb-20">
             <button
