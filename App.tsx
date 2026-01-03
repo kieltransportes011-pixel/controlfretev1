@@ -17,6 +17,7 @@ import { supabase } from './supabase';
 import { Loader2, ShieldAlert, Cloud } from 'lucide-react';
 import { useSubscription } from './hooks/useSubscription';
 import { WorkCalendar } from './components/WorkCalendar';
+import { LandingPage } from './components/LandingPage';
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
   defaultCompanyPercent: 40,
@@ -36,6 +37,7 @@ export default function App() {
   const [permissionError, setPermissionError] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [showLanding, setShowLanding] = useState(true);
 
   // Subscription Hook
   const { isActive, isExpired, daysRemaining, isTrial } = useSubscription(currentUser);
@@ -201,6 +203,7 @@ export default function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
+    setShowLanding(true);
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
@@ -223,7 +226,10 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <Auth onLogin={setCurrentUser} />;
+    if (showLanding) {
+      return <LandingPage onLogin={() => setShowLanding(false)} />;
+    }
+    return <Auth onLogin={setCurrentUser} onBack={() => setShowLanding(true)} />;
   }
 
   // Blocking Paywall removed to comply with "No forced redirect" rule.

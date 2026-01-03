@@ -9,11 +9,12 @@ import { supabase } from '../supabase';
 
 interface AuthProps {
   onLogin: (user: User) => void;
+  onBack?: () => void;
 }
 
 type AuthView = 'LOGIN_OFFER' | 'REGISTER_FLOW' | 'FORGOT' | 'REGISTER_SUCCESS';
 
-export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
+export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
   const [view, setView] = useState<AuthView>('LOGIN_OFFER');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -221,6 +222,16 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     return (
       <div className="min-h-screen bg-base-bg dark:bg-slate-950 flex flex-col justify-center p-6 animate-fadeIn">
         <div className="max-w-md mx-auto w-full space-y-10">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="absolute top-6 left-6 flex items-center text-slate-500 hover:text-brand font-medium text-sm transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 mr-1" />
+              Voltar
+            </button>
+          )}
+
           <header className="text-center space-y-3 flex flex-col items-center">
             <img
               src="/logo.png"
