@@ -69,7 +69,7 @@ export default function App() {
 
   const fetchUserProfile = async (uid: string) => {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('users_data')
       .select('*')
       .eq('id', uid)
       .single();
