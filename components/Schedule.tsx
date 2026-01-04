@@ -212,8 +212,9 @@ export const Schedule: React.FC<ScheduleProps> = ({
             />
           </div>
           {activeTab === 'PAYABLES' && (
-            <Button onClick={() => setShowAddBillModal(true)} className="aspect-square p-0 w-[46px] flex items-center justify-center rounded-2xl">
-              <Plus className="w-5 h-5" />
+            <Button onClick={() => setShowAddBillModal(true)} className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 transition-all shrink-0">
+              <Plus className="w-4 h-4" />
+              <span>Nova Conta</span>
             </Button>
           )}
         </div>
