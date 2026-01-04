@@ -72,7 +72,7 @@ serve(async (req) => {
                     description: 'Acesso completo a todos os recursos por 1 ano',
                     quantity: 1,
                     currency_id: 'BRL',
-                    unit_price: 1.00
+                    unit_price: 2.00
                 }
             ],
             payer: {
