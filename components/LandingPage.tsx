@@ -1,10 +1,10 @@
 
+
 import React from 'react';
 import {
     Truck,
     TrendingUp,
     Target,
-    Calculator,
     Calendar,
     Shield,
     Smartphone,
@@ -14,7 +14,8 @@ import {
     X,
     ChevronRight,
     Star,
-    Zap
+    Zap,
+    Layout
 } from 'lucide-react';
 import { Button } from './Button';
 
@@ -33,15 +34,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
         }
     };
 
-    const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all">
-            <div className="w-12 h-12 bg-brand/10 dark:bg-slate-700 rounded-xl flex items-center justify-center mb-4 text-brand dark:text-brand-300">
-                <Icon className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">{title}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{description}</p>
-        </div>
-    );
+
 
     const BenefitItem = ({ text }: { text: string }) => (
         <div className="flex items-start gap-3">
@@ -59,17 +52,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-2">
-                            <img
-                                src="/logo-control-frete.png"
-                                alt="Control Frete"
-                                className="h-10 w-auto object-contain"
-                            />
+                            <span className="text-xl font-black text-brand italic">CONTROL FRETE</span>
                         </div>
 
                         <div className="hidden md:flex items-center gap-8">
-                            <button onClick={() => scrollToSection('features')} className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand-300 transition-colors">Funcionalidades</button>
+                            <button onClick={() => scrollToSection('features')} className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand-300 transition-colors">Como Funciona</button>
                             <button onClick={() => scrollToSection('benefits')} className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand-300 transition-colors">Benefícios</button>
-                            <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand-300 transition-colors">Planos</button>
                             <button
                                 onClick={onLogin}
                                 className="bg-brand text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-brand-hover transition-colors shadow-lg shadow-brand/20"
@@ -88,9 +76,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 {isMenuOpen && (
                     <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 animate-slideDown">
                         <div className="px-4 pt-2 pb-6 space-y-4">
-                            <button onClick={() => scrollToSection('features')} className="block w-full text-left py-2 text-slate-600 dark:text-slate-300 font-medium">Funcionalidades</button>
+                            <button onClick={() => scrollToSection('features')} className="block w-full text-left py-2 text-slate-600 dark:text-slate-300 font-medium">Como Funciona</button>
                             <button onClick={() => scrollToSection('benefits')} className="block w-full text-left py-2 text-slate-600 dark:text-slate-300 font-medium">Benefícios</button>
-                            <button onClick={() => scrollToSection('pricing')} className="block w-full text-left py-2 text-slate-600 dark:text-slate-300 font-medium">Planos</button>
                             <Button fullWidth onClick={onLogin} className="mt-4">
                                 Acessar Sistema
                             </Button>
@@ -101,31 +88,50 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
             {/* Hero Section */}
             <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative overflow-hidden">
-                <div className="relative z-10 text-center max-w-4xl mx-auto">
-                    <div className="inline-flex items-center gap-2 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-300 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest mb-6 animate-fadeIn">
-                        <Star className="w-3 h-3" />
-                        <span>Gestão Profissional de Verdade</span>
+                <div className="grid lg:grid-cols-2 gap-12 items-center">
+                    <div className="relative z-10 text-center lg:text-left">
+                        <div className="inline-flex items-center gap-2 bg-brand/10 dark:bg-brand/20 text-brand dark:text-brand-300 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest mb-6 animate-fadeIn">
+                            <Star className="w-3 h-3" />
+                            <span>Gestão Profissional para Autônomos</span>
+                        </div>
+                        <h1 className="text-4xl sm:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-6 leading-tight animate-slideUp">
+                            Controle total do seu transporte na palma da mão
+                        </h1>
+                        <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed animate-slideUp delay-100">
+                            Abandone as anotações em papel. Gerencie seus fretes, acompanhe gastos e atinja suas metas de faturamento com o Control Frete.
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 animate-slideUp delay-200">
+                            <button
+                                onClick={onLogin}
+                                className="w-full sm:w-auto px-8 py-4 bg-brand text-white rounded-2xl font-bold text-lg shadow-xl shadow-brand/30 hover:scale-105 transition-transform flex items-center justify-center gap-2"
+                            >
+                                Começar Agora Grátis
+                                <ArrowRight className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => scrollToSection('features')}
+                                className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-bold text-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                            >
+                                Como Funciona
+                            </button>
+                        </div>
                     </div>
-                    <h1 className="text-4xl sm:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-6 leading-tight animate-slideUp">
-                        Controle total do seu transporte na palma da mão
-                    </h1>
-                    <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed animate-slideUp delay-100">
-                        Abandone as anotações em papel. O Control Frete é a ferramenta definitiva para motoristas e transportadoras gerenciarem ganhos, despesas e metas com precisão.
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slideUp delay-200">
-                        <button
-                            onClick={onLogin}
-                            className="w-full sm:w-auto px-8 py-4 bg-brand text-white rounded-2xl font-bold text-lg shadow-xl shadow-brand/30 hover:scale-105 transition-transform flex items-center justify-center gap-2"
-                        >
-                            Começar Agora Grátis
-                            <ArrowRight className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => scrollToSection('features')}
-                            className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-bold text-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                        >
-                            Saiba Mais
-                        </button>
+
+                    {/* Hero Phone Mockup */}
+                    <div className="relative z-10 flex justify-center lg:justify-end animate-slideUp delay-300">
+                        <div className="relative rounded-[2.5rem] border-[8px] border-slate-900 overflow-hidden shadow-2xl max-w-[300px]">
+                            <img src="/assets/landing/print-2.jpg" alt="Dashboard Control Frete" className="w-full h-auto" />
+                        </div>
+                        {/* Floating Badge */}
+                        <div className="absolute -bottom-6 -left-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                <TrendingUp className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500 font-medium">Faturamento Mensal</p>
+                                <p className="text-lg font-bold text-slate-900 dark:text-white">+R$ 4.000,00</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -133,71 +139,83 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand/5 dark:bg-brand/10 rounded-full blur-3xl -z-10" />
             </section>
 
-            {/* Social Proof */}
-            <section className="px-4 pb-20 max-w-6xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                        "Hoje consigo saber exatamente quanto lucro em cada frete.",
-                        "Aplicativo simples, sem complicação.",
-                        "Facilitou muito o controle dos meus gastos.",
-                        "Agora tenho mais organização e menos prejuízo."
-                    ].map((text, i) => (
-                        <div key={i} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
-                            <div className="flex gap-1 text-brand-secondary mb-3">
-                                {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-3 h-3 fill-current" />)}
-                            </div>
-                            <p className="text-slate-700 dark:text-slate-300 font-medium text-sm mb-4 leading-relaxed">"{text}"</p>
-                            <div className="flex items-center gap-2 opacity-70">
-                                <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                    {['A', 'R', 'C', 'M'][i]}
-                                </div>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Parceiro Verificado</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Features Grid */}
+            {/* Como Funciona Section */}
             <section id="features" className="py-20 bg-white dark:bg-slate-950/50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-brand font-bold uppercase tracking-widest text-sm mb-3">Funcionalidades</h2>
-                        <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">Tudo o que você precisa</h3>
+                    <div className="text-center mb-20">
+                        <h2 className="text-brand font-bold uppercase tracking-widest text-sm mb-3">Como Funciona</h2>
+                        <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">Por dentro do Control Frete</h3>
+                        <p className="mt-4 text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                            Uma interface simples e poderosa, desenhada para quem vive na estrada.
+                        </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <FeatureCard
-                            icon={TrendingUp}
-                            title="Gestão Financeira"
-                            description="Acompanhe suas receitas, despesas e lucro real em tempo real com gráficos intuitivos."
-                        />
-                        <FeatureCard
-                            icon={Truck}
-                            title="Controle de Fretes"
-                            description="Registre cada viagem, valores a receber e status de pagamento de forma simplificada."
-                        />
-                        <FeatureCard
-                            icon={Target}
-                            title="Metas Mensais"
-                            description="Defina objetivos de faturamento e acompanhe seu progresso dia a dia para alcançar o sucesso."
-                        />
-                        <FeatureCard
-                            icon={Calendar}
-                            title="Agenda Inteligente"
-                            description="Organize suas viagens e compromissos em um calendário integrado visualmente."
-                        />
-                        <FeatureCard
-                            icon={Calculator}
-                            title="Calculadora de Fretes"
-                            description="Nunca mais tenha prejuízo. Calcule exatamente quanto cobrar baseando-se em seus custos."
-                        />
-                        <FeatureCard
-                            icon={Smartphone}
-                            title="100% Mobile"
-                            description="Acesse de qualquer lugar, direto do seu celular, tablet ou computador."
-                        />
+                    {/* Feature 1: Histórico */}
+                    <div className="flex flex-col md:flex-row items-center gap-12 mb-24">
+                        <div className="flex-1 order-2 md:order-1">
+                            <div className="relative rounded-[2rem] border-4 border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden max-w-sm mx-auto">
+                                <img src="/assets/landing/print-0.jpg" alt="Histórico de Fretes" className="w-full h-auto" />
+                            </div>
+                        </div>
+                        <div className="flex-1 order-1 md:order-2">
+                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-6">
+                                <Layout className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">Histórico Detalhado</h3>
+                            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                                Tenha o extrato completo das suas viagens. Filtre por período (semana, mês, ano) e visualize claramente o que é lucro, custo e saldo pendente.
+                            </p>
+                            <ul className="space-y-3">
+                                <BenefitItem text="Separação de valor Motorista/Empresa" />
+                                <BenefitItem text="Identificação visual de status (Pago/Pendente)" />
+                            </ul>
+                        </div>
                     </div>
+
+                    {/* Feature 2: Finanças */}
+                    <div className="flex flex-col md:flex-row items-center gap-12 mb-24">
+                        <div className="flex-1">
+                            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 mb-6">
+                                <Smartphone className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">Controle de Recebíveis</h3>
+                            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                                Não perca dinheiro esquecendo de cobrar. O sistema mostra exatamente quem te deve, com datas de vencimento e valores atualizados.
+                            </p>
+                            <ul className="space-y-3">
+                                <BenefitItem text="Total a receber em destaque" />
+                                <BenefitItem text="Alertas de vencimento" />
+                            </ul>
+                        </div>
+                        <div className="flex-1">
+                            <div className="relative rounded-[2rem] border-4 border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden max-w-sm mx-auto">
+                                <img src="/assets/landing/print-3.jpg" alt="Finanças e Recebíveis" className="w-full h-auto" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Feature 3: Configurações */}
+                    <div className="flex flex-col md:flex-row items-center gap-12">
+                        <div className="flex-1 order-2 md:order-1">
+                            <div className="relative rounded-[2rem] border-4 border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden max-w-sm mx-auto">
+                                <img src="/assets/landing/print-4.jpg" alt="Configurações" className="w-full h-auto" />
+                            </div>
+                        </div>
+                        <div className="flex-1 order-1 md:order-2">
+                            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-6">
+                                <Target className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">Personalização Total</h3>
+                            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                                Configure o aplicativo conforme sua necessidade. Defina porcentagens padrão para empresa/motorista, escolha entre tema Claro ou Escuro e gerencie sua assinatura.
+                            </p>
+                            <ul className="space-y-3">
+                                <BenefitItem text="Modo Claro e Escuro" />
+                                <BenefitItem text="Definição de comissões automática" />
+                            </ul>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
@@ -233,7 +251,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                                 </div>
                             </div>
                             <div className="bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
-                                <h4 className="font-bold text-xl mb-6">Porque escolher o Control Frete?</h4>
+                                <h4 className="font-bold text-xl mb-6">Benefícios Exclusivos</h4>
                                 <div className="space-y-4">
                                     <BenefitItem text="Elimine o caderno de anotações" />
                                     <BenefitItem text="Saiba para onde vai seu dinheiro" />
@@ -277,13 +295,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
             {/* Footer */}
             <footer className="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 py-12">
                 <div className="max-w-7xl mx-auto px-4 text-center">
-                    <div className="flex items-center justify-center mb-4">
-                        <img
-                            src="/logo-control-frete.png"
-                            alt="Control Frete"
-                            className="h-8 w-auto object-contain"
-                        />
-                    </div>
                     <p className="text-slate-500 text-sm">© {new Date().getFullYear()} Control Frete. Todos os direitos reservados.</p>
                 </div>
             </footer>

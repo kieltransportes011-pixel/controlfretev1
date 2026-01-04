@@ -54,8 +54,6 @@ export interface User {
   isPremium: boolean; // Status da assinatura
   plano?: 'free' | 'pro';
   status_assinatura?: 'ativa' | 'cancelada' | 'inadimplente';
-  stripe_customer_id?: string;
-  stripe_subscription_id?: string;
 
   // Referral System
   referralCode?: string;

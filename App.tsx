@@ -82,8 +82,6 @@ export default function App() {
         isPremium: data.is_premium || data.plano === 'pro',
         plano: data.plano || 'free',
         status_assinatura: data.status_assinatura || 'ativa',
-        stripe_customer_id: data.stripe_customer_id,
-        stripe_subscription_id: data.stripe_subscription_id,
         premiumUntil: data.premium_until,
         lastPaymentId: data.last_payment_id,
         trialStart: data.trial_start,
