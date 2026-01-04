@@ -221,7 +221,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
 
           <header className="text-center space-y-3 flex flex-col items-center">
             <img
-              src="/logo-new.png"
+              src="/logo-official.png"
               alt="Control Frete"
               className="h-20 w-auto object-contain mb-2 dark:brightness-110 drop-shadow-xl"
             />
