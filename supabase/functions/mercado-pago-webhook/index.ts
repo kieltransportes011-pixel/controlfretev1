@@ -60,8 +60,9 @@ serve(async (req) => {
                     .single();
 
                 if (existingPayment?.status === 'approved') {
-                    console.log(`Payment ${paymentId} already processed as approved. Skipping.`);
-                    return new Response(JSON.stringify({ received: true }), { headers: corsHeaders });
+                    console.log(`Payment ${paymentId} already processed as approved.`);
+                    // We continue to update the profile to ensure consistency in case the previous update failed.
+                    // return new Response(JSON.stringify({ received: true }), { headers: corsHeaders }); 
                 }
 
                 // 2. Upsert Payment Record
@@ -86,7 +87,7 @@ serve(async (req) => {
                     const premiumUntil = new Date();
                     premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
 
-                    const { error } = await supabase.from('profiles').update({
+                    const { error } = await supabase.from('users_data').update({
                         is_premium: true,
                         plano: 'pro',
                         status_assinatura: 'ativa',
