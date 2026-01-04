@@ -52,37 +52,36 @@ serve(async (req) => {
                 );
 
                 // 1. Idempotency Check & History Log
-                // Check if this payment is already recorded as approved
+                // Check if this payment is already recorded as approved in HISTORY
                 const { data: existingPayment } = await supabase
-                    .from('payments')
-                    .select('status')
-                    .eq('mercado_pago_id', paymentId.toString())
+                    .from('payment_history')
+                    .select('status, user_id')
+                    .eq('payment_id', paymentId.toString())
                     .single();
 
                 if (existingPayment?.status === 'approved') {
-                    console.log(`Payment ${paymentId} already processed as approved.`);
-                    // We continue to update the profile to ensure consistency in case the previous update failed.
-                    // return new Response(JSON.stringify({ received: true }), { headers: corsHeaders }); 
+                    console.log(`Payment ${paymentId} already processed (Status: Approved). Ensuring Profile is Up-to-Date.`);
+                    // We DO NOT return here. We allow the profile update to run again to "heal" any inconsistencies.
                 }
 
-                // 2. Upsert Payment Record
+                // 2. Upsert Payment Record into History
                 const { error: paymentError } = await supabase
-                    .from('payments')
+                    .from('payment_history')
                     .upsert({
-                        mercado_pago_id: paymentId.toString(),
+                        payment_id: paymentId.toString(),
                         user_id: userId,
                         amount: paymentData.transaction_amount,
                         status: paymentStatus,
                         payment_method: paymentData.payment_method_id,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'mercado_pago_id' });
+                        processed_at: new Date().toISOString(),
+                        metadata: paymentData
+                    }, { onConflict: 'payment_id' });
 
                 if (paymentError) {
-                    console.error("Error logging payment:", paymentError);
-                    // Continue to try updating profile if it's approved, but log the error
+                    console.error("Error logging payment history:", paymentError);
                 }
 
-                // 3. Update Profile if Approved
+                // 3. Update PRO Profile
                 if (paymentStatus === 'approved') {
                     const premiumUntil = new Date();
                     premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
@@ -90,15 +89,17 @@ serve(async (req) => {
                     const { error } = await supabase.from('users_data').update({
                         is_premium: true,
                         plano: 'pro',
+                        plan_type: 'ANUAL',
                         status_assinatura: 'ativa',
                         premium_until: premiumUntil.toISOString(),
-                        last_payment_id: paymentId.toString()
+                        last_payment_id: paymentId.toString(),
+                        last_payment_event: new Date().toISOString()
                     }).eq('id', userId);
 
                     if (error) {
-                        console.error("Database Update Error:", error);
+                        console.error("CRITICAL: Database Update Error during PRO activation:", error);
                     } else {
-                        console.log(`User ${userId} successfully upgraded to PRO (Payment ${paymentId}).`);
+                        console.log(`SUCCESS: User ${userId} upgraded to PRO ANUAL (Payment ${paymentId}).`);
                     }
                 }
             } catch (mpError) {
