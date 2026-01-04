@@ -17,21 +17,36 @@ serve(async (req) => {
     }
 
     try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-        const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        // Debug logging
+        console.log("Function invoked");
+
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            console.error("Missing Env Vars: SUPABASE_URL or SUPABASE_ANON_KEY");
+            throw new Error('Configuration Error: Missing Supabase Environment Variables');
+        }
+
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+            throw new Error('Missing Authorization Header');
+        }
 
         const supabase = createClient(
             supabaseUrl,
-            supabaseKey,
-            { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+            supabaseAnonKey,
+            { global: { headers: { Authorization: authHeader } } }
         );
 
         const {
             data: { user },
+            error: userError
         } = await supabase.auth.getUser();
 
-        if (!user) {
-            throw new Error('User not found');
+        if (userError || !user) {
+            console.error("Auth Error:", userError);
+            throw new Error('User not found or unauthorized');
         }
 
         const { email } = await req.json();
@@ -47,10 +62,7 @@ serve(async (req) => {
         const preference = new Preference(client);
 
         const notification_url = `${supabaseUrl}/functions/v1/mercado-pago-webhook`;
-        // For local dev, notification_url must be publicly accessible or it won't work.
-        // In production, Supabase Edge Functions URL is public.
-
-        const origin = req.headers.get('origin') || 'http://localhost:5173'; // Fallback for testing
+        const origin = req.headers.get('origin') || 'http://localhost:5173';
 
         const body = {
             items: [
@@ -74,7 +86,7 @@ serve(async (req) => {
                 pending: `${origin}/?payment=pending`
             },
             auto_return: 'approved',
-            external_reference: user.id, // CRITICAL: Linking payment to User ID
+            external_reference: user.id,
             notification_url: notification_url,
             statement_descriptor: 'CONTROLFRETE'
         };
