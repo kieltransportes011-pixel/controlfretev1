@@ -35,38 +35,69 @@ serve(async (req) => {
             // Verify payment status with MP
             try {
                 const paymentData = await payment.get({ id: paymentId });
-                console.log(`Payment Data Retrieved. Status: ${paymentData.status}, Ref: ${paymentData.external_reference}`);
+                console.log(`Payment Status: ${paymentData.status}, Ref: ${paymentData.external_reference}`);
 
-                if (paymentData.status === 'approved') {
-                    // We utilize external_reference as standard for User ID in Checkout Pro
-                    // Fallback to metadata if external_reference is missing (legacy support)
-                    const userId = paymentData.external_reference || paymentData.metadata?.user_id;
+                const paymentStatus = paymentData.status;
+                const userId = paymentData.external_reference || paymentData.metadata?.user_id;
 
-                    if (userId) {
-                        // Initialize Supabase Admin Client
-                        const supabase = createClient(
-                            Deno.env.get('SUPABASE_URL') ?? '',
-                            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-                        );
+                if (!userId) {
+                    console.error("No User ID found in payment reference/metadata.");
+                    return new Response(JSON.stringify({ received: true }), { headers: corsHeaders });
+                }
 
-                        const premiumUntil = new Date();
-                        premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
+                // Initialize Supabase Admin Client
+                const supabase = createClient(
+                    Deno.env.get('SUPABASE_URL') ?? '',
+                    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+                );
 
-                        const { error } = await supabase.from('profiles').update({
-                            is_premium: true,
-                            plano: 'pro',
-                            status_assinatura: 'ativa',
-                            premium_until: premiumUntil.toISOString(),
-                            last_payment_id: paymentId.toString()
-                        }).eq('id', userId);
+                // 1. Idempotency Check & History Log
+                // Check if this payment is already recorded as approved
+                const { data: existingPayment } = await supabase
+                    .from('payments')
+                    .select('status')
+                    .eq('mercado_pago_id', paymentId.toString())
+                    .single();
 
-                        if (error) {
-                            console.error("Database Update Error:", error);
-                        } else {
-                            console.log(`User ${userId} successfully upgraded to PRO (Payment ${paymentId}).`);
-                        }
+                if (existingPayment?.status === 'approved') {
+                    console.log(`Payment ${paymentId} already processed as approved. Skipping.`);
+                    return new Response(JSON.stringify({ received: true }), { headers: corsHeaders });
+                }
+
+                // 2. Upsert Payment Record
+                const { error: paymentError } = await supabase
+                    .from('payments')
+                    .upsert({
+                        mercado_pago_id: paymentId.toString(),
+                        user_id: userId,
+                        amount: paymentData.transaction_amount,
+                        status: paymentStatus,
+                        payment_method: paymentData.payment_method_id,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'mercado_pago_id' });
+
+                if (paymentError) {
+                    console.error("Error logging payment:", paymentError);
+                    // Continue to try updating profile if it's approved, but log the error
+                }
+
+                // 3. Update Profile if Approved
+                if (paymentStatus === 'approved') {
+                    const premiumUntil = new Date();
+                    premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
+
+                    const { error } = await supabase.from('profiles').update({
+                        is_premium: true,
+                        plano: 'pro',
+                        status_assinatura: 'ativa',
+                        premium_until: premiumUntil.toISOString(),
+                        last_payment_id: paymentId.toString()
+                    }).eq('id', userId);
+
+                    if (error) {
+                        console.error("Database Update Error:", error);
                     } else {
-                        console.error("No User ID found in payment reference/metadata.");
+                        console.log(`User ${userId} successfully upgraded to PRO (Payment ${paymentId}).`);
                     }
                 }
             } catch (mpError) {
