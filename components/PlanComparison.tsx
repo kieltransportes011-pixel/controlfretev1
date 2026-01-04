@@ -56,11 +56,11 @@ export const PlanComparison: React.FC<PlanComparisonProps> = ({ onUpgrade, isLoa
                 <div className="flex flex-col items-center mb-6">
                     <div className="flex items-end gap-1">
                         <span className="text-sm font-bold text-slate-400 mb-1">R$</span>
-                        <span className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter">49,99</span>
+                        <span className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter">59,99</span>
                         <span className="text-sm font-bold text-slate-400 mb-1">/ano</span>
                     </div>
                     <p className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full mt-1">
-                        Equivalente a R$ 4,16 / mês
+                        Equivalente a R$ 4,99 / mês
                     </p>
                 </div>
 
