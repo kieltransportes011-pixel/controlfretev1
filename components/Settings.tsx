@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AppSettings, User, ViewState } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Clock, Gift, Loader2, Camera, User as UserIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -107,14 +107,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   const handleConfirmUpload = async () => {
     if (!previewBlob) return;
 
-    const cost = isPaidChange ? 50 : 0;
-    if (cost > 0) {
-      if ((user.referralBalance || 0) < cost) {
-        alert('Saldo de CF insuficiente para alterar a foto de perfil.');
-        handleCancelPreview();
-        return;
-      }
-    }
+    const cost = 0;
 
     try {
       setUploading(true);
@@ -241,7 +234,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
                   className="flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-600 transition-colors"
                 >
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                  {freeChangesRemaining > 0 ? 'Salvar (Grátis)' : 'Salvar (50 CF)'}
+                  {freeChangesRemaining > 0 ? 'Salvar (Grátis)' : 'Salvar'}
                 </button>
                 <button
                   onClick={handleCancelPreview}
@@ -271,7 +264,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
                 </Button>
                 {isPaidChange && (
                   <p className="text-[10px] text-slate-400 mt-2">
-                    Você atingiu o limite de trocas. Será cobrado 50 CF.
+                    Você atingiu o limite de trocas gratuitas.
                   </p>
                 )}
               </div>
@@ -280,26 +273,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         </Card>
       </section>
 
-      {/* Referral Link (Indique e Ganhe) - Integrado aqui */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
-          <Gift className="w-4 h-4 text-brand" />
-          Indicação
-        </h2>
-        <Card
-          onClick={() => onNavigate('REFERRAL')}
-          className="border-2 border-brand/20 bg-brand/5 dark:bg-brand/10 hover:shadow-md cursor-pointer transition-all group flex items-center gap-4 p-5"
-        >
-          <div className="bg-brand text-white p-3 rounded-2xl shadow-lg shadow-brand/20">
-            <Gift className="w-6 h-6" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-black text-brand text-sm uppercase">Indique e Ganhe</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Convide amigos e ganhe prêmios</p>
-          </div>
-          <ArrowRight className="w-5 h-5 text-brand group-hover:translate-x-1 transition-transform" />
-        </Card>
-      </section>
+
 
       {/* Subscription Section */}
       <section className="space-y-3">

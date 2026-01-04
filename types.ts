@@ -56,10 +56,6 @@ export interface User {
   status_assinatura?: 'ativa' | 'cancelada' | 'inadimplente';
 
   // Referral System
-  referralCode?: string;
-  referredBy?: string;
-  referralBalance?: number;
-  referralCount?: number;
   profile_photo_url?: string;
   profile_photo_changes_used?: number;
   premiumUntil?: string; // ISO Date string
@@ -97,7 +93,7 @@ export interface AppSettings {
   issuerAddressZip?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'REFERRAL' | 'GOALS' | 'PAYMENT';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT';
 
 export interface DashboardStats {
   monthTotal: number;

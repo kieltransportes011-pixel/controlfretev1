@@ -50,65 +50,7 @@ serve(async (req) => {
                         .eq('id', userId);
                     console.log(`User ${userId} upgraded to Pro`);
 
-                    // 2. Referral Logic
-                    try {
-                        // Check if subscription is Annual
-                        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-                        const price = subscription.items.data[0].price;
 
-                        if (price.recurring?.interval === 'year') {
-                            const { data: userProfile } = await supabaseAdmin.from('profiles').select('referred_by').eq('id', userId).single();
-
-                            if (userProfile?.referred_by) {
-                                // Find referrer
-                                const { data: referrer } = await supabaseAdmin.from('profiles').select('id').eq('referral_code', userProfile.referred_by).single();
-
-                                if (referrer) {
-                                    // Check if already referred this user
-                                    const { data: existingRef } = await supabaseAdmin.from('referrals').select('id').eq('referred_user_id', userId).single();
-
-                                    if (!existingRef) {
-                                        const bonusCF = 1000; // 1000 CF = R$ 10.00
-
-                                        // Insert Referral Record
-                                        await supabaseAdmin.from('referrals').insert({
-                                            referrer_id: referrer.id,
-                                            referred_user_id: userId,
-                                            status: 'confirmed',
-                                            subscription_id: subscriptionId,
-                                            converted_at: new Date().toISOString()
-                                        });
-
-                                        // Insert Transaction
-                                        await supabaseAdmin.from('cf_transactions').insert({
-                                            user_id: referrer.id,
-                                            type: 'referral_bonus',
-                                            amount_cf: bonusCF,
-                                            amount_brl: 10.00,
-                                            status: 'confirmed',
-                                            source_reference: userId,
-                                            description: 'Bônus por indicação (Plano Anual)'
-                                        });
-
-                                        // Update Wallet
-                                        const { data: wallet } = await supabaseAdmin.from('user_cf_wallet').select('balance_available').eq('user_id', referrer.id).single();
-
-                                        // Initialize wallet if needed (though migration should have done it)
-                                        const currentBal = wallet?.balance_available || 0;
-
-                                        await supabaseAdmin.from('user_cf_wallet').upsert({
-                                            user_id: referrer.id,
-                                            balance_available: currentBal + bonusCF,
-                                            updated_at: new Date().toISOString()
-                                        });
-                                        console.log(`Bonus awarded to referrer ${referrer.id}`);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (refError) {
-                        console.error('Error processing referral:', refError);
-                    }
                 }
                 break;
             }
@@ -149,39 +91,7 @@ serve(async (req) => {
                     console.log(`User ${userId} downgraded/cancelled`);
                 }
 
-                // Revoke Referral Bonus Logic
-                if (subscriptionId) {
-                    const { data: referral } = await supabaseAdmin.from('referrals').select('*').eq('subscription_id', subscriptionId).single();
 
-                    if (referral && referral.status === 'confirmed') {
-                        console.log(`Revoking bonus for referral ${referral.id}`);
-
-                        // Update Referral Status
-                        await supabaseAdmin.from('referrals').update({ status: 'revoked' }).eq('id', referral.id);
-
-                        const penaltyCF = -1000;
-
-                        // Create Revoke Transaction
-                        await supabaseAdmin.from('cf_transactions').insert({
-                            user_id: referral.referrer_id,
-                            type: 'referral_bonus', // keeping logic consistent
-                            amount_cf: penaltyCF,
-                            amount_brl: -10.00,
-                            status: 'revoked',
-                            source_reference: referral.referred_user_id,
-                            description: 'Estorno de bônus (Cancelamento/Falha)'
-                        });
-
-                        // Update Wallet
-                        const { data: wallet } = await supabaseAdmin.from('user_cf_wallet').select('balance_available').eq('user_id', referral.referrer_id).single();
-                        const currentBal = wallet?.balance_available || 0;
-
-                        await supabaseAdmin.from('user_cf_wallet').update({
-                            balance_available: currentBal + penaltyCF,
-                            updated_at: new Date().toISOString()
-                        }).eq('user_id', referral.referrer_id);
-                    }
-                }
                 break;
             }
         }

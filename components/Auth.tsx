@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useSupabaseError } from '../hooks/useSupabaseError';
 import { User } from '../types';
 import { Button } from './Button';
-import { validateCPF, maskCPF, generateReferralCode } from '../utils';
-import { Truck, Mail, Lock, User as UserIcon, Eye, EyeOff, FileText, ArrowRight, Loader2, Ticket, CheckCircle, ChevronLeft } from 'lucide-react';
+import { validateCPF, maskCPF } from '../utils';
+import { Truck, Mail, Lock, User as UserIcon, Eye, EyeOff, FileText, ArrowRight, Loader2, CheckCircle, ChevronLeft } from 'lucide-react';
 import { supabase } from '../supabase';
 
 
@@ -27,14 +27,12 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
     email: '',
     cpf: '',
     password: '',
-    confirmPassword: '',
-    referralCode: ''
+    confirmPassword: ''
   });
 
   const handleChange = (field: string, value: string) => {
     let finalValue = value;
     if (field === 'cpf') finalValue = maskCPF(value);
-    if (field === 'referralCode') finalValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     setFormData(prev => ({ ...prev, [field]: finalValue }));
     setError('');
   };
@@ -107,16 +105,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
           email: formData.email,
           createdAt: new Date().toISOString(),
           isPremium: false,
-          referralCode: generateReferralCode(formData.name),
-          referralBalance: 0,
-          referralCount: 0,
           trialStart: new Date().toISOString(),
           trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         };
-
-        if (formData.referralCode) {
-          newUser.referredBy = formData.referralCode;
-        }
 
         const { error: profileError } = await supabase
           .from('profiles')
@@ -128,10 +119,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               email: newUser.email,
               created_at: newUser.createdAt,
               is_premium: newUser.isPremium,
-              referred_by: newUser.referredBy || null,
-              referral_code: newUser.referralCode,
-              referral_balance: 0,
-              referral_count: 0,
               trial_start: newUser.trialStart,
               trial_end: newUser.trialEnd
             }
@@ -234,7 +221,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
 
           <header className="text-center space-y-3 flex flex-col items-center">
             <img
-              src="/logo.png"
+              src="/logo-new.png"
               alt="Control Frete"
               className="h-20 w-auto object-contain mb-2 dark:brightness-110 drop-shadow-xl"
             />
@@ -290,10 +277,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               {renderInput('E-mail Profissional', 'email', 'email', <Mail className="w-5 h-5" />)}
               {renderInput('Senha de Acesso', 'password', 'password', <Lock className="w-5 h-5" />, true)}
               {renderInput('Confirmar Senha', 'confirmPassword', 'password', <Lock className="w-5 h-5" />, true)}
-
-              <div className="pt-2">
-                {renderInput('Código de Indicação', 'referralCode', 'text', <Ticket className="w-5 h-5 text-accent-success" />, false, true)}
-              </div>
 
               {error && (
                 <div className="p-3 bg-red-50 text-accent-error text-[10px] font-roboto font-bold uppercase tracking-wider rounded-lg border border-red-100">

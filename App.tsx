@@ -9,7 +9,6 @@ import { Schedule } from './components/Schedule';
 import { Settings } from './components/Settings';
 import { FreightCalculator } from './components/FreightCalculator';
 import { Auth } from './components/Auth';
-import { ReferralSystem } from './components/ReferralSystem';
 import { MonthlyGoal } from './components/MonthlyGoal';
 import { Button } from './components/Button';
 import { Paywall } from './components/Paywall';
@@ -87,9 +86,6 @@ export default function App() {
         lastPaymentId: data.last_payment_id,
         trialStart: data.trial_start,
         trialEnd: data.trial_end,
-        referralCode: data.referral_code,
-        referralBalance: data.referral_balance || 0,
-        referralCount: data.referral_count || 0,
         profile_photo_url: data.profile_photo_url,
         profile_photo_changes_used: data.profile_photo_changes_used || 0
       });
@@ -438,9 +434,7 @@ export default function App() {
         <FreightCalculator onCancel={() => setView('DASHBOARD')} onRegister={(d) => { setFormData(d); setView('ADD_FREIGHT'); }} />
       )}
 
-      {view === 'REFERRAL' && (
-        <ReferralSystem user={currentUser} onUpdateUser={handleUpdateUser} onBack={() => setView('SETTINGS')} />
-      )}
+
 
       {view === 'GOALS' && (
         <MonthlyGoal
