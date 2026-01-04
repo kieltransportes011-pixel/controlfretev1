@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Freight, Expense, DashboardStats, User } from '../types';
+import { Freight, Expense, DashboardStats, User, AccountPayable } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
+import { Button } from './Button';
 import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 
@@ -16,10 +17,28 @@ interface DashboardProps {
   onViewGoals: () => void;
   onUpgrade: () => void;
   onViewAgenda: () => void;
+  accountsPayable: AccountPayable[];
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showBillAlert, setShowBillAlert] = useState(true);
+
+  const upcomingBills = useMemo(() => {
+    if (!accountsPayable) return [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const in3Days = new Date(today);
+    in3Days.setDate(today.getDate() + 3);
+
+    return accountsPayable.filter(bill => {
+      if (bill.status !== 'aberto') return false;
+      const [y, m, d] = bill.due_date.split('-').map(Number);
+      const dueDate = new Date(y, m - 1, d);
+      dueDate.setHours(0, 0, 0, 0); // normalize
+      return dueDate <= in3Days;
+    });
+  }, [accountsPayable]);
 
   const trialDaysRemaining = useMemo(() => {
     if (user.isPremium) return 0;
@@ -363,6 +382,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           {isMenuOpen ? <X className="w-7 h-7" /> : <Plus className="w-7 h-7" />}
         </button>
       </div>
+
+      {/* Accounts Payable Alert Modal */}
+      {upcomingBills.length > 0 && showBillAlert && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative animate-slideUp">
+            <button onClick={() => setShowBillAlert(false)} className="absolute top-4 right-4 text-slate-400">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Contas a Pagar</h3>
+                <p className="text-xs text-slate-500">Você tem contas vencendo em breve.</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-6 max-h-48 overflow-y-auto">
+              {upcomingBills.map(bill => (
+                <div key={bill.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{bill.description}</span>
+                    <span className="text-[10px] text-slate-400">Vencimento: {formatDate(bill.due_date)}</span>
+                  </div>
+                  <span className="text-sm font-bold text-slate-800 dark:text-white tabular-nums">{formatCurrency(bill.value)}</span>
+                </div>
+              ))}
+            </div>
+
+            <Button onClick={() => { setShowBillAlert(false); onViewSchedule(); }} fullWidth>
+              VER CONTAS
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

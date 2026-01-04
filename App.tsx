@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewState, Freight, Expense, AppSettings, User, Booking } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -32,6 +32,7 @@ export default function App() {
   const [freights, setFreights] = useState<Freight[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
   const [permissionError, setPermissionError] = useState(false);
@@ -181,6 +182,17 @@ export default function App() {
       setBookings(mappedBookings as Booking[]);
     }
 
+    // Fetch Accounts Payable
+    const { data: payablesData } = await supabase
+      .from('contas_a_pagar')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('due_date', { ascending: true });
+
+    if (payablesData) {
+      setAccountsPayable(payablesData as AccountPayable[]);
+    }
+
     setSyncing(false);
   };
 
@@ -274,6 +286,7 @@ export default function App() {
           user={currentUser}
           freights={freights}
           expenses={expenses}
+          accountsPayable={accountsPayable}
           onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
           onAddExpense={() => setView('ADD_EXPENSE')}
           onViewSchedule={() => setView('RECEIVABLES')}
@@ -397,6 +410,26 @@ export default function App() {
               console.error("Erro ao salvar recebimento:", error);
               alert("Erro ao salvar no banco de dados.");
             }
+          }}
+          accountsPayable={accountsPayable}
+          onAddAccountPayable={async (acc) => {
+            if (!currentUser) return;
+            const { data, error } = await supabase.from('contas_a_pagar').insert([{
+              ...acc,
+              user_id: currentUser.id
+            }]).select();
+            if (data) fetchData();
+          }}
+          onDeleteAccountPayable={async (id) => {
+            if (!currentUser) return;
+            await supabase.from('contas_a_pagar').delete().eq('id', id);
+            fetchData();
+          }}
+          onToggleAccountPayableStatus={async (acc) => {
+            if (!currentUser) return;
+            const newStatus = acc.status === 'aberto' ? 'pago' : 'aberto';
+            await supabase.from('contas_a_pagar').update({ status: newStatus }).eq('id', acc.id);
+            fetchData();
           }}
         />
       )}

@@ -107,3 +107,13 @@ export interface DashboardStats {
   totalReserve: number;
   totalPending: number;
 }
+
+export interface AccountPayable {
+  id: string;
+  description: string;
+  value: number;
+  due_date: string; // ISO Date "YYYY-MM-DD"
+  status: 'aberto' | 'pago';
+  recurrence: 'unica' | 'mensal' | 'semanal';
+  user_id: string;
+}
