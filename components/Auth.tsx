@@ -92,13 +92,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            cpf: formData.cpf
-          }
-        }
+        password: formData.password
       });
 
       if (authError) throw authError;
@@ -115,11 +109,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
           trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         };
 
-        // Use upsert instead of insert to be safe against double-inserts from triggers
-        // This ensures compatibility whether the backend trigger runs or not
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert([
+          .insert([
             {
               id: newUser.id,
               name: newUser.name,
@@ -130,7 +122,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               trial_start: newUser.trialStart,
               trial_end: newUser.trialEnd
             }
-          ], { onConflict: 'id' });
+          ]);
 
         if (profileError) {
           console.error("Profile creation failed", profileError);
