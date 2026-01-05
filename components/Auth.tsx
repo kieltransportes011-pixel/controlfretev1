@@ -92,7 +92,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            cpf: formData.cpf
+          }
+        }
       });
 
       if (authError) throw authError;
@@ -109,9 +115,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
           trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         };
 
+        // Use upsert to prevent errors if the backend trigger already created the profile
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([
+          .upsert([
             {
               id: newUser.id,
               name: newUser.name,
@@ -122,15 +129,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               trial_start: newUser.trialStart,
               trial_end: newUser.trialEnd
             }
-          ]);
+          ], { onConflict: 'id' });
 
         if (profileError) {
           console.error("Profile creation failed", profileError);
           throw profileError;
         }
 
-        // Create default settings
-        await supabase.from('settings').insert([{ user_id: newUser.id }]);
+        // Create default settings (safely)
+        await supabase.from('settings').upsert([{ user_id: newUser.id }], { onConflict: 'user_id' });
 
         setRegisteredUser(newUser as User);
         setView('REGISTER_SUCCESS');
