@@ -50,6 +50,11 @@ USING (
   AND (
     (SELECT plano FROM profiles WHERE id = auth.uid()) = 'pro'
     OR
+    (SELECT is_premium FROM profiles WHERE id = auth.uid()) = true
+    OR
+    (SELECT trial_end FROM profiles WHERE id = auth.uid()) > now()
+    OR
+    -- Fallback para garantir acesso aos dados recentes caso as flags falhem
     date >= (CURRENT_DATE - INTERVAL '7 days')
   )
 );
