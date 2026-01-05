@@ -127,7 +127,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          throw new Error('Erro ao criar perfil de usuário.');
+          throw new Error('Erro ao criar perfil de usuário: ' + profileError.message);
         }
 
         // 3. Insert Settings (Optional but recommended for app stability)
@@ -157,8 +157,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
       }
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes('already registered') || err.message?.includes('violates unique constraint')) {
-        setError('Este e-mail ou CPF já está cadastrado.');
+      if (err.message?.includes('already registered')) {
+        setError('Este e-mail já está cadastrado. Tente fazer login.');
+      } else if (err.message?.includes('profiles_cpf_key')) {
+        setError('Este CPF já está cadastrado em outra conta.');
       } else {
         setError('Erro no cadastro: ' + (err.message || 'Tente novamente.'));
       }
