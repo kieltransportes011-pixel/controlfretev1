@@ -51,27 +51,36 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
         password: formData.password
       });
 
-      handleSupabaseError(error);
+      if (error) throw error;
 
       if (data.user) {
-        const { data: profile } = await supabase
+        // Fetch profile to get plan details
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
           .single();
 
-        if (profile) {
-          // Adapt profile to User type if needed, or ensure table matches
-          const user: User = {
-            ...profile,
-            // Ensure these fields exist or handle undefined
-            email: data.user.email!,
-            password: '' // Don't keep password in memory
-          };
-          onLogin(user);
-        } else {
-          setError('Perfil não encontrado.');
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('Profile fetch error:', profileError);
         }
+
+        const plan = profile?.plano || 'FREE';
+
+        const user: User = {
+          id: data.user.id,
+          email: data.user.email!,
+          name: profile?.name || '',
+          cpf: profile?.cpf || '',
+          password: '', // Security: don't store
+          createdAt: profile?.created_at || new Date().toISOString(),
+          isPremium: plan === 'PRO',
+          plano: plan === 'PRO' ? 'pro' : 'free',
+          // Map other fields as necessary or use defaults
+          trialStart: profile?.trial_start,
+          trialEnd: profile?.trial_end
+        };
+        onLogin(user);
       }
     } catch (err: any) {
       handleSupabaseError(err);
@@ -82,6 +91,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validations
     if (!formData.name) { setError('Nome obrigatório.'); return; }
     if (!validateCPF(formData.cpf)) { setError('CPF inválido.'); return; }
     if (!formData.email.includes('@')) { setError('E-mail inválido.'); return; }
@@ -90,68 +100,67 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
 
     setLoading(true);
     try {
+      // 1. Create Auth User
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            cpf: formData.cpf
-          }
-        }
       });
 
       if (authError) throw authError;
 
       if (authData.user) {
-        const newUser: Partial<User> = {
-          id: authData.user.id,
+        const userId = authData.user.id;
+        const now = new Date().toISOString();
+
+        // 2. Insert Profile (Client-side, relying on policies)
+        // We use upsert to be safe, but conceptually it's an insert for a new user.
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            email: formData.email,
+            name: formData.name,
+            cpf: formData.cpf,
+            plano: 'FREE', // ALWAYS FREE INITIALLY
+            created_at: now
+          }, { onConflict: 'id' });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          throw new Error('Erro ao criar perfil de usuário.');
+        }
+
+        // 3. Insert Settings (Optional but recommended for app stability)
+        const { error: settingsError } = await supabase
+          .from('settings')
+          .upsert({ user_id: userId }, { onConflict: 'user_id' });
+
+        if (settingsError) {
+          console.warn('Settings creation warning:', settingsError);
+          // We don't block signup on settings error, but log it.
+        }
+
+        // Success State
+        const newUser: User = {
+          id: userId,
           name: formData.name,
           cpf: formData.cpf,
           email: formData.email,
-          createdAt: new Date().toISOString(),
+          createdAt: now,
           isPremium: false,
-          trialStart: new Date().toISOString(),
-          trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          plano: 'free',
+          password: ''
         };
 
-        // Use upsert to prevent errors if the backend trigger already created the profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert([
-            {
-              id: newUser.id,
-              name: newUser.name,
-              cpf: newUser.cpf,
-              email: newUser.email,
-              created_at: newUser.createdAt,
-              is_premium: newUser.isPremium,
-              trial_start: newUser.trialStart,
-              trial_end: newUser.trialEnd
-            }
-          ], { onConflict: 'id' });
-
-        if (profileError) {
-          console.error("Profile creation failed", profileError);
-          throw profileError;
-        }
-
-        // Create default settings (safely)
-        await supabase.from('settings').upsert([{ user_id: newUser.id }], { onConflict: 'user_id' });
-
-        setRegisteredUser(newUser as User);
+        setRegisteredUser(newUser);
         setView('REGISTER_SUCCESS');
       }
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes('profiles_cpf_key') || err.message?.includes('duplicate key value')) {
-        setError('CPF já cadastrado. Tente fazer login.');
-      } else if (err.message?.includes('profiles_email_key')) {
-        setError('E-mail já está em uso.');
-      } else if (err.message?.includes('User already registered')) {
-        setError('E-mail já cadastrado no sistema.');
+      if (err.message?.includes('already registered') || err.message?.includes('violates unique constraint')) {
+        setError('Este e-mail ou CPF já está cadastrado.');
       } else {
-        setError('Erro ao criar conta: ' + err.message);
+        setError('Erro no cadastro: ' + (err.message || 'Tente novamente.'));
       }
     } finally {
       setLoading(false);
@@ -202,12 +211,11 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
         </div>
         <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-4 tracking-tight uppercase">Bem-vindo ao Control Frete!</h1>
         <p className="text-slate-500 dark:text-slate-400 max-w-xs mb-8">
-          Sua conta foi criada com sucesso. Você tem <span className="text-brand dark:text-brand-300 font-bold">7 dias de acesso total gratuito</span> para testar todas as funcionalidades.
+          Sua conta foi criada com sucesso. Aproveite o plano FREE para começar.
         </p>
         <Button fullWidth onClick={() => registeredUser && onLogin(registeredUser)} className="h-16">
-          COMEÇAR AGORA <ArrowRight className="w-5 h-5 ml-2" />
+          ACESSAR SISTEMA <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
-        <p className="mt-6 text-[10px] text-slate-400 font-bold uppercase tracking-widest">Login automático realizado</p>
       </div>
     );
   }
@@ -256,7 +264,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               onClick={() => setView('REGISTER_FLOW')}
               className="text-brand-secondary font-roboto font-bold text-[10px] uppercase tracking-widest hover:underline"
             >
-              Não tem conta? Ganhe 7 dias grátis
+              Criar nova conta
             </button>
           </div>
         </div>
@@ -275,7 +283,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
           <div className="space-y-6">
             <div className="px-1">
               <h2 className="text-2xl font-bold text-base-text dark:text-white tracking-tight uppercase">Criar Conta</h2>
-              <p className="text-base-subtext text-xs mt-1">Leva menos de 1 minuto para começar.</p>
+              <p className="text-base-subtext text-xs mt-1">Preencha seus dados para começar.</p>
             </div>
 
             <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
@@ -292,7 +300,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               )}
 
               <Button type="submit" fullWidth disabled={loading} className="py-4 mt-4">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Ativar meus 7 dias grátis'}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Criar Conta Grátis'}
               </Button>
             </form>
           </div>
