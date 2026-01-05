@@ -12,6 +12,35 @@ interface AuthProps {
 
 type AuthView = 'LOGIN' | 'REGISTER' | 'SUCCESS';
 
+// Defined OUTSIDE to prevent re-mounting on every render (Fixes focus loss issue)
+const InputField = ({
+  label, value, onChange, type = 'text', icon, isPass, onTogglePass, passVisible
+}: any) => (
+  <div className="space-y-1">
+    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{label}</label>
+    <div className="relative group">
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand transition-colors">
+        {icon}
+      </div>
+      <input
+        type={isPass ? (passVisible ? 'text' : 'password') : type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all dark:text-white font-medium"
+      />
+      {isPass && (
+        <button
+          type="button"
+          onClick={onTogglePass}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+        >
+          {passVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
 export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
   const [view, setView] = useState<AuthView>('LOGIN');
   const [loading, setLoading] = useState(false);
@@ -31,6 +60,8 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
   const handleChange = (field: string, value: string) => {
     let v = value;
     if (field === 'cpf') v = maskCPF(value);
+
+    // Correct pattern: preserves previous state
     setFormData(prev => ({ ...prev, [field]: v }));
     setError(null);
   };
@@ -90,11 +121,11 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
     setError(null);
 
     // 1. Basic Validation
-    if (!formData.name.trim()) return setError('Nome é obrigatório.');
-    if (!validateCPF(formData.cpf)) return setError('CPF inválido.');
-    if (!formData.email.includes('@')) return setError('E-mail inválido.');
-    if (formData.password.length < 6) return setError('Senha deve ter min. 6 caracteres.');
-    if (formData.password !== formData.confirmPassword) return setError('As senhas não coincidem.');
+    if (!formData.name.trim()) { setError('Nome é obrigatório.'); return; }
+    if (!validateCPF(formData.cpf)) { setError('CPF inválido.'); return; }
+    if (!formData.email.includes('@')) { setError('E-mail inválido.'); return; }
+    if (formData.password.length < 6) { setError('Senha deve ter min. 6 caracteres.'); return; }
+    if (formData.password !== formData.confirmPassword) { setError('As senhas não coincidem.'); return; }
 
     setLoading(true);
 
@@ -122,10 +153,8 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
           });
 
         if (profileError) {
-          // Rollback attempt? Or just notify?
-          // Since we can't delete auth user easily on client, we report error.
-          // BUT: If it's a "duplicate" error, handle gracefully.
-          if (profileError.code === '23505') { // Unique violation
+          // If it's a "duplicate" error, handle gracefully.
+          if (profileError.code === '23505') {
             throw new Error('Já existe um usuário com estes dados.');
           }
           throw profileError;
@@ -182,35 +211,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
       </div>
     );
   }
-
-  // Common Input Helper
-  const InputField = ({
-    label, value, onChange, type = 'text', icon, isPass, onTogglePass, passVisible
-  }: any) => (
-    <div className="space-y-1">
-      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{label}</label>
-      <div className="relative group">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand transition-colors">
-          {icon}
-        </div>
-        <input
-          type={isPass ? (passVisible ? 'text' : 'password') : type}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all dark:text-white font-medium"
-        />
-        {isPass && (
-          <button
-            type="button"
-            onClick={onTogglePass}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            {passVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
