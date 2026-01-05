@@ -1,26 +1,24 @@
 import React, { useState } from 'react';
-import { useSupabaseError } from '../hooks/useSupabaseError';
 import { User } from '../types';
 import { Button } from './Button';
 import { validateCPF, maskCPF } from '../utils';
-import { Truck, Mail, Lock, User as UserIcon, Eye, EyeOff, FileText, ArrowRight, Loader2, CheckCircle, ChevronLeft } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Eye, EyeOff, FileText, ArrowRight, Loader2, CheckCircle, ChevronLeft } from 'lucide-react';
 import { supabase } from '../supabase';
-
 
 interface AuthProps {
   onLogin: (user: User) => void;
   onBack?: () => void;
 }
 
-type AuthView = 'LOGIN_OFFER' | 'REGISTER_FLOW' | 'FORGOT' | 'REGISTER_SUCCESS';
+type AuthView = 'LOGIN' | 'REGISTER' | 'SUCCESS';
 
 export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
-  const [view, setView] = useState<AuthView>('LOGIN_OFFER');
+  const [view, setView] = useState<AuthView>('LOGIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const handleSupabaseError = useSupabaseError(setError);
   const [showPassword, setShowPassword] = useState(false);
-  const [registeredUser, setRegisteredUser] = useState<User | null>(null);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [justRegisteredUser, setJustRegisteredUser] = useState<User | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -31,20 +29,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
   });
 
   const handleChange = (field: string, value: string) => {
-    let finalValue = value;
-    if (field === 'cpf') finalValue = maskCPF(value);
-    setFormData(prev => ({ ...prev, [field]: finalValue }));
-    setError('');
+    let v = value;
+    if (field === 'cpf') v = maskCPF(value);
+    setFormData(prev => ({ ...prev, [field]: v }));
+    setError(null);
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email || !formData.password) {
-      setError('Preencha e-mail e senha.');
-      return;
-    }
-
     setLoading(true);
+    setError(null);
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -54,262 +49,280 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch profile to get plan details
+        // Fetch Profile
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
           .single();
 
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('Profile fetch error:', profileError);
-        }
+        // Robustness: If profile missing (shouldn't happen with new flow), treat as basic user
+        const userName = profile?.name || 'Usuário';
+        const userCpf = profile?.cpf || '';
+        const userPlan = profile?.plano || 'FREE';
 
-        const plan = profile?.plano || 'FREE';
-
-        const user: User = {
+        const userObj: User = {
           id: data.user.id,
           email: data.user.email!,
-          name: profile?.name || '',
-          cpf: profile?.cpf || '',
-          password: '', // Security: don't store
+          name: userName,
+          cpf: userCpf,
+          password: '', // do not keep in memory
           createdAt: profile?.created_at || new Date().toISOString(),
-          isPremium: plan === 'PRO',
-          plano: plan === 'PRO' ? 'pro' : 'free',
-          // Map other fields as necessary or use defaults
-          trialStart: profile?.trial_start,
-          trialEnd: profile?.trial_end
+          isPremium: userPlan === 'PRO',
+          plano: userPlan === 'PRO' ? 'pro' : 'free',
+          // Default others to avoid crashes
+          trialStart: new Date().toISOString(),
+          trialEnd: new Date().toISOString()
         };
-        onLogin(user);
+
+        onLogin(userObj);
       }
     } catch (err: any) {
-      handleSupabaseError(err);
+      console.error(err);
+      setError('E-mail ou senha incorretos.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validations
-    if (!formData.name) { setError('Nome obrigatório.'); return; }
-    if (!validateCPF(formData.cpf)) { setError('CPF inválido.'); return; }
-    if (!formData.email.includes('@')) { setError('E-mail inválido.'); return; }
-    if (formData.password.length < 6) { setError('Senha curta (min 6).'); return; }
-    if (formData.password !== formData.confirmPassword) { setError('Senhas não conferem.'); return; }
+    setError(null);
+
+    // 1. Basic Validation
+    if (!formData.name.trim()) return setError('Nome é obrigatório.');
+    if (!validateCPF(formData.cpf)) return setError('CPF inválido.');
+    if (!formData.email.includes('@')) return setError('E-mail inválido.');
+    if (formData.password.length < 6) return setError('Senha deve ter min. 6 caracteres.');
+    if (formData.password !== formData.confirmPassword) return setError('As senhas não coincidem.');
 
     setLoading(true);
+
     try {
-      // 1. Create Auth User
+      // 2. Auth Creation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
+        password: formData.password
       });
 
       if (authError) throw authError;
 
       if (authData.user) {
         const userId = authData.user.id;
-        const now = new Date().toISOString();
 
-        // 2. Insert Profile (Client-side, relying on policies)
-        // We use upsert to be safe, but conceptually it's an insert for a new user.
+        // 3. Profile Creation (Manual & Explicit)
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert({
+          .insert({
             id: userId,
             email: formData.email,
             name: formData.name,
             cpf: formData.cpf,
-            plano: 'FREE', // ALWAYS FREE INITIALLY
-            created_at: now
-          }, { onConflict: 'id' });
+            plano: 'FREE' // Enforce logic
+          });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
-          throw new Error('Erro ao criar perfil de usuário: ' + profileError.message);
+          // Rollback attempt? Or just notify?
+          // Since we can't delete auth user easily on client, we report error.
+          // BUT: If it's a "duplicate" error, handle gracefully.
+          if (profileError.code === '23505') { // Unique violation
+            throw new Error('Já existe um usuário com estes dados.');
+          }
+          throw profileError;
         }
 
-        // 3. Insert Settings (Optional but recommended for app stability)
-        const { error: settingsError } = await supabase
-          .from('settings')
-          .upsert({ user_id: userId }, { onConflict: 'user_id' });
+        // 4. Settings Creation (Optional but good)
+        await supabase.from('settings').insert({ user_id: userId });
 
-        if (settingsError) {
-          console.warn('Settings creation warning:', settingsError);
-          // We don't block signup on settings error, but log it.
-        }
-
-        // Success State
+        // 5. Success
         const newUser: User = {
           id: userId,
           name: formData.name,
           cpf: formData.cpf,
           email: formData.email,
-          createdAt: now,
+          createdAt: new Date().toISOString(),
           isPremium: false,
           plano: 'free',
           password: ''
         };
-
-        setRegisteredUser(newUser);
-        setView('REGISTER_SUCCESS');
+        setJustRegisteredUser(newUser);
+        setView('SUCCESS');
       }
     } catch (err: any) {
       console.error(err);
       if (err.message?.includes('already registered')) {
-        setError('Este e-mail já está cadastrado. Tente fazer login.');
-      } else if (err.message?.includes('profiles_cpf_key')) {
-        setError('Este CPF já está cadastrado em outra conta.');
+        setError('Este e-mail já possui conta.');
       } else {
-        setError('Erro no cadastro: ' + (err.message || 'Tente novamente.'));
+        setError(err.message || 'Erro ao criar conta.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const renderInput = (
-    label: string,
-    id: keyof typeof formData,
-    type: string = 'text',
-    icon: React.ReactNode,
-    isPasswordToggle = false,
-    optional = false
-  ) => (
-    <div className="relative group">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-secondary transition-colors">
-        {icon}
-      </div>
-      <input
-        type={isPasswordToggle ? (showPassword ? 'text' : 'password') : type}
-        value={formData[id as keyof typeof formData]}
-        onChange={(e) => handleChange(id as string, e.target.value)}
-        placeholder={label}
-        className="w-full pl-12 pr-10 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-brand-secondary focus:bg-white dark:focus:bg-slate-800 transition-all text-base-text dark:text-white placeholder-slate-400 text-sm font-medium"
-      />
-      {isPasswordToggle && (
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-        >
-          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-        </button>
-      )}
-      {optional && !formData[id as keyof typeof formData] && (
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-roboto font-bold text-slate-400 uppercase">
-          Opcional
-        </span>
-      )}
-    </div>
-  );
+  // --- RENDERS ---
 
-  if (view === 'REGISTER_SUCCESS') {
+  if (view === 'SUCCESS') {
     return (
-      <div className="min-h-screen bg-base-bg dark:bg-slate-950 flex flex-col justify-center p-6 animate-fadeIn items-center text-center">
-        <div className="bg-brand text-white p-6 rounded-3xl shadow-xl shadow-brand/20 mb-8">
-          <CheckCircle className="w-16 h-16" />
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-900 animate-fadeIn text-center">
+        <div className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 p-4 rounded-full mb-6">
+          <CheckCircle size={48} />
         </div>
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-4 tracking-tight uppercase">Bem-vindo ao Control Frete!</h1>
-        <p className="text-slate-500 dark:text-slate-400 max-w-xs mb-8">
-          Sua conta foi criada com sucesso. Aproveite o plano FREE para começar.
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Conta Criada!</h2>
+        <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-sm">
+          Seu cadastro foi realizado com sucesso no plano FREE.
         </p>
-        <Button fullWidth onClick={() => registeredUser && onLogin(registeredUser)} className="h-16">
-          ACESSAR SISTEMA <ArrowRight className="w-5 h-5 ml-2" />
+        <Button
+          fullWidth
+          onClick={() => justRegisteredUser && onLogin(justRegisteredUser)}
+          className="max-w-xs"
+        >
+          ACESSAR SISTEMA <ArrowRight className="inline ml-2" size={18} />
         </Button>
       </div>
     );
   }
 
-  if (view === 'LOGIN_OFFER') {
-    return (
-      <div className="min-h-screen bg-base-bg dark:bg-slate-950 flex flex-col justify-center p-6 animate-fadeIn">
-        <div className="max-w-md mx-auto w-full space-y-10">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="absolute top-6 left-6 flex items-center text-slate-500 hover:text-brand font-medium text-sm transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 mr-1" />
-              Voltar
-            </button>
+  // Common Input Helper
+  const InputField = ({
+    label, value, onChange, type = 'text', icon, isPass, onTogglePass, passVisible
+  }: any) => (
+    <div className="space-y-1">
+      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">{label}</label>
+      <div className="relative group">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand transition-colors">
+          {icon}
+        </div>
+        <input
+          type={isPass ? (passVisible ? 'text' : 'password') : type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all dark:text-white font-medium"
+        />
+        {isPass && (
+          <button
+            type="button"
+            onClick={onTogglePass}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            {passVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl overflow-hidden">
+
+        {/* Header */}
+        <div className="bg-brand p-8 text-center text-white">
+          <img src="/logo-official.png" className="h-12 mx-auto mb-4 drop-shadow-md brightness-0 invert" alt="Logo" />
+          <h1 className="text-2xl font-bold tracking-tight uppercase">Control Frete</h1>
+          <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">
+            {view === 'LOGIN' ? 'Login Seguro' : 'Criar Nova Conta'}
+          </p>
+        </div>
+
+        <div className="p-8">
+          {error && (
+            <div className="mb-6 mx-auto bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wide p-3 rounded-lg border border-red-100 dark:border-red-900/30 text-center animate-shake">
+              {error}
+            </div>
           )}
 
-          <header className="text-center space-y-3 flex flex-col items-center">
-            <img
-              src="/logo-official.png"
-              alt="Control Frete"
-              className="h-20 w-auto object-contain mb-2 dark:brightness-110 drop-shadow-xl"
-            />
-            <h1 className="text-3xl font-bold text-base-text dark:text-white tracking-tight uppercase">CONTROL FRETE</h1>
-            <p className="text-base-subtext dark:text-slate-400 text-[10px] font-roboto font-bold uppercase tracking-[0.2em]">Gestão Profissional para Autônomos</p>
-          </header>
+          {view === 'LOGIN' ? (
+            <form onSubmit={handleLogin} className="space-y-5">
+              <InputField
+                label="E-mail"
+                value={formData.email}
+                onChange={(v: string) => handleChange('email', v)}
+                icon={<Mail size={18} />}
+              />
+              <InputField
+                label="Senha"
+                value={formData.password}
+                onChange={(v: string) => handleChange('password', v)}
+                type="password"
+                icon={<Lock size={18} />}
+                isPass
+                passVisible={showPassword}
+                onTogglePass={() => setShowPassword(!showPassword)}
+              />
 
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            {renderInput('Seu e-mail', 'email', 'email', <Mail className="w-5 h-5" />)}
-            {renderInput('Sua senha', 'password', 'password', <Lock className="w-5 h-5" />, true)}
+              <Button type="submit" fullWidth disabled={loading} className="py-4">
+                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENTRAR'}
+              </Button>
 
-            {error && (
-              <div className="text-accent-error text-[10px] text-center font-roboto font-bold uppercase tracking-wider bg-red-50 dark:bg-red-900/20 p-2.5 rounded-lg border border-red-100">
-                {error}
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setView('REGISTER')}
+                  className="text-slate-500 hover:text-brand text-xs font-bold uppercase tracking-wider transition-colors"
+                >
+                  Não tem conta? Cadastre-se
+                </button>
               </div>
-            )}
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setView('LOGIN')}
+                className="flex items-center text-slate-400 hover:text-slate-600 text-[10px] font-bold uppercase tracking-widest mb-4 transition-colors"
+              >
+                <ChevronLeft size={14} className="mr-1" /> Voltar para Login
+              </button>
 
-            <Button type="submit" fullWidth disabled={loading} className="py-4 mt-2">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar no sistema'}
-            </Button>
-          </form>
+              <div className="grid grid-cols-1 gap-4">
+                <InputField
+                  label="Nome Completo"
+                  value={formData.name}
+                  onChange={(v: string) => handleChange('name', v)}
+                  icon={<UserIcon size={18} />}
+                />
+                <InputField
+                  label="CPF"
+                  value={formData.cpf}
+                  onChange={(v: string) => handleChange('cpf', v)}
+                  icon={<FileText size={18} />}
+                />
+                <InputField
+                  label="E-mail"
+                  value={formData.email}
+                  onChange={(v: string) => handleChange('email', v)}
+                  icon={<Mail size={18} />}
+                />
+                <InputField
+                  label="Senha"
+                  value={formData.password}
+                  onChange={(v: string) => handleChange('password', v)}
+                  type="password"
+                  icon={<Lock size={18} />}
+                  isPass
+                  passVisible={showPassword}
+                  onTogglePass={() => setShowPassword(!showPassword)}
+                />
+                <InputField
+                  label="Confirmar Senha"
+                  value={formData.confirmPassword}
+                  onChange={(v: string) => handleChange('confirmPassword', v)}
+                  type="password"
+                  icon={<Lock size={18} />}
+                  isPass
+                  passVisible={showConfirmPassword}
+                  onTogglePass={() => setShowConfirmPassword(!showConfirmPassword)}
+                />
+              </div>
 
-          <div className="text-center">
-            <button
-              onClick={() => setView('REGISTER_FLOW')}
-              className="text-brand-secondary font-roboto font-bold text-[10px] uppercase tracking-widest hover:underline"
-            >
-              Criar nova conta
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (view === 'REGISTER_FLOW') {
-    return (
-      <div className="min-h-screen bg-base-bg dark:bg-slate-950 flex flex-col justify-center p-6 animate-slideUp">
-        <div className="max-w-md mx-auto w-full">
-          <button onClick={() => setView('LOGIN_OFFER')} className="flex items-center text-base-subtext font-roboto font-bold text-[10px] mb-8 uppercase tracking-widest transition-colors hover:text-brand">
-            <ChevronLeft className="w-5 h-5 mr-1" /> Voltar
-          </button>
-
-          <div className="space-y-6">
-            <div className="px-1">
-              <h2 className="text-2xl font-bold text-base-text dark:text-white tracking-tight uppercase">Criar Conta</h2>
-              <p className="text-base-subtext text-xs mt-1">Preencha seus dados para começar.</p>
-            </div>
-
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-              {renderInput('Nome Completo', 'name', 'text', <UserIcon className="w-5 h-5" />)}
-              {renderInput('Seu CPF', 'cpf', 'tel', <FileText className="w-5 h-5" />)}
-              {renderInput('E-mail Profissional', 'email', 'email', <Mail className="w-5 h-5" />)}
-              {renderInput('Senha de Acesso', 'password', 'password', <Lock className="w-5 h-5" />, true)}
-              {renderInput('Confirmar Senha', 'confirmPassword', 'password', <Lock className="w-5 h-5" />, true)}
-
-              {error && (
-                <div className="p-3 bg-red-50 text-accent-error text-[10px] font-roboto font-bold uppercase tracking-wider rounded-lg border border-red-100">
-                  {error}
-                </div>
-              )}
-
-              <Button type="submit" fullWidth disabled={loading} className="py-4 mt-4">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Criar Conta Grátis'}
+              <Button type="submit" fullWidth disabled={loading} className="py-4 mt-2">
+                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'CRIAR CONTA GRÁTIS'}
               </Button>
             </form>
-          </div>
+          )}
         </div>
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 };
