@@ -76,9 +76,7 @@ serve(async (req) => {
                 }
             ],
             payer: {
-                email: payerEmail || 'cliente@controlfrete.com.br',
-                name: 'Assinante',
-                surname: 'ControlFrete'
+                email: payerEmail || 'cliente@controlfrete.com.br'
             },
             back_urls: {
                 success: `${origin}/?payment=success`,
@@ -86,6 +84,7 @@ serve(async (req) => {
                 pending: `${origin}/?payment=pending`
             },
             auto_return: 'approved',
+            binary_mode: false,
             external_reference: user.id,
             metadata: {
                 user_id: user.id
@@ -94,12 +93,14 @@ serve(async (req) => {
                 excluded_payment_methods: [],
                 excluded_payment_types: []
             },
-            notification_url: notification_url,
-            statement_descriptor: 'CONTROLFRETE'
+            notification_url: notification_url
         };
+
+        console.log("Preference Body:", JSON.stringify(body));
 
         const response = await preference.create({ body });
         console.log("Preference Created:", response.id);
+        console.log("Init Point:", response.init_point);
 
         return new Response(
             JSON.stringify({
