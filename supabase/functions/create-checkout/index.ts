@@ -49,8 +49,8 @@ serve(async (req) => {
             throw new Error('User not found or unauthorized');
         }
 
-        const { email } = await req.json();
-        const payerEmail = email || user.email;
+        const reqData = await req.json().catch(() => ({}));
+        const payerEmail = reqData.email || user.email;
 
         console.log(`Creating Preference for User: ${user.id} (${payerEmail})`);
 
@@ -76,8 +76,8 @@ serve(async (req) => {
                 }
             ],
             payer: {
-                email: payerEmail,
-                name: 'Usuario',
+                email: payerEmail || 'cliente@controlfrete.com.br',
+                name: 'Assinante',
                 surname: 'ControlFrete'
             },
             back_urls: {
@@ -87,7 +87,15 @@ serve(async (req) => {
             },
             auto_return: 'approved',
             external_reference: user.id,
-            notification_url: notification_url
+            metadata: {
+                user_id: user.id
+            },
+            payment_methods: {
+                excluded_payment_methods: [],
+                excluded_payment_types: []
+            },
+            notification_url: notification_url,
+            statement_descriptor: 'CONTROLFRETE'
         };
 
         const response = await preference.create({ body });
