@@ -87,12 +87,7 @@ serve(async (req) => {
             },
             auto_return: 'approved',
             external_reference: user.id,
-            payment_methods: {
-                excluded_payment_methods: [],
-                excluded_payment_types: []
-            },
-            notification_url: notification_url,
-            statement_descriptor: 'CONTROLFRETE'
+            notification_url: notification_url
         };
 
         const response = await preference.create({ body });
