@@ -10,7 +10,7 @@ import { useSubscription } from '../hooks/useSubscription';
 interface SettingsProps {
   settings: AppSettings;
   user: User;
-  onSave: (newSettings: AppSettings) => void;
+  onSave: (newSettings: AppSettings) => Promise<void>;
   onNavigate: (view: ViewState) => void;
   onUpdateUser?: (user: User) => Promise<void>;
 }
@@ -18,22 +18,38 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNavigate, onUpdateUser }) => {
   /* Removed handleStripeUpgrade */
   const { isTrial, isActive, daysRemaining } = useSubscription(user);
+
+  // Initialize state with props
   const [company, setCompany] = useState(settings.defaultCompanyPercent);
   const [driver, setDriver] = useState(settings.defaultDriverPercent);
   const [reserve, setReserve] = useState(settings.defaultReservePercent);
 
-  // Issuer State
   const [issuerName, setIssuerName] = useState(settings.issuerName || user?.name || '');
   const [issuerDoc, setIssuerDoc] = useState(settings.issuerDoc || '');
   const [issuerPhone, setIssuerPhone] = useState(settings.issuerPhone || '');
 
-  // Address State
   const [issuerStreet, setIssuerStreet] = useState(settings.issuerAddressStreet || '');
   const [issuerNumber, setIssuerNumber] = useState(settings.issuerAddressNumber || '');
   const [issuerNeighborhood, setIssuerNeighborhood] = useState(settings.issuerAddressNeighborhood || '');
   const [issuerCity, setIssuerCity] = useState(settings.issuerAddressCity || '');
   const [issuerState, setIssuerState] = useState(settings.issuerAddressState || '');
   const [issuerZip, setIssuerZip] = useState(settings.issuerAddressZip || '');
+
+  // Sync state with props when they change (e.g. initial fetch completes)
+  React.useEffect(() => {
+    setCompany(settings.defaultCompanyPercent);
+    setDriver(settings.defaultDriverPercent);
+    setReserve(settings.defaultReservePercent);
+    setIssuerName(settings.issuerName || user?.name || '');
+    setIssuerDoc(settings.issuerDoc || '');
+    setIssuerPhone(settings.issuerPhone || '');
+    setIssuerStreet(settings.issuerAddressStreet || '');
+    setIssuerNumber(settings.issuerAddressNumber || '');
+    setIssuerNeighborhood(settings.issuerAddressNeighborhood || '');
+    setIssuerCity(settings.issuerAddressCity || '');
+    setIssuerState(settings.issuerAddressState || '');
+    setIssuerZip(settings.issuerAddressZip || '');
+  }, [settings, user?.name]);
 
   // Profile Photo Logic
   const [uploading, setUploading] = useState(false);
@@ -133,7 +149,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
 
       if (rpcError) throw rpcError;
 
-      if (onUpdateUser) onUpdateUser({ ...user, profile_photo_url: publicUrl, profile_photo_changes_used: (user.profile_photo_changes_used || 0) + 1 });
+      if (onUpdateUser) await onUpdateUser({ ...user, profile_photo_url: publicUrl, profile_photo_changes_used: (user.profile_photo_changes_used || 0) + 1 });
       handleCancelPreview();
       alert('Foto de perfil atualizada com sucesso!');
     } catch (error: any) {
@@ -151,25 +167,34 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   };
 
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // Add saving state
 
-  const handleSave = () => {
-    onSave({
-      ...settings,
-      defaultCompanyPercent: company,
-      defaultDriverPercent: driver,
-      defaultReservePercent: reserve,
-      issuerName,
-      issuerDoc,
-      issuerPhone,
-      issuerAddressStreet: issuerStreet,
-      issuerAddressNumber: issuerNumber,
-      issuerAddressNeighborhood: issuerNeighborhood,
-      issuerCity,
-      issuerAddressState: issuerState,
-      issuerAddressZip: issuerZip,
-    });
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await onSave({
+        ...settings,
+        defaultCompanyPercent: company,
+        defaultDriverPercent: driver,
+        defaultReservePercent: reserve,
+        issuerName,
+        issuerDoc,
+        issuerPhone,
+        issuerAddressStreet: issuerStreet,
+        issuerAddressNumber: issuerNumber,
+        issuerAddressNeighborhood: issuerNeighborhood,
+        issuerCity,
+        issuerAddressState: issuerState,
+        issuerAddressZip: issuerZip,
+      });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      alert("Falha ao salvar configurações. Tente novamente.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const toggleTheme = (theme: 'light' | 'dark') => {
@@ -514,8 +539,15 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
       </section>
 
       <div className="pt-4">
-        <Button fullWidth onClick={handleSave} disabled={total !== 100}>
-          {isSaved ? 'Configurações Salvas!' : 'Salvar Tudo'}
+        <Button fullWidth onClick={handleSave} disabled={total !== 100 || isSaving}>
+          {isSaving ? (
+            <div className="flex items-center gap-2 justify-center">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Salvando...
+            </div>
+          ) : (
+            isSaved ? 'Configurações Salvas!' : 'Salvar Tudo'
+          )}
         </Button>
       </div>
 

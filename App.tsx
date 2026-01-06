@@ -471,12 +471,13 @@ export default function App() {
             onSave={async (s) => {
               if (!currentUser) return;
               setSettings(s);
-              await supabase.from('settings').upsert({
+              const { error } = await supabase.from('settings').upsert({
                 user_id: currentUser.id,
                 theme: s.theme,
                 default_company_percent: s.defaultCompanyPercent,
                 default_driver_percent: s.defaultDriverPercent,
                 default_reserve_percent: s.defaultReservePercent,
+                monthly_goal: s.monthlyGoal,
                 issuer_name: s.issuerName,
                 issuer_doc: s.issuerDoc,
                 issuer_phone: s.issuerPhone,
@@ -487,6 +488,11 @@ export default function App() {
                 issuer_address_state: s.issuerAddressState,
                 issuer_address_zip: s.issuerAddressZip
               });
+
+              if (error) {
+                console.error("Error saving settings to Supabase:", error);
+                throw error;
+              }
             }}
             onNavigate={setView}
             onUpdateUser={async (u) => {
