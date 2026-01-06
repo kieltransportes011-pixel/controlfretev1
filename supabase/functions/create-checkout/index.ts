@@ -86,6 +86,7 @@ serve(async (req) => {
                 pending: `${origin}/?payment=pending`
             },
             auto_return: 'approved',
+            binary_mode: true,
             external_reference: user.id,
             payment_methods: {
                 excluded_payment_methods: [],

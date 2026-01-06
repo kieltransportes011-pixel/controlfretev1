@@ -86,16 +86,36 @@ serve(async (req) => {
                     const premiumUntil = new Date();
                     premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
 
-                    const { error } = await supabase.from('profiles').update({
-                        is_premium: true,
-                        plano: 'pro',
-                        status_assinatura: 'ativa',
-                        premium_until: premiumUntil.toISOString(),
-                        last_payment_id: paymentId.toString()
-                    }).eq('id', userId);
+                    const { data: updatedProfile, error: updateError } = await supabase
+                        .from('profiles')
+                        .update({
+                            is_premium: true,
+                            plano: 'pro',
+                            status_assinatura: 'ativa',
+                            premium_until: premiumUntil.toISOString(),
+                            last_payment_id: paymentId.toString()
+                        })
+                        .eq('id', userId)
+                        .select();
 
-                    if (error) {
-                        console.error("CRITICAL: Database Update Error during PRO activation:", error);
+                    if (updateError) {
+                        console.error("Database Update Error:", updateError);
+                    } else if (!updatedProfile || updatedProfile.length === 0) {
+                        // Profile missing? Create one!
+                        console.log("Profile missing for user. Creating new PRO profile...");
+                        const { error: insertError } = await supabase.from('profiles').insert({
+                            id: userId,
+                            email: paymentData.payer?.email || '',
+                            is_premium: true,
+                            plano: 'pro',
+                            status_assinatura: 'ativa',
+                            premium_until: premiumUntil.toISOString(),
+                            last_payment_id: paymentId.toString(),
+                            created_at: new Date().toISOString()
+                        });
+
+                        if (insertError) console.error("Error creating missing profile:", insertError);
+                        else console.log(`SUCCESS: Created and Upgraded User ${userId} to PRO ANUAL.`);
                     } else {
                         console.log(`SUCCESS: User ${userId} upgraded to PRO ANUAL (Payment ${paymentId}).`);
                     }
