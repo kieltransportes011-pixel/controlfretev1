@@ -69,34 +69,28 @@ serve(async (req) => {
                 {
                     id: 'pro_annual',
                     title: 'Assinatura Anual Control Frete Pro',
-                    description: 'Acesso completo a todos os recursos por 1 ano',
+                    description: 'Acesso completo - 1 Ano',
                     quantity: 1,
                     currency_id: 'BRL',
                     unit_price: 59.99
                 }
             ],
-            payer: {
-                email: payerEmail || 'cliente@controlfrete.com.br'
-            },
+            // Payer removed to allow Guest Checkout / Full manual entry
+            // This prevents "invalid email" errors if the fallback is rejected
             back_urls: {
                 success: `${origin}/?payment=success`,
                 failure: `${origin}/?payment=failure`,
                 pending: `${origin}/?payment=pending`
             },
             auto_return: 'approved',
-            binary_mode: false,
             external_reference: user.id,
             metadata: {
                 user_id: user.id
             },
-            payment_methods: {
-                excluded_payment_methods: [],
-                excluded_payment_types: []
-            },
             notification_url: notification_url
         };
 
-        console.log("Preference Body:", JSON.stringify(body));
+        console.log("Preference Body MINIMAL:", JSON.stringify(body));
 
         const response = await preference.create({ body });
         console.log("Preference Created:", response.id);
