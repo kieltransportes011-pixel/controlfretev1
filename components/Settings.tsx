@@ -189,9 +189,9 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
       });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save settings:", error);
-      alert("Falha ao salvar configurações. Tente novamente.");
+      alert("Falha ao salvar configurações: " + (error.message || "Erro desconhecido"));
     } finally {
       setIsSaving(false);
     }

@@ -487,7 +487,7 @@ export default function App() {
                 issuer_address_city: s.issuerAddressCity,
                 issuer_address_state: s.issuerAddressState,
                 issuer_address_zip: s.issuerAddressZip
-              });
+              }, { onConflict: 'user_id' });
 
               if (error) {
                 console.error("Error saving settings to Supabase:", error);
