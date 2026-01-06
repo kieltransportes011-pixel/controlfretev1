@@ -38,13 +38,13 @@ serve(async (req) => {
 
             // Check user status
             const { data: user, error: userError } = await supabase
-                .from('users_data')
+                .from('profiles')
                 .select('is_premium, plano')
                 .eq('id', userId)
                 .single();
 
             if (userError) {
-                console.error(`Error fetching user ${userId}:`, userError);
+                console.error(`Error fetching profile ${userId}:`, userError);
                 continue;
             }
 
@@ -55,14 +55,12 @@ serve(async (req) => {
                 const premiumUntil = new Date();
                 premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
 
-                const { error: updateError } = await supabase.from('users_data').update({
+                const { error: updateError } = await supabase.from('profiles').update({
                     is_premium: true,
                     plano: 'pro',
-                    plan_type: 'ANUAL',
                     status_assinatura: 'ativa',
                     premium_until: premiumUntil.toISOString(),
-                    last_payment_id: payment.payment_id,
-                    last_payment_event: new Date().toISOString()
+                    last_payment_id: payment.payment_id
                 }).eq('id', userId);
 
                 if (updateError) {
