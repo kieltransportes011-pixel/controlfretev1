@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AppSettings, User, ViewState } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -111,7 +111,8 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
 
     try {
       setUploading(true);
-      const filePath = `avatars/${user.id}.webp`;
+      // Removed redundant 'avatars/' prefix since we are already IN the 'avatars' bucket
+      const filePath = `${user.id}.webp`;
       const processedFile = new File([previewBlob], 'avatar.webp', { type: 'image/webp' });
 
       // Upload
@@ -121,17 +122,18 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
 
       if (uploadError) throw uploadError;
 
+      // Get Public URL
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-      // RPC
+      // RPC to update profile
       const { error: rpcError } = await supabase.rpc('update_profile_avatar', {
         new_photo_url: `${publicUrl}?t=${Date.now()}`,
-        cost: cost
+        cost: 0 // Logic handled in backend or irrelevant for free changes
       });
 
       if (rpcError) throw rpcError;
 
-      if (onUpdateUser) onUpdateUser(user);
+      if (onUpdateUser) onUpdateUser({ ...user, profile_photo_url: publicUrl, profile_photo_changes_used: (user.profile_photo_changes_used || 0) + 1 });
       handleCancelPreview();
       alert('Foto de perfil atualizada com sucesso!');
     } catch (error: any) {
@@ -516,6 +518,25 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           {isSaved ? 'Configurações Salvas!' : 'Salvar Tudo'}
         </Button>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <MessageCircle className="w-4 h-4" />
+          Suporte & Ajuda
+        </h2>
+        <Card className="p-4 bg-[#F5F7FA] dark:bg-slate-900 border-none">
+          <button
+            onClick={() => window.open('https://chat.whatsapp.com/KV5mZBRNLuy5Ci7brBAf2K', '_blank')}
+            className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+          >
+            <MessageCircle className="w-5 h-5" />
+            Entrar no Grupo de Suporte VIP
+          </button>
+          <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
+            Tire dúvidas e receba novidades diretamente no WhatsApp.
+          </p>
+        </Card>
+      </section>
 
       <section className="space-y-3 pt-6 border-t border-slate-200 dark:border-slate-700">
         <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">

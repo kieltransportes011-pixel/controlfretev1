@@ -126,6 +126,15 @@ export default function App() {
         defaultReservePercent: settingsData.default_reserve_percent,
         theme: settingsData.theme as 'light' | 'dark',
         monthlyGoal: settingsData.monthly_goal,
+        issuerName: settingsData.issuer_name,
+        issuerDoc: settingsData.issuer_doc,
+        issuerPhone: settingsData.issuer_phone,
+        issuerAddressStreet: settingsData.issuer_address_street,
+        issuerAddressNumber: settingsData.issuer_address_number,
+        issuerAddressNeighborhood: settingsData.issuer_address_neighborhood,
+        issuerAddressCity: settingsData.issuer_address_city,
+        issuerAddressState: settingsData.issuer_address_state,
+        issuerAddressZip: settingsData.issuer_address_zip
       });
     }
 
@@ -468,7 +477,15 @@ export default function App() {
                 default_company_percent: s.defaultCompanyPercent,
                 default_driver_percent: s.defaultDriverPercent,
                 default_reserve_percent: s.defaultReservePercent,
-                // issuer props...
+                issuer_name: s.issuerName,
+                issuer_doc: s.issuerDoc,
+                issuer_phone: s.issuerPhone,
+                issuer_address_street: s.issuerAddressStreet,
+                issuer_address_number: s.issuerAddressNumber,
+                issuer_address_neighborhood: s.issuerAddressNeighborhood,
+                issuer_address_city: s.issuerAddressCity,
+                issuer_address_state: s.issuerAddressState,
+                issuer_address_zip: s.issuerAddressZip
               });
             }}
             onNavigate={setView}
