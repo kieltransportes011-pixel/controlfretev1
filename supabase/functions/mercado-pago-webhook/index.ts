@@ -86,14 +86,12 @@ serve(async (req) => {
                     const premiumUntil = new Date();
                     premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
 
-                    const { error } = await supabase.from('users_data').update({
+                    const { error } = await supabase.from('profiles').update({
                         is_premium: true,
                         plano: 'pro',
-                        plan_type: 'ANUAL',
                         status_assinatura: 'ativa',
                         premium_until: premiumUntil.toISOString(),
-                        last_payment_id: paymentId.toString(),
-                        last_payment_event: new Date().toISOString()
+                        last_payment_id: paymentId.toString()
                     }).eq('id', userId);
 
                     if (error) {

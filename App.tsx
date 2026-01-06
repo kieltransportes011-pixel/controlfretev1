@@ -12,6 +12,7 @@ import { Auth } from './components/Auth';
 import { MonthlyGoal } from './components/MonthlyGoal';
 import { Button } from './components/Button';
 import { Paywall } from './components/Paywall';
+import { PaymentSuccessModal } from './components/PaymentSuccessModal';
 import { supabase } from './supabase';
 import { Loader2, ShieldAlert, Cloud } from 'lucide-react';
 import { useSubscription } from './hooks/useSubscription';
@@ -38,6 +39,7 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Subscription Hook
   const { isActive, isExpired, daysRemaining, isTrial } = useSubscription(currentUser);
@@ -69,7 +71,7 @@ export default function App() {
 
   const fetchUserProfile = async (uid: string) => {
     const { data, error } = await supabase
-      .from('users_data')
+      .from('profiles')
       .select('*')
       .eq('id', uid)
       .single();
@@ -101,7 +103,7 @@ export default function App() {
     if (params.get('payment') === 'success') {
       // Clear the query param
       window.history.replaceState(null, '', window.location.pathname);
-      alert('Parabéns! Sua assinatura Pro foi ativada com sucesso.');
+      setShowSuccessModal(true);
       if (currentUser) fetchUserProfile(currentUser.id);
     }
   }, [currentUser?.id]);
@@ -484,6 +486,9 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+      {showSuccessModal && (
+        <PaymentSuccessModal onClose={() => setShowSuccessModal(false)} />
       )}
     </Layout>
   );

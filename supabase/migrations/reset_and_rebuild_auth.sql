@@ -35,6 +35,14 @@ CREATE TABLE public.profiles (
     name TEXT DEFAULT '',
     cpf TEXT DEFAULT '',
     plano TEXT DEFAULT 'FREE',
+    status_assinatura TEXT DEFAULT 'ativa',
+    is_premium BOOLEAN DEFAULT FALSE,
+    premium_until TIMESTAMPTZ,
+    last_payment_id TEXT,
+    trial_start TIMESTAMPTZ,
+    trial_end TIMESTAMPTZ,
+    profile_photo_url TEXT,
+    profile_photo_changes_used INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now(),
     usage_stats JSONB DEFAULT '{}'::jsonb
 );
