@@ -21,6 +21,8 @@ import { LandingPage } from './components/LandingPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { PrivacyModal } from './components/PrivacyModal';
 import { Support } from './components/Support';
+import { MandatoryNoticeModal } from './components/MandatoryNoticeModal';
+import { NoticesCenter } from './components/NoticesCenter';
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
   defaultCompanyPercent: 40,
@@ -578,6 +580,14 @@ export default function App() {
             setCurrentUser(prev => prev ? ({ ...prev, privacy_accepted: true }) : null);
           }}
         />
+      )}
+
+      {view === 'NOTICES' && currentUser && (
+        <NoticesCenter user={currentUser} onBack={() => setView('DASHBOARD')} />
+      )}
+
+      {currentUser && (
+        <MandatoryNoticeModal user={currentUser} />
       )}
     </Layout>
   );

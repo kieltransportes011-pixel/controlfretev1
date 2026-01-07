@@ -97,7 +97,7 @@ export interface AppSettings {
   issuerAddressZip?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES';
 
 export interface DashboardStats {
   monthTotal: number;
@@ -140,4 +140,23 @@ export interface AdminLog {
   target_id?: string;
   description: string;
   created_at: string;
+}
+
+export interface PlatformNotice {
+  id: string;
+  title: string;
+  summary?: string;
+  content: string;
+  level: 'info' | 'important' | 'critical';
+  is_mandatory: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoticeRead {
+  id: string;
+  notice_id: string;
+  user_id: string;
+  read_at: string;
 }
