@@ -9,9 +9,9 @@ interface PlanComparisonProps {
 
 export const PlanComparison: React.FC<PlanComparisonProps> = ({ onUpgrade, isLoading }) => {
     const features = [
-        { name: 'Cálculo de Fretes', free: '5 por mês', pro: 'Ilimitado' },
+        { name: 'Registros Salvos', free: '5 por mês', pro: 'Ilimitado' },
         { name: 'Histórico de Registros', free: 'Últimos 7 dias', pro: 'Completo' },
-        { name: 'Meta Mensal', free: '1 Ativa', pro: 'Histórico Completo' },
+        { name: 'Meta Mensal', free: false, pro: 'Histórico Completo' },
         { name: 'Relatórios e Exportação', free: false, pro: true },
         { name: 'Agenda Inteligente', free: false, pro: true },
         { name: 'Suporte Prioritário', free: false, pro: true },

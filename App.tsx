@@ -320,7 +320,7 @@ export default function App() {
   return (
     <Layout currentView={view} onNavigate={(v) => {
       // Pro Features Guard
-      const proFeatures: ViewState[] = ['AGENDA', 'GOALS'];
+      const proFeatures: ViewState[] = ['AGENDA', 'GOALS', 'SUPPORT'];
       const hasProAccess = isActive; // isActive is true if Pro OR Trial
 
       if (proFeatures.includes(v) && !hasProAccess) {
@@ -470,6 +470,7 @@ export default function App() {
           }}
           onEditFreight={(f) => { setFormData(f); setView('ADD_FREIGHT'); }}
           settings={settings}
+          isPremium={isActive}
         />
       )}
 
