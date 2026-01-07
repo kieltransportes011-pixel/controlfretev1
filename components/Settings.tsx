@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AppSettings, User, ViewState } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -587,6 +587,32 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
             Novidades, manutenções e atualizações importantes.
           </p>
+        </Card>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <Users className="w-4 h-4" />
+          Indique e Ganhe
+        </h2>
+        <Card className="p-4 bg-gradient-to-r from-brand/10 to-brand-secondary/10 dark:from-brand/20 dark:to-brand-secondary/20 border-brand/20">
+          <button
+            onClick={() => onNavigate('REFERRALS')}
+            className="w-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg hover:scale-[1.02]"
+          >
+            <Users className="w-5 h-5" />
+            Acessar Painel de Indicações
+          </button>
+          <div className="flex items-center justify-center gap-4 mt-3">
+            <div className="flex items-center gap-1 text-xs text-brand font-bold">
+              <DollarSign className="w-3 h-3" />
+              Ganhe 20%
+            </div>
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <CheckCircle className="w-3 h-3" />
+              Sem limites
+            </div>
+          </div>
         </Card>
       </section>
 

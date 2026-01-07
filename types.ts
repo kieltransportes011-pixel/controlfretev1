@@ -66,6 +66,7 @@ export interface User {
   account_status?: 'active' | 'suspended' | 'banned';
   privacy_accepted?: boolean;
   privacy_accepted_at?: string; // ISO Date string
+  referrer_id?: string;
 }
 
 export interface GoalHistoryEntry {
@@ -97,7 +98,7 @@ export interface AppSettings {
   issuerAddressZip?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS';
 
 export interface DashboardStats {
   monthTotal: number;

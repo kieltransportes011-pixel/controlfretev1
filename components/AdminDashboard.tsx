@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus } from 'lucide-react';
+import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus, DollarSign } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice } from '../types';
 
 interface AdminDashboardProps {
@@ -28,7 +28,7 @@ interface UserProfile {
     role: string;
 }
 
-type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES';
+type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
     const [activeTab, setActiveTab] = useState<TabView>('USERS');
@@ -59,6 +59,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [notices, setNotices] = useState<PlatformNotice[]>([]);
     const [editingNotice, setEditingNotice] = useState<Partial<PlatformNotice> | null>(null);
     const [isSavingNotice, setIsSavingNotice] = useState(false);
+
+    // Referrals State
+    const [commissions, setCommissions] = useState<any[]>([]);
+    const [referralSearch, setReferralSearch] = useState('');
 
     useEffect(() => {
         fetchAdminData();
@@ -100,10 +104,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             if (noticeError) throw noticeError;
 
+            // Fetch Commissions
+            const { data: allCommissions, error: commError } = await supabase
+                .from('commissions')
+                .select('*, referrer:profiles!referrer_id(name, email), referred:profiles!referred_id(name, email)')
+                .order('created_at', { ascending: false });
+
+            if (commError) throw commError;
+
             setUsers(profiles || []);
             setTickets(supportTickets || []);
             setLogs(adminLogs || []);
             setNotices(platformNotices || []);
+            setCommissions(allCommissions || []);
 
             setStats({
                 totalUsers: profiles?.length || 0,
@@ -266,6 +279,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         l.description.toLowerCase().includes(logSearch.toLowerCase())
     );
 
+    // --- Referrals Logic ---
+    const handleUpdateCommission = async (id: string, newStatus: string) => {
+        if (!confirm(`Confirmar alteração de status para: ${newStatus}?`)) return;
+        try {
+            const { error } = await supabase.from('commissions').update({ status: newStatus }).eq('id', id);
+            if (error) throw error;
+            await logAction('UPDATE_COMMISSION', 'system', id, `Alterou status da comissão para ${newStatus}`);
+            await fetchAdminData();
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao atualizar comissão.");
+        }
+    };
+
+    const filteredCommissions = commissions.filter(c =>
+        (c.referrer?.name?.toLowerCase() || '').includes(referralSearch.toLowerCase()) ||
+        (c.referred?.name?.toLowerCase() || '').includes(referralSearch.toLowerCase()) ||
+        (c.referrer?.email || '').includes(referralSearch.toLowerCase())
+    );
+
     // --- Notices Logic ---
     const handleSaveNotice = async () => {
         if (!editingNotice || !editingNotice.title || !editingNotice.content) return;
@@ -389,6 +422,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     >
                         <Megaphone className="w-4 h-4" />
                         Central de Avisos
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('REFERRALS')}
+                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'REFERRALS' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <DollarSign className="w-4 h-4" />
+                        Indicações ({commissions.filter(c => c.status === 'pending').length})
                     </button>
                 </div>
 
@@ -685,6 +725,109 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- REFERRALS TAB --- */}
+                {activeTab === 'REFERRALS' && (
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-slate-500" />
+                                Gestão de Indicações ({filteredCommissions.length})
+                            </h2>
+                            <div className="relative w-full md:w-96">
+                                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por indicador ou indicado..."
+                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                    value={referralSearch}
+                                    onChange={(e) => setReferralSearch(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto flex-1">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                    <tr>
+                                        <th className="px-6 py-4">Data</th>
+                                        <th className="px-6 py-4">Indicador (Recebe)</th>
+                                        <th className="px-6 py-4">Indicado (Pagou)</th>
+                                        <th className="px-6 py-4 text-right">Valor Comissão</th>
+                                        <th className="px-6 py-4 text-center">Status</th>
+                                        <th className="px-6 py-4 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {filteredCommissions.map((comm) => (
+                                        <tr key={comm.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                            <td className="px-6 py-4">
+                                                <div className="text-slate-900 dark:text-white font-medium">
+                                                    {new Date(comm.created_at).toLocaleDateString()}
+                                                </div>
+                                                <div className="text-xs text-slate-400">
+                                                    {new Date(comm.created_at).toLocaleTimeString()}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-blue-600 dark:text-blue-400">
+                                                    {comm.referrer?.name || 'Desconhecido'}
+                                                </div>
+                                                <div className="text-xs text-slate-500">{comm.referrer?.email}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-slate-800 dark:text-white">
+                                                    {comm.referred?.name || 'Desconhecido'}
+                                                </div>
+                                                <div className="text-xs text-slate-500">{comm.referred?.email}</div>
+                                                <div className="text-[10px] text-green-600 mt-1">
+                                                    Base: R$ {comm.base_amount}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-lg text-slate-900 dark:text-white">
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(comm.amount)}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${comm.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                                        comm.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                            'bg-orange-100 text-orange-700'
+                                                    }`}>
+                                                    {comm.status === 'approved' ? 'Aprovado' : comm.status === 'cancelled' ? 'Cancelado' : 'Pendente'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                {comm.status === 'pending' && (
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleUpdateCommission(comm.id, 'approved')}
+                                                            className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Aprovar/Pagar">
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleUpdateCommission(comm.id, 'cancelled')}
+                                                            className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Cancelar">
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {comm.status === 'approved' && (
+                                                    <span className="text-xs text-green-600 font-bold flex items-center justify-end gap-1">
+                                                        <CheckCircle className="w-3 h-3" /> Pago
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {filteredCommissions.length === 0 && (
+                                <div className="p-12 text-center text-slate-400">
+                                    Nenhuma indicação encontrada.
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

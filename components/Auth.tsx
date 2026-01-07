@@ -156,7 +156,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
             email: formData.email,
             name: formData.name,
             cpf: formData.cpf,
-            plano: 'FREE' // Enforce logic
+            plano: 'FREE', // Enforce logic
+            referrer_id: (() => {
+              const params = new URLSearchParams(window.location.search);
+              const ref = params.get('ref');
+              // Simple UUID regex check to prevent DB errors
+              return (ref && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref)) ? ref : null;
+            })()
           });
 
         if (profileError) {

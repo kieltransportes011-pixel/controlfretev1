@@ -23,6 +23,7 @@ import { PrivacyModal } from './components/PrivacyModal';
 import { Support } from './components/Support';
 import { MandatoryNoticeModal } from './components/MandatoryNoticeModal';
 import { NoticesCenter } from './components/NoticesCenter';
+import { ReferralSystem } from './components/ReferralSystem';
 import { UpgradeModal } from './components/UpgradeModal';
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
@@ -617,6 +618,13 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {view === 'REFERRALS' && currentUser && (
+        <ReferralSystem
+          user={currentUser}
+          onBack={() => setView('SETTINGS')}
+        />
       )}
 
       {view === 'SUPPORT' && (

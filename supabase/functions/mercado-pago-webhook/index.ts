@@ -119,6 +119,41 @@ serve(async (req) => {
                     } else {
                         console.log(`SUCCESS: User ${userId} upgraded to PRO ANUAL (Payment ${paymentId}).`);
                     }
+
+                    // 4. Referral Commission Processing
+                    try {
+                        // Fetch Refferer ID
+                        const { data: payerProfile } = await supabase
+                            .from('profiles')
+                            .select('referrer_id')
+                            .eq('id', userId)
+                            .single();
+
+                        if (payerProfile?.referrer_id) {
+                            // Calculate 20%
+                            const commissionAmount = Number(paymentData.transaction_amount) * 0.20;
+
+                            // Idempotent Insert
+                            const { error: commError } = await supabase.from('commissions').insert({
+                                referrer_id: payerProfile.referrer_id,
+                                referred_id: userId,
+                                amount: commissionAmount,
+                                base_amount: paymentData.transaction_amount,
+                                source_payment_id: paymentId.toString(),
+                                status: 'pending' // Requirement: pending initially
+                            });
+
+                            if (commError) {
+                                if (!commError.message.includes('unique constraint')) {
+                                    console.error("Error creating commission:", commError);
+                                }
+                            } else {
+                                console.log(`Referral commission recorded for referrer ${payerProfile.referrer_id}`);
+                            }
+                        }
+                    } catch (refError) {
+                        console.error("Error processing referral logic:", refError);
+                    }
                 }
             } catch (mpError) {
                 console.error("Mercado Pago Lookup Error:", mpError);
