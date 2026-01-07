@@ -13,12 +13,14 @@ interface HistoryProps {
   onEditFreight: (freight: Freight) => void;
   settings?: AppSettings;
   isPremium?: boolean;
+  onRequestUpgrade?: () => void;
 }
 
 type FilterType = 'ALL' | 'MONTH' | 'WEEK' | 'CUSTOM';
 type StatusFilterType = 'ALL' | 'PAID' | 'PARTIAL' | 'PENDING';
 
-export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFreight, onDeleteExpense, onEditFreight, settings, isPremium }) => {
+export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFreight, onDeleteExpense, onEditFreight, settings, isPremium, onRequestUpgrade }) => {
+
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -249,15 +251,20 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
                       </div>
 
                       {/* Receipt Action - Only for PRO */}
-                      {isPremium && (
-                        <button
-                          onClick={() => setReceiptFreight(freight)}
-                          className="absolute -bottom-2 -right-2 p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                          title="Gerar Recibo"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                      )}
+                      {/* Receipt Action - Intercept for FREE */}
+                      <button
+                        onClick={() => {
+                          if (isPremium) {
+                            setReceiptFreight(freight);
+                          } else {
+                            onRequestUpgrade?.();
+                          }
+                        }}
+                        className={`absolute -bottom-2 -right-2 p-2 transition-colors ${isPremium ? 'text-slate-400 hover:text-blue-600' : 'text-slate-300 hover:text-brand'}`}
+                        title={isPremium ? "Gerar Recibo" : "Recurso PRO"}
+                      >
+                        {isPremium ? <Printer className="w-4 h-4" /> : <Printer className="w-4 h-4 opacity-50" />}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -312,6 +319,21 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
               );
             }
           })
+        )}
+
+        {/* Helper for Limited History (Free Plan) */}
+        {!isPremium && freights.length > 0 && filter === 'ALL' && (
+          <div
+            onClick={onRequestUpgrade}
+            className="bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
+          >
+            <div className="w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+              <CalendarDays className="w-6 h-6 text-slate-400" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">Histórico Antigo Bloqueado</h3>
+            <p className="text-xs text-slate-500 mt-1 mb-3">O plano gratuito exibe apenas os últimos 7 dias.</p>
+            <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Desbloquear Agora</span>
+          </div>
         )}
       </div>
 

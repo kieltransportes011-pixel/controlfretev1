@@ -18,11 +18,28 @@ interface DashboardProps {
   onUpgrade: () => void;
   onViewAgenda: () => void;
   accountsPayable: AccountPayable[];
+  onRequestUpgrade?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
+  const [showUsageBanner, setShowUsageBanner] = useState(false);
+
+  React.useEffect(() => {
+    if (user.isPremium) return;
+
+    // Check usage limits locally for prompt
+    const freightCount = freights.length;
+    const daysSinceSignup = Math.floor((new Date().getTime() - new Date(user.createdAt).getTime()) / (1000 * 3600 * 24));
+
+    if (freightCount >= 5 || daysSinceSignup >= 7) {
+      const lastPrompt = localStorage.getItem('control_frete_upgrade_prompt');
+      if (!lastPrompt || (new Date().getTime() - new Date(lastPrompt).getTime()) > (7 * 24 * 60 * 60 * 1000)) {
+        setShowUsageBanner(true);
+      }
+    }
+  }, [user, freights]);
 
   const upcomingBills = useMemo(() => {
     if (!accountsPayable) return [];
@@ -173,6 +190,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           >
             Assinar Agora
           </button>
+        </div>
+      )}
+
+      {/* Usage Trigger Banner */}
+      {showUsageBanner && !user.isPremium && (
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-2xl shadow-lg text-white flex items-center justify-between mb-4 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-full">
+              <Sparkles className="w-5 h-5 text-yellow-300" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm uppercase">Uso Intenso Detectado!</h3>
+              <p className="text-[10px] opacity-90">Você está aproveitando bem o sistema. Vire PRO para não ter limites.</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setShowUsageBanner(false);
+                localStorage.setItem('control_frete_upgrade_prompt', new Date().toISOString());
+              }}
+              className="p-2 text-white/60 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onRequestUpgrade || onUpgrade}
+              className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-blue-50 transition-colors"
+            >
+              Vire PRO
+            </button>
+          </div>
         </div>
       )}
 

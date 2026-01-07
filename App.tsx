@@ -23,6 +23,7 @@ import { PrivacyModal } from './components/PrivacyModal';
 import { Support } from './components/Support';
 import { MandatoryNoticeModal } from './components/MandatoryNoticeModal';
 import { NoticesCenter } from './components/NoticesCenter';
+import { UpgradeModal } from './components/UpgradeModal';
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
   defaultCompanyPercent: 40,
@@ -46,6 +47,30 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [upgradeModal, setUpgradeModal] = useState({
+    open: false,
+    title: '',
+    description: ''
+  });
+
+  const handleOpenUpgrade = (reason: 'LIMIT' | 'FEATURE' | 'GENERAL' = 'GENERAL') => {
+    let title = 'Desbloqueie o Pro';
+    let description = 'Faça o upgrade para remover todas as restrições.';
+
+    if (reason === 'LIMIT') {
+      title = 'Limite Atingido';
+      description = 'Você atingiu o limite de fretes do plano gratuito. Vire PRO para registros ilimitados.';
+    } else if (reason === 'FEATURE') {
+      title = 'Recurso Exclusivo';
+      description = 'Esta funcionalidade está disponível apenas para assinantes PRO.';
+    }
+
+    setUpgradeModal({
+      open: true,
+      title,
+      description
+    });
+  };
 
   // Subscription Hook
   const { isActive, isExpired, daysRemaining, isTrial } = useSubscription(currentUser);
@@ -324,8 +349,7 @@ export default function App() {
       const hasProAccess = isActive; // isActive is true if Pro OR Trial
 
       if (proFeatures.includes(v) && !hasProAccess) {
-        alert('Seu período de teste acabou. Assine o Plano Pro para continuar acessando este recurso!');
-        setView('PAYMENT');
+        handleOpenUpgrade('FEATURE');
         return;
       }
 
@@ -353,6 +377,7 @@ export default function App() {
           onViewGoals={() => setView('GOALS')}
           onUpgrade={() => setView('PAYMENT')}
           onViewAgenda={() => setView('AGENDA')}
+          onRequestUpgrade={() => handleOpenUpgrade('GENERAL')}
         />
       )}
 
@@ -390,45 +415,51 @@ export default function App() {
           settings={settings}
           onSave={async (f) => {
             if (!currentUser) return;
+            try {
+              // Strict separation: Check if ID exists and is valid (not empty)
+              if (f.id && f.id.length > 10) {
+                // Update existing freight
+                const { error } = await supabase.from('freights').update({
+                  date: f.date,
+                  client: f.client,
+                  total_value: f.totalValue,
+                  company_value: f.companyValue,
+                  driver_value: f.driverValue,
+                  reserve_value: f.reserveValue,
+                  status: f.status,
+                  received_value: f.receivedValue,
+                  pending_value: f.pendingValue,
+                  due_date: f.dueDate,
+                }).eq('id', f.id);
+                if (error) throw error;
+              } else {
+                // Insert new freight
+                const { error } = await supabase.from('freights').insert([{
+                  user_id: currentUser.id,
+                  date: f.date,
+                  client: f.client,
+                  total_value: f.totalValue,
+                  company_value: f.companyValue,
+                  driver_value: f.driverValue,
+                  reserve_value: f.reserveValue,
+                  status: f.status,
+                  received_value: f.receivedValue,
+                  pending_value: f.pendingValue,
+                  due_date: f.dueDate
+                }]);
+                if (error) throw error;
+              }
 
-            // Strict separation: Check if ID exists and is valid (not empty)
-            if (f.id && f.id.length > 10) {
-              // Update existing freight
-              // We strictly use UPDATE and valid existing ID
-              await supabase.from('freights').update({
-                date: f.date,
-                client: f.client,
-                total_value: f.totalValue,
-                company_value: f.companyValue,
-                driver_value: f.driverValue,
-                reserve_value: f.reserveValue,
-                status: f.status,
-                received_value: f.receivedValue,
-                pending_value: f.pendingValue,
-                due_date: f.dueDate,
-                // created_at is NOT updated
-                // updated_at could be added here if the column exists
-              }).eq('id', f.id);
-            } else {
-              // Insert new freight
-              // We strictly use INSERT and do NOT send an ID (DB generates it)
-              await supabase.from('freights').insert([{
-                user_id: currentUser.id,
-                date: f.date,
-                client: f.client,
-                total_value: f.totalValue,
-                company_value: f.companyValue,
-                driver_value: f.driverValue,
-                reserve_value: f.reserveValue,
-                status: f.status,
-                received_value: f.receivedValue,
-                pending_value: f.pendingValue,
-                due_date: f.dueDate
-              }]);
+              fetchData();
+              setView('DASHBOARD');
+            } catch (error: any) {
+              console.error("Erro ao salvar:", error);
+              if (error.message && error.message.includes('Limite do Plano Gratuito')) {
+                handleOpenUpgrade('LIMIT');
+              } else {
+                alert("Erro ao salvar: " + (error.message || "Tente novamente."));
+              }
             }
-
-            fetchData();
-            setView('DASHBOARD');
           }}
           onCancel={() => setView('DASHBOARD')}
           initialData={formData}
@@ -471,6 +502,7 @@ export default function App() {
           onEditFreight={(f) => { setFormData(f); setView('ADD_FREIGHT'); }}
           settings={settings}
           isPremium={isActive}
+          onRequestUpgrade={() => handleOpenUpgrade('FEATURE')}
         />
       )}
 
@@ -613,6 +645,16 @@ export default function App() {
       {currentUser && (
         <MandatoryNoticeModal user={currentUser} />
       )}
+      <UpgradeModal
+        isOpen={upgradeModal.open}
+        title={upgradeModal.title}
+        description={upgradeModal.description}
+        onClose={() => setUpgradeModal(prev => ({ ...prev, open: false }))}
+        onUpgrade={() => {
+          setUpgradeModal(prev => ({ ...prev, open: false }));
+          setView('PAYMENT');
+        }}
+      />
     </Layout>
   );
 };
