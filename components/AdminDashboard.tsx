@@ -40,6 +40,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
     const [isSavingUser, setIsSavingUser] = useState(false);
+    const [newEmail, setNewEmail] = useState('');
+    const [recoveryLoading, setRecoveryLoading] = useState(false);
 
     // Support Management State
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -135,6 +137,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     };
 
     // --- User Logic ---
+    const handleRecoveryAction = async (action: string, payload: any = {}) => {
+        if (!editingUser) return;
+        if (!confirm("Tem certeza que deseja executar esta ação de recuperação?")) return;
+
+        setRecoveryLoading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) throw new Error("No session");
+
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    action,
+                    targetId: editingUser.id,
+                    payload
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Action failed');
+
+            alert(result.message);
+            await fetchAdminData();
+            if (action === 'update_user_email' || action === 'force_logout') {
+                setEditingUser(null);
+            }
+        } catch (err: any) {
+            console.error("Recovery Action Error:", err);
+            alert(`Erro: ${err.message}`);
+        } finally {
+            setRecoveryLoading(false);
+        }
+    };
+
     const handleUpdateUser = async (updatedData: Partial<UserProfile>) => {
         if (!editingUser) return;
         setIsSavingUser(true);
@@ -800,12 +840,69 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-slate-500">
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-slate-500 mb-6">
                                 <p className="flex items-center gap-2 mb-2 font-bold text-orange-600">
                                     <Lock className="w-3 h-3" />
                                     Ações Sensíveis
                                 </p>
                                 <p>Alterações manuais de plano não geram cobrança. Para banir, selecione "Banida" no status.</p>
+                            </div>
+
+                            <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                                <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2 text-sm">
+                                    <Shield className="w-4 h-4 text-purple-600" />
+                                    Recuperação de Conta Assistida
+                                </h4>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => handleRecoveryAction('send_password_reset')}
+                                        disabled={recoveryLoading}
+                                        className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
+                                    >
+                                        <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors shrink-0">
+                                            <Lock className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Reset de Senha</span>
+                                            <span className="block text-xs text-slate-500">Enviar email de redefinição</span>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleRecoveryAction('force_logout')}
+                                        disabled={recoveryLoading}
+                                        className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
+                                    >
+                                        <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-full text-orange-600 group-hover:bg-orange-200 transition-colors shrink-0">
+                                            <Ban className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Forçar Logout</span>
+                                            <span className="block text-xs text-slate-500">Encerrar todas as sessões</span>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div className="mt-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Correção de Email</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="email"
+                                            placeholder="Novo email do usuário"
+                                            className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"
+                                            value={newEmail}
+                                            onChange={(e) => setNewEmail(e.target.value)}
+                                        />
+                                        <button
+                                            onClick={() => handleRecoveryAction('update_user_email', { email: newEmail })}
+                                            disabled={!newEmail || recoveryLoading}
+                                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                                        >
+                                            Alterar
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                         </div>
