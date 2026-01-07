@@ -102,7 +102,7 @@ export default function App() {
       });
 
       // Show Privacy Modal if not accepted yet
-      if (!data.privacy_policy_accepted_at) {
+      if (!data.privacy_accepted) {
         setShowPrivacyModal(true);
       }
 
@@ -571,25 +571,11 @@ export default function App() {
 
       {showPrivacyModal && currentUser && (
         <PrivacyModal
-          onAccept={async () => {
-            if (!currentUser) return;
-            // Record acceptance in DB
-            const now = new Date().toISOString();
-            const { error } = await supabase.from('profiles').update({
-              privacy_policy_accepted_at: now
-            }).eq('id', currentUser.id);
-
-            if (!error) {
-              // Update local state
-              setCurrentUser({ ...currentUser, privacy_policy_accepted_at: now });
-              setShowPrivacyModal(false);
-            } else {
-              alert("Erro ao salvar aceite. Tente novamente.");
-            }
-          }}
-          onReadPolicy={() => {
-            // Ideally navigate to Policy page or open in new tab
-            window.open('https://your-privacy-policy-url.com', '_blank'); // Placeholder
+          userId={currentUser.id}
+          onAccept={() => {
+            setShowPrivacyModal(false);
+            // Update local user state instantly to prevent flicker
+            setCurrentUser(prev => prev ? ({ ...prev, privacy_accepted: true }) : null);
           }}
         />
       )}

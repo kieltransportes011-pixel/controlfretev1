@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
-import { SupportTicket } from '../types';
+import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity } from 'lucide-react';
+import { SupportTicket, AdminLog } from '../types';
 
 interface AdminDashboardProps {
     onBack: () => void;
@@ -27,7 +27,7 @@ interface UserProfile {
     role: string;
 }
 
-type TabView = 'USERS' | 'SUPPORT';
+type TabView = 'USERS' | 'SUPPORT' | 'LOGS';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
     const [activeTab, setActiveTab] = useState<TabView>('USERS');
@@ -47,6 +47,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [ticketReply, setTicketReply] = useState('');
     const [ticketStatus, setTicketStatus] = useState<string>('');
     const [isSavingTicket, setIsSavingTicket] = useState(false);
+
+    // Logs State
+    const [logs, setLogs] = useState<AdminLog[]>([]);
+    const [logSearch, setLogSearch] = useState('');
 
     useEffect(() => {
         fetchAdminData();
@@ -72,8 +76,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             if (ticketError) throw ticketError;
 
+            // Fetch Logs
+            const { data: adminLogs, error: logError } = await supabase
+                .from('admin_logs')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (logError) throw logError;
+
             setUsers(profiles || []);
             setTickets(supportTickets || []);
+            setLogs(adminLogs || []);
             setStats({
                 totalUsers: profiles?.length || 0,
                 activeProUsers: profiles?.filter(p => p.plano === 'pro' || p.is_premium).length || 0,
@@ -89,6 +102,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         }
     };
 
+    // Helper to log actions
+    const logAction = async (action: string, targetType: 'user' | 'support_ticket' | 'system', targetId: string | undefined, description: string) => {
+        try {
+            await supabase.from('admin_logs').insert([{
+                admin_id: currentUser.id,
+                action,
+                target_type: targetType,
+                target_id: targetId,
+                description
+            }]);
+        } catch (e) {
+            console.error("Failed to log action:", e);
+        }
+    };
+
     // --- User Logic ---
     const handleUpdateUser = async (updatedData: Partial<UserProfile>) => {
         if (!editingUser) return;
@@ -101,11 +129,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             if (error) throw error;
 
-            await supabase.from('admin_logs').insert([{
-                action: 'UPDATE_USER',
-                target_user_id: editingUser.id,
-                details: updatedData
-            }]).select();
+            // Log the action
+            let changes = [];
+            if (updatedData.plano && updatedData.plano !== editingUser.plano) changes.push(`Plano: ${editingUser.plano} -> ${updatedData.plano}`);
+            if (updatedData.account_status && updatedData.account_status !== editingUser.account_status) changes.push(`Status: ${editingUser.account_status} -> ${updatedData.account_status}`);
+
+            await logAction('UPDATE_USER', 'user', editingUser.id, `Atualizou usuário ${editingUser.email}. ${changes.join(', ')}`);
 
             await fetchAdminData();
             setEditingUser(null);
@@ -139,6 +168,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             if (error) throw error;
 
+            // Log the action
+            await logAction(
+                'UPDATE_TICKET',
+                'support_ticket',
+                editingTicket.id,
+                `Ticket atualizado. Status: ${ticketStatus}. Respondeu: ${ticketReply ? 'Sim' : 'Não'}`
+            );
+
             await fetchAdminData();
             setEditingTicket(null);
             alert("Ticket atualizado com sucesso!");
@@ -154,6 +191,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         t.title.toLowerCase().includes(ticketSearch.toLowerCase()) ||
         t.description.toLowerCase().includes(ticketSearch.toLowerCase()) ||
         t.id.includes(ticketSearch)
+    );
+
+    const filteredLogs = logs.filter(l =>
+        l.action.toLowerCase().includes(logSearch.toLowerCase()) ||
+        l.description.toLowerCase().includes(logSearch.toLowerCase())
     );
 
     if (loading) {
@@ -194,18 +236,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-4 mb-6 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex gap-4 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('USERS')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 ${activeTab === 'USERS' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'USERS' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                     >
                         Gerenciar Usuários
                     </button>
                     <button
                         onClick={() => setActiveTab('SUPPORT')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 ${activeTab === 'SUPPORT' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'SUPPORT' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                     >
                         Suporte ({tickets.filter(t => t.status === 'open').length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('LOGS')}
+                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'LOGS' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <Activity className="w-4 h-4" />
+                        Logs Audit
                     </button>
                 </div>
 
@@ -358,6 +407,74 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             {filteredTickets.length === 0 && (
                                 <div className="p-8 text-center text-slate-500">
                                     Nenhum ticket encontrado.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* --- LOGS TAB --- */}
+                {activeTab === 'LOGS' && (
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-slate-500" />
+                                Logs de Auditoria
+                            </h2>
+                            <div className="relative w-full md:w-96">
+                                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar logs..."
+                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                    value={logSearch}
+                                    onChange={(e) => setLogSearch(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto flex-1">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                    <tr>
+                                        <th className="px-6 py-4">Data / Hora</th>
+                                        <th className="px-6 py-4">Admin</th>
+                                        <th className="px-6 py-4">Ação</th>
+                                        <th className="px-6 py-4">Detalhes</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {filteredLogs.map((log) => {
+                                        const adminUser = users.find(u => u.id === log.admin_id);
+                                        return (
+                                            <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                                                    {new Date(log.created_at).toLocaleString()}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-medium text-slate-800 dark:text-white">{adminUser?.name || 'Admin'}</div>
+                                                    <div className="text-[10px] text-slate-400 font-mono">{log.admin_id.slice(0, 8)}...</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${log.action.includes('UPDATE') ? 'bg-orange-100 text-orange-700' :
+                                                            log.action.includes('DELETE') ? 'bg-red-100 text-red-700' :
+                                                                'bg-blue-100 text-blue-700'
+                                                        }`}>
+                                                        {log.action}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-600 dark:text-slate-300 max-w-md truncate" title={log.description}>
+                                                    {log.description}
+                                                    {log.target_id && <span className="block text-[10px] text-slate-400 font-mono mt-0.5">Target: {log.target_id}</span>}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                            {filteredLogs.length === 0 && (
+                                <div className="p-8 text-center text-slate-500">
+                                    Nenhum log encontrado.
                                 </div>
                             )}
                         </div>
@@ -523,8 +640,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             </button>
                         </div>
                     </div>
+                )}
                 </div>
-            )}
         </div>
     );
 }

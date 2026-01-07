@@ -64,7 +64,8 @@ export interface User {
   trialEnd?: string; // ISO Date string
   role?: 'user' | 'admin';
   account_status?: 'active' | 'suspended' | 'banned';
-  privacy_policy_accepted_at?: string; // ISO Date string
+  privacy_accepted?: boolean;
+  privacy_accepted_at?: string; // ISO Date string
 }
 
 export interface GoalHistoryEntry {
@@ -129,4 +130,14 @@ export interface SupportTicket {
   attachment_url?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminLog {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_type: 'user' | 'support_ticket' | 'system';
+  target_id?: string;
+  description: string;
+  created_at: string;
 }
