@@ -62,6 +62,7 @@ export interface User {
   lastPaymentId?: string;
   trialStart?: string; // ISO Date string
   trialEnd?: string; // ISO Date string
+  role?: 'user' | 'admin';
 }
 
 export interface GoalHistoryEntry {
@@ -93,7 +94,7 @@ export interface AppSettings {
   issuerAddressZip?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN';
 
 export interface DashboardStats {
   monthTotal: number;

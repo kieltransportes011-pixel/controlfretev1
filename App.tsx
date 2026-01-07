@@ -18,6 +18,7 @@ import { Loader2, ShieldAlert, Cloud } from 'lucide-react';
 import { useSubscription } from './hooks/useSubscription';
 import { WorkCalendar } from './components/WorkCalendar';
 import { LandingPage } from './components/LandingPage';
+import { AdminDashboard } from './components/AdminDashboard';
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
   defaultCompanyPercent: 40,
@@ -88,8 +89,10 @@ export default function App() {
         lastPaymentId: data.last_payment_id,
         trialStart: data.trial_start,
         trialEnd: data.trial_end,
+
         profile_photo_url: data.profile_photo_url,
-        profile_photo_changes_used: data.profile_photo_changes_used || 0
+        profile_photo_changes_used: data.profile_photo_changes_used || 0,
+        role: data.role || 'user'
       });
     } else if (error) {
       console.error("Error fetching profile", error);
@@ -101,12 +104,27 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
-      // Clear the query param
       window.history.replaceState(null, '', window.location.pathname);
       setShowSuccessModal(true);
       if (currentUser) fetchUserProfile(currentUser.id);
     }
   }, [currentUser?.id]);
+
+  // Admin Route Check
+  useEffect(() => {
+    if (!initializing && currentUser) {
+      if (window.location.pathname === '/admin') {
+        if (currentUser.role === 'admin') {
+          setView('ADMIN');
+          setShowLanding(false);
+        } else {
+          // Redirect unauthorized access to admin
+          window.history.replaceState(null, '', '/');
+          setView('DASHBOARD');
+        }
+      }
+    }
+  }, [initializing, currentUser]);
 
   const fetchData = async () => {
     if (!currentUser) return;
@@ -262,6 +280,16 @@ export default function App() {
         setView('DASHBOARD');
       }}
       onCancel={() => setView('DASHBOARD')}
+    />;
+  }
+
+  if (view === 'ADMIN' && currentUser?.role === 'admin') {
+    return <AdminDashboard
+      currentUser={currentUser}
+      onBack={() => {
+        window.history.replaceState(null, '', '/');
+        setView('DASHBOARD');
+      }}
     />;
   }
 
