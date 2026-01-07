@@ -151,7 +151,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             if (updatedData.plano && updatedData.plano !== editingUser.plano) changes.push(`Plano: ${editingUser.plano} -> ${updatedData.plano}`);
             if (updatedData.account_status && updatedData.account_status !== editingUser.account_status) changes.push(`Status: ${editingUser.account_status} -> ${updatedData.account_status}`);
 
+
+
             await logAction('UPDATE_USER', 'user', editingUser.id, `Atualizou usuário ${editingUser.email}. ${changes.join(', ')}`);
+
+            // Security Log for User
+            if (changes.length > 0) {
+                await supabase.from('account_activity_logs').insert([{
+                    user_id: editingUser.id,
+                    action: `Alteração pelo Admin: ${changes.join(', ')}`,
+                    actor: 'admin'
+                }]);
+            }
 
             await fetchAdminData();
             setEditingUser(null);
@@ -587,8 +598,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${notice.level === 'critical' ? 'bg-red-50 text-red-600 border-red-200' :
-                                                        notice.level === 'important' ? 'bg-orange-50 text-orange-600 border-orange-200' :
-                                                            'bg-blue-50 text-blue-600 border-blue-200'
+                                                    notice.level === 'important' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                                        'bg-blue-50 text-blue-600 border-blue-200'
                                                     }`}>
                                                     {notice.level}
                                                 </span>

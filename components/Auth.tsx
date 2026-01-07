@@ -107,6 +107,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
         };
 
         onLogin(userObj);
+
+        // Security Log: Login
+        supabase.from('account_activity_logs').insert([{
+          user_id: data.user.id,
+          action: 'Login realizado',
+          actor: 'user'
+        }]).then(); // Fire and forget
       }
     } catch (err: any) {
       console.error(err);
@@ -176,6 +183,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
         };
         setJustRegisteredUser(newUser);
         setView('SUCCESS');
+
+        // Security Log: Register
+        supabase.from('account_activity_logs').insert([{
+          user_id: userId,
+          action: 'Conta criada',
+          actor: 'user'
+        }]).then();
       }
     } catch (err: any) {
       console.error(err);

@@ -160,3 +160,11 @@ export interface NoticeRead {
   user_id: string;
   read_at: string;
 }
+
+export interface AccountActivityLog {
+  id: string;
+  user_id: string;
+  action: string;
+  actor: 'user' | 'admin' | 'system';
+  created_at: string;
+}

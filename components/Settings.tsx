@@ -6,6 +6,7 @@ import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, Che
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
+import { ActivityHistory } from './ActivityHistory';
 
 interface SettingsProps {
   settings: AppSettings;
@@ -605,6 +606,16 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
             Precisa de ajuda? Abra um ticket e responderemos em breve.
           </p>
+        </Card>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <Shield className="w-4 h-4" />
+          Segurança
+        </h2>
+        <Card className="p-0 border-none bg-transparent shadow-none">
+          <ActivityHistory userId={user.id} />
         </Card>
       </section>
 
