@@ -19,6 +19,7 @@ import { useSubscription } from './hooks/useSubscription';
 import { WorkCalendar } from './components/WorkCalendar';
 import { LandingPage } from './components/LandingPage';
 import { AdminDashboard } from './components/AdminDashboard';
+import { PrivacyModal } from './components/PrivacyModal';
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
   defaultCompanyPercent: 40,
@@ -41,6 +42,7 @@ export default function App() {
   const [initializing, setInitializing] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   // Subscription Hook
   const { isActive, isExpired, daysRemaining, isTrial } = useSubscription(currentUser);
@@ -93,8 +95,16 @@ export default function App() {
         profile_photo_url: data.profile_photo_url,
         profile_photo_changes_used: data.profile_photo_changes_used || 0,
         role: data.role || 'user',
-        account_status: data.account_status || 'active'
+
+        account_status: data.account_status || 'active',
+        privacy_policy_accepted_at: data.privacy_policy_accepted_at
       });
+
+      // Show Privacy Modal if not accepted yet
+      if (!data.privacy_policy_accepted_at) {
+        setShowPrivacyModal(true);
+      }
+
     } else if (error) {
       console.error("Error fetching profile", error);
     }
@@ -551,6 +561,31 @@ export default function App() {
       )}
       {showSuccessModal && (
         <PaymentSuccessModal onClose={() => setShowSuccessModal(false)} />
+      )}
+
+      {showPrivacyModal && currentUser && (
+        <PrivacyModal
+          onAccept={async () => {
+            if (!currentUser) return;
+            // Record acceptance in DB
+            const now = new Date().toISOString();
+            const { error } = await supabase.from('profiles').update({
+              privacy_policy_accepted_at: now
+            }).eq('id', currentUser.id);
+
+            if (!error) {
+              // Update local state
+              setCurrentUser({ ...currentUser, privacy_policy_accepted_at: now });
+              setShowPrivacyModal(false);
+            } else {
+              alert("Erro ao salvar aceite. Tente novamente.");
+            }
+          }}
+          onReadPolicy={() => {
+            // Ideally navigate to Policy page or open in new tab
+            window.open('https://your-privacy-policy-url.com', '_blank'); // Placeholder
+          }}
+        />
       )}
     </Layout>
   );
