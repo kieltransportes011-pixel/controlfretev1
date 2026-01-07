@@ -366,8 +366,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase mb-1 ${ticket.status === 'open' ? 'bg-blue-100 text-blue-700' :
-                                                            ticket.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                                                                'bg-slate-100 text-slate-600'
+                                                        ticket.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                                                            'bg-slate-100 text-slate-600'
                                                         }`}>
                                                         {ticket.status === 'open' ? 'Aberto' : ticket.status === 'in_progress' ? 'Em Análise' : ticket.status}
                                                     </span>
@@ -457,8 +457,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${log.action.includes('UPDATE') ? 'bg-orange-100 text-orange-700' :
-                                                            log.action.includes('DELETE') ? 'bg-red-100 text-red-700' :
-                                                                'bg-blue-100 text-blue-700'
+                                                        log.action.includes('DELETE') ? 'bg-red-100 text-red-700' :
+                                                            'bg-blue-100 text-blue-700'
                                                         }`}>
                                                         {log.action}
                                                     </span>
@@ -611,8 +611,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                 key={s}
                                                 onClick={() => setTicketStatus(s)}
                                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${ticketStatus === s
-                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                        : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-blue-400'
                                                     }`}
                                             >
                                                 {s}
@@ -640,8 +640,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             </button>
                         </div>
                     </div>
-                )}
                 </div>
+            )}
         </div>
     );
 }
