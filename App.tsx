@@ -92,7 +92,8 @@ export default function App() {
 
         profile_photo_url: data.profile_photo_url,
         profile_photo_changes_used: data.profile_photo_changes_used || 0,
-        role: data.role || 'user'
+        role: data.role || 'user',
+        account_status: data.account_status || 'active'
       });
     } else if (error) {
       console.error("Error fetching profile", error);
@@ -109,6 +110,16 @@ export default function App() {
       if (currentUser) fetchUserProfile(currentUser.id);
     }
   }, [currentUser?.id]);
+
+  // Security Check: Ban Enforcement
+  useEffect(() => {
+    if (currentUser && (currentUser as any).account_status === 'banned') {
+      alert("Sua conta foi suspensa. Entre em contato com o suporte.");
+      supabase.auth.signOut();
+      setCurrentUser(null);
+      setShowLanding(true);
+    }
+  }, [currentUser]);
 
   // Admin Route Check
   useEffect(() => {

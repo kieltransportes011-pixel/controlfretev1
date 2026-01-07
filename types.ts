@@ -63,6 +63,7 @@ export interface User {
   trialStart?: string; // ISO Date string
   trialEnd?: string; // ISO Date string
   role?: 'user' | 'admin';
+  account_status?: 'active' | 'suspended' | 'banned';
 }
 
 export interface GoalHistoryEntry {
