@@ -559,14 +559,14 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         </h2>
         <Card className="p-4 bg-[#F5F7FA] dark:bg-slate-900 border-none">
           <button
-            onClick={() => window.open('https://chat.whatsapp.com/KV5mZBRNLuy5Ci7brBAf2K', '_blank')}
-            className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            onClick={() => onNavigate('SUPPORT')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
           >
             <MessageCircle className="w-5 h-5" />
-            Entrar no Grupo de Suporte VIP
+            Abrir Chamado de Suporte
           </button>
           <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
-            Tire dúvidas e receba novidades diretamente no WhatsApp.
+            Precisa de ajuda? Abra um ticket e responderemos em breve.
           </p>
         </Card>
       </section>

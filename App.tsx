@@ -20,6 +20,7 @@ import { WorkCalendar } from './components/WorkCalendar';
 import { LandingPage } from './components/LandingPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { PrivacyModal } from './components/PrivacyModal';
+import { Support } from './components/Support';
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
   defaultCompanyPercent: 40,
@@ -559,6 +560,11 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {view === 'SUPPORT' && (
+        <Support user={currentUser!} onBack={() => setView('SETTINGS')} />
+      )}
+
       {showSuccessModal && (
         <PaymentSuccessModal onClose={() => setShowSuccessModal(false)} />
       )}

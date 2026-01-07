@@ -96,7 +96,7 @@ export interface AppSettings {
   issuerAddressZip?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT';
 
 export interface DashboardStats {
   monthTotal: number;
@@ -115,4 +115,18 @@ export interface AccountPayable {
   status: 'aberto' | 'pago';
   recurrence: 'unica' | 'mensal' | 'semanal';
   user_id: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  title: string;
+  category: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high';
+  admin_reply?: string;
+  attachment_url?: string;
+  created_at: string;
+  updated_at: string;
 }
