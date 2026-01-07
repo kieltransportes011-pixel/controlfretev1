@@ -391,8 +391,10 @@ export default function App() {
           onSave={async (f) => {
             if (!currentUser) return;
 
-            if (formData?.id) {
+            // Strict separation: Check if ID exists and is valid (not empty)
+            if (f.id && f.id.length > 10) {
               // Update existing freight
+              // We strictly use UPDATE and valid existing ID
               await supabase.from('freights').update({
                 date: f.date,
                 client: f.client,
@@ -403,10 +405,13 @@ export default function App() {
                 status: f.status,
                 received_value: f.receivedValue,
                 pending_value: f.pendingValue,
-                due_date: f.dueDate
-              }).eq('id', formData.id);
+                due_date: f.dueDate,
+                // created_at is NOT updated
+                // updated_at could be added here if the column exists
+              }).eq('id', f.id);
             } else {
               // Insert new freight
+              // We strictly use INSERT and do NOT send an ID (DB generates it)
               await supabase.from('freights').insert([{
                 user_id: currentUser.id,
                 date: f.date,

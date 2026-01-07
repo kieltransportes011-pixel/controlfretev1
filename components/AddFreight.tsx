@@ -80,7 +80,7 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCanc
     }
 
     const newFreight: Freight = {
-      id: initialData?.id || generateId(), // Preserve ID if editing, generate if new
+      id: initialData?.id || '', // Only use existing ID if editing, otherwise empty
       date,
       client,
       totalValue: total,
