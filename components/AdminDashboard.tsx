@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus, DollarSign } from 'lucide-react';
+import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus, DollarSign, Calendar } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice } from '../types';
 
 interface AdminDashboardProps {
@@ -10,6 +10,9 @@ interface AdminDashboardProps {
 
 interface AdminStats {
     totalUsers: number;
+    newUsersToday: number;
+    newUsersWeek: number;
+    newUsersMonth: number;
     activeProUsers: number;
     bannedUsers: number;
     openTickets: number;
@@ -33,7 +36,16 @@ type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS';
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
     const [activeTab, setActiveTab] = useState<TabView>('USERS');
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<AdminStats>({ totalUsers: 0, activeProUsers: 0, bannedUsers: 0, openTickets: 0, activeNotices: 0 });
+    const [stats, setStats] = useState<AdminStats>({
+        totalUsers: 0,
+        newUsersToday: 0,
+        newUsersWeek: 0,
+        newUsersMonth: 0,
+        activeProUsers: 0,
+        bannedUsers: 0,
+        openTickets: 0,
+        activeNotices: 0
+    });
 
     // User Management State
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -118,10 +130,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             setNotices(platformNotices || []);
             setCommissions(allCommissions || []);
 
+            // Calculate User Stats
+            const userList = profiles || [];
+            const now = new Date();
+            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
             setStats({
-                totalUsers: profiles?.length || 0,
-                activeProUsers: profiles?.filter(p => p.plano === 'pro' || p.is_premium).length || 0,
-                bannedUsers: profiles?.filter(p => p.account_status === 'banned').length || 0,
+                totalUsers: userList.length,
+                newUsersToday: userList.filter(p => new Date(p.created_at) >= startOfDay).length,
+                newUsersWeek: userList.filter(p => new Date(p.created_at) >= sevenDaysAgo).length,
+                newUsersMonth: userList.filter(p => new Date(p.created_at) >= thirtyDaysAgo).length,
+                activeProUsers: userList.filter(p => p.plano === 'pro' || p.is_premium).length,
+                bannedUsers: userList.filter(p => p.account_status === 'banned').length,
                 openTickets: supportTickets?.filter(t => t.status === 'open' || t.status === 'in_progress').length || 0,
                 activeNotices: platformNotices?.filter(n => n.is_active).length || 0
             });
@@ -133,6 +155,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             setLoading(false);
         }
     };
+
+    // Realtime Subscription for New Users
+    useEffect(() => {
+        const channel = supabase
+            .channel('admin-users-realtime')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'profiles'
+                },
+                (payload) => {
+                    const newUser = payload.new as UserProfile;
+                    setUsers(prev => [newUser, ...prev]);
+                    setStats(prev => ({
+                        ...prev,
+                        totalUsers: prev.totalUsers + 1,
+                        newUsersToday: prev.newUsersToday + 1,
+                        newUsersWeek: prev.newUsersWeek + 1,
+                        newUsersMonth: prev.newUsersMonth + 1
+                    }));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     // Helper to log actions
     const logAction = async (action: string, targetType: 'user' | 'support_ticket' | 'system', targetId: string | undefined, description: string) => {
@@ -387,8 +439,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             <div className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
                 {/* Stats */}
+                {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <StatCard title="Total de Usuários" value={stats.totalUsers} icon={<Users className="w-6 h-6 text-blue-600" />} bg="bg-blue-50 dark:bg-blue-900/20" />
+                    <StatCard title="Novos Hoje" value={stats.newUsersToday} icon={<Clock className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" subtext="Últimas 24h (Dia)" />
+                    <StatCard title="Últimos 7 Dias" value={stats.newUsersWeek} icon={<Calendar className="w-6 h-6 text-indigo-600" />} bg="bg-indigo-50 dark:bg-indigo-900/20" />
+                    <StatCard title="Últimos 30 Dias" value={stats.newUsersMonth} icon={<Calendar className="w-6 h-6 text-teal-600" />} bg="bg-teal-50 dark:bg-teal-900/20" />
+
                     <StatCard title="Assinantes PRO" value={stats.activeProUsers} icon={<Shield className="w-6 h-6 text-green-600" />} bg="bg-green-50 dark:bg-green-900/20" subtext="Pagantes ativos" />
                     <StatCard title="Usuários Banidos" value={stats.bannedUsers} icon={<Ban className="w-6 h-6 text-red-600" />} bg="bg-red-50 dark:bg-red-900/20" />
                     <StatCard title="Tickets Abertos" value={stats.openTickets} icon={<MessageCircle className="w-6 h-6 text-orange-600" />} bg="bg-orange-50 dark:bg-orange-900/20" />
@@ -792,8 +849,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${comm.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                                        comm.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                            'bg-orange-100 text-orange-700'
+                                                    comm.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-orange-100 text-orange-700'
                                                     }`}>
                                                     {comm.status === 'approved' ? 'Aprovado' : comm.status === 'cancelled' ? 'Cancelado' : 'Pendente'}
                                                 </span>
