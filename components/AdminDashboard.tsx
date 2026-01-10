@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus, DollarSign, Calendar } from 'lucide-react';
+import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus, DollarSign, Calendar, Zap } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice } from '../types';
 
 interface AdminDashboardProps {
@@ -17,6 +17,7 @@ interface AdminStats {
     bannedUsers: number;
     openTickets: number;
     activeNotices: number;
+    sessionNewUsers: number;
 }
 
 interface UserProfile {
@@ -44,8 +45,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         activeProUsers: 0,
         bannedUsers: 0,
         openTickets: 0,
-        activeNotices: 0
+        activeNotices: 0,
+        sessionNewUsers: 0
     });
+    const [realtimeAlert, setRealtimeAlert] = useState<{ name: string, email: string } | null>(null);
+
+
 
     // User Management State
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -145,8 +150,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 activeProUsers: userList.filter(p => p.plano === 'pro' || p.is_premium).length,
                 bannedUsers: userList.filter(p => p.account_status === 'banned').length,
                 openTickets: supportTickets?.filter(t => t.status === 'open' || t.status === 'in_progress').length || 0,
-                activeNotices: platformNotices?.filter(n => n.is_active).length || 0
+                activeNotices: platformNotices?.filter(n => n.is_active).length || 0,
+                sessionNewUsers: 0
             });
+
+
         } catch (error: any) {
             console.error("Admin Load Error:", error);
             alert("Acesso negado ou erro ao carregar dados.");
@@ -175,8 +183,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         totalUsers: prev.totalUsers + 1,
                         newUsersToday: prev.newUsersToday + 1,
                         newUsersWeek: prev.newUsersWeek + 1,
-                        newUsersMonth: prev.newUsersMonth + 1
+                        newUsersMonth: prev.newUsersMonth + 1,
+                        sessionNewUsers: prev.sessionNewUsers + 1
                     }));
+
+                    // Trigger Live Alert
+                    setRealtimeAlert({ name: newUser.name || 'Novo Usuário', email: newUser.email });
+                    setTimeout(() => setRealtimeAlert(null), 5000);
                 }
             )
             .subscribe();
@@ -450,7 +463,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     <StatCard title="Usuários Banidos" value={stats.bannedUsers} icon={<Ban className="w-6 h-6 text-red-600" />} bg="bg-red-50 dark:bg-red-900/20" />
                     <StatCard title="Tickets Abertos" value={stats.openTickets} icon={<MessageCircle className="w-6 h-6 text-orange-600" />} bg="bg-orange-50 dark:bg-orange-900/20" />
                     <StatCard title="Avisos Ativos" value={stats.activeNotices} icon={<Megaphone className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" />
+                    <StatCard
+                        title="Novos (Nesta Sessão)"
+                        value={stats.sessionNewUsers}
+                        icon={<Activity className="w-6 h-6 text-green-500" />}
+                        bg="bg-green-50 dark:bg-green-900/20"
+                        subtext="Desde que você abriu o painel"
+                        highlight={stats.sessionNewUsers > 0}
+                    />
                 </div>
+
+                {/* Realtime Alert Toast */}
+                {realtimeAlert && (
+                    <div className="fixed bottom-10 right-10 z-[100] bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 animate-in slide-in-from-right duration-300 flex items-center gap-4">
+                        <div className="bg-green-500 p-2 rounded-full animate-pulse">
+                            <Zap className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-green-400 uppercase tracking-widest">Novo Cadastro Realtime</p>
+                            <p className="text-sm font-bold">{realtimeAlert.name}</p>
+                            <p className="text-[10px] text-slate-400">{realtimeAlert.email}</p>
+                        </div>
+                    </div>
+                )}
+
 
                 {/* Tabs */}
                 <div className="flex gap-4 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
@@ -1214,14 +1250,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     );
 }
 
-const StatCard = ({ title, value, icon, bg, subtext }: any) => (
+const StatCard = ({ title, value, icon, bg, subtext, highlight }: any) => (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-start justify-between">
         <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{value}</h3>
             {subtext && <p className="text-xs text-slate-400 mt-1">{subtext}</p>}
         </div>
-        <div className={`p-3 rounded-lg ${bg}`}>
+        <div className={`p-3 rounded-lg ${bg} ${highlight ? 'animate-pulse ring-4 ring-green-500/20' : ''}`}>
             {icon}
         </div>
     </div>

@@ -3,7 +3,7 @@ import { Freight, Expense, DashboardStats, User, AccountPayable } from '../types
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
-import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield } from 'lucide-react';
+import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield, Gift } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 
 interface DashboardProps {
@@ -19,9 +19,10 @@ interface DashboardProps {
   onViewAgenda: () => void;
   accountsPayable: AccountPayable[];
   onRequestUpgrade?: () => void;
+  onViewReferrals?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -283,6 +284,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-brand-secondary group-hover:translate-x-1 transition-all" />
         </div>
       </Card>
+
+      {/* Referral Shortcut Widget - PRO Only */}
+      {isActive && (
+        <Card
+          onClick={onViewReferrals}
+          className="relative overflow-hidden border-none bg-gradient-to-br from-slate-900 to-black hover:from-black hover:to-slate-900 cursor-pointer transition-all group p-5 shadow-xl shadow-brand/10"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-2xl -mr-10 -mt-10 opacity-30" />
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="bg-brand text-white p-2.5 rounded-xl shadow-lg shadow-brand/20">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-sm">Convide e Ganhe R$</h3>
+                <p className="text-[10px] font-bold text-brand uppercase tracking-widest mt-0.5">Ganhe 20% de cada indicação</p>
+              </div>
+            </div>
+            <div className="bg-white/10 p-2 rounded-lg text-white group-hover:bg-brand group-hover:text-white transition-all">
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Receivables Widget */}
       {stats.totalPending > 0 && (

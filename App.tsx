@@ -513,6 +513,7 @@ Obs: ${of.description || 'Sem observações'}`;
           onUpgrade={() => setView('PAYMENT')}
           onViewAgenda={() => setView('AGENDA')}
           onRequestUpgrade={() => handleOpenUpgrade('GENERAL')}
+          onViewReferrals={() => setView('REFERRALS')}
         />
       )}
 
@@ -757,7 +758,6 @@ Obs: ${of.description || 'Sem observações'}`;
       {view === 'REFERRALS' && currentUser && (
         <ReferralSystem
           user={currentUser}
-          onBack={() => setView('SETTINGS')}
         />
       )}
 

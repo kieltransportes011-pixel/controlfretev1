@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewState } from '../types';
-import { LayoutGrid, List, Settings, Wallet, Truck } from 'lucide-react';
+import { LayoutGrid, List, Settings, Wallet, Truck, Users } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,45 +29,53 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
       {/* Bottom Navigation */}
       {shouldShowNav && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.08)] transition-colors duration-200">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 px-2 py-3 flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.08)] transition-colors duration-200">
           <button
             onClick={() => onNavigate('DASHBOARD')}
-            className={`flex flex-col items-center gap-1.5 transition-all flex-1 ${currentView === 'DASHBOARD' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'DASHBOARD' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
           >
             <LayoutGrid className="w-5 h-5" strokeWidth={currentView === 'DASHBOARD' ? 2.5 : 2} />
-            <span className="text-[10px] font-roboto font-medium uppercase tracking-wider">Início</span>
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Início</span>
           </button>
 
           <button
             onClick={() => onNavigate('RECEIVABLES')}
-            className={`flex flex-col items-center gap-1.5 transition-all flex-1 ${currentView === 'RECEIVABLES' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'RECEIVABLES' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
           >
             <Wallet className="w-5 h-5" strokeWidth={currentView === 'RECEIVABLES' ? 2.5 : 2} />
-            <span className="text-[10px] font-roboto font-medium uppercase tracking-wider">Contas</span>
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Contas</span>
           </button>
 
           <button
             onClick={() => onNavigate('FREIGHT_INTEGRATION')}
-            className={`flex flex-col items-center gap-1.5 transition-all flex-1 ${currentView === 'FREIGHT_INTEGRATION' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'FREIGHT_INTEGRATION' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
           >
             <Truck className="w-5 h-5" strokeWidth={currentView === 'FREIGHT_INTEGRATION' ? 2.5 : 2} />
-            <span className="text-[10px] font-roboto font-medium uppercase tracking-wider">Fretes</span>
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Fretes</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('REFERRALS')}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'REFERRALS' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+          >
+            <Users className="w-5 h-5" strokeWidth={currentView === 'REFERRALS' ? 2.5 : 2} />
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Indicar</span>
           </button>
 
           <button
             onClick={() => onNavigate('HISTORY')}
-            className={`flex flex-col items-center gap-1.5 transition-all flex-1 ${currentView === 'HISTORY' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'HISTORY' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
           >
             <List className="w-5 h-5" strokeWidth={currentView === 'HISTORY' ? 2.5 : 2} />
-            <span className="text-[10px] font-roboto font-medium uppercase tracking-wider">Histórico</span>
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Histórico</span>
           </button>
 
           <button
             onClick={() => onNavigate('SETTINGS')}
-            className={`flex flex-col items-center gap-1.5 transition-all flex-1 ${currentView === 'SETTINGS' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'SETTINGS' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
           >
             <Settings className="w-5 h-5" strokeWidth={currentView === 'SETTINGS' ? 2.5 : 2} />
-            <span className="text-[10px] font-roboto font-medium uppercase tracking-wider">Ajustes</span>
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Ajustes</span>
           </button>
         </nav>
       )}
