@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -25,6 +25,9 @@ import { MandatoryNoticeModal } from './components/MandatoryNoticeModal';
 import { NoticesCenter } from './components/NoticesCenter';
 import { ReferralSystem } from './components/ReferralSystem';
 import { UpgradeModal } from './components/UpgradeModal';
+import { FreightIntegration } from './components/FreightIntegration';
+import { FreightNoticeModal } from './components/FreightNoticeModal';
+
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
   defaultCompanyPercent: 40,
@@ -40,6 +43,7 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
+  const [ofretejaFreights, setOfretejaFreights] = useState<OFretejaFreight[]>([]);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
   const [permissionError, setPermissionError] = useState(false);
@@ -53,6 +57,8 @@ export default function App() {
     title: '',
     description: ''
   });
+  const [showFreightNotice, setShowFreightNotice] = useState(false);
+
 
   const handleOpenUpgrade = (reason: 'LIMIT' | 'FEATURE' | 'GENERAL' = 'GENERAL') => {
     let title = 'Desbloqueie o Pro';
@@ -268,6 +274,17 @@ export default function App() {
       setAccountsPayable(payablesData as AccountPayable[]);
     }
 
+    // Fetch O FreteJá Freights (with joins)
+    const { data: ofretejaData } = await supabase
+      .from('fretes_ofreteja')
+      .select('*, empresas_ofreteja(*), categorias_veiculos(*)')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (ofretejaData) {
+      setOfretejaFreights(ofretejaData as OFretejaFreight[]);
+    }
+
     setSyncing(false);
   };
 
@@ -291,6 +308,116 @@ export default function App() {
     await supabase.auth.signOut();
     setCurrentUser(null);
     setShowLanding(true);
+  };
+
+  const handleApproveOFreteja = async (of: OFretejaFreight) => {
+    if (!currentUser) return;
+
+    try {
+      setSyncing(true);
+
+      // 1. Prepare values
+      const defaultVal = of.estimated_value ? of.estimated_value.toString() : "0";
+      const valueStr = prompt("Informe o valor final para aprovação e importação:", defaultVal);
+      const total = parseFloat(valueStr || defaultVal);
+
+      // Create detailed description
+      const stopsText = of.stops && of.stops.length > 0
+        ? of.stops.map((s: any, i: number) => `Parada ${i + 1}: ${s.address}, ${s.number}${s.complement ? ` (${s.complement})` : ''}`).join('\n')
+        : 'Sem paradas intermediárias';
+
+      const detailedDesc = `[Veículo: ${of.categorias_veiculos?.name || 'Não informado'}]
+Origem: ${of.origin_address}, ${of.origin_number}
+${stopsText}
+Destino: ${of.delivery_address}, ${of.delivery_number}
+Peso: ${of.weight || '--'}kg
+Contato: ${of.contact_phone || 'Não informado'}
+Obs: ${of.description || 'Sem observações'}`;
+
+      const companyVal = (total * settings.defaultCompanyPercent) / 100;
+      const driverVal = (total * settings.defaultDriverPercent) / 100;
+      const reserveVal = (total * settings.defaultReservePercent) / 100;
+
+      // 2. Insert into main freights table
+      const { error: insertError } = await supabase.from('freights').insert([{
+        user_id: currentUser.id,
+        date: of.date,
+        client: of.empresas_ofreteja?.name || 'Cliente O FreteJá',
+        total_value: total,
+        company_value: companyVal,
+        driver_value: driverVal,
+        reserve_value: reserveVal,
+        status: 'PENDING',
+        received_value: 0,
+        pending_value: total,
+        description: detailedDesc
+      }]);
+
+      if (insertError) throw insertError;
+
+      // 3. Mark as APROVADO and also IMPORTED (internal flag) in ofreteja table
+      const { error: updateError } = await supabase
+        .from('fretes_ofreteja')
+        .update({ status: 'APROVADO' })
+        .eq('id', of.id);
+
+      if (updateError) throw updateError;
+
+      await fetchData();
+      alert("Frete aprovado e importado para o ControlFrete.");
+    } catch (error: any) {
+      console.error("Erro na aprovação:", error);
+      alert("Erro ao aprovar: " + error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleRejectOFreteja = async (of: OFretejaFreight) => {
+    if (!currentUser) return;
+    const reason = prompt("Informe o motivo da reprovação (opcional):", "");
+    if (reason === null) return; // Cancelled prompt
+
+    try {
+      setSyncing(true);
+      const { error } = await supabase
+        .from('fretes_ofreteja')
+        .update({
+          status: 'REPROVADO',
+          rejection_reason: reason
+        })
+        .eq('id', of.id);
+
+      if (error) throw error;
+      await fetchData();
+      alert("Solicitação reprovada.");
+    } catch (error: any) {
+      console.error("Erro ao reprovar:", error);
+      alert("Erro ao reprovar: " + error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleCancelOFreteja = async (of: OFretejaFreight) => {
+    if (!currentUser) return;
+    if (!confirm("Deseja realmente cancelar esta solicitação?")) return;
+
+    try {
+      setSyncing(true);
+      const { error } = await supabase
+        .from('fretes_ofreteja')
+        .update({ status: 'CANCELLED' })
+        .eq('id', of.id);
+
+      if (error) throw error;
+      await fetchData();
+    } catch (error: any) {
+      console.error("Erro ao cancelar:", error);
+      alert("Erro ao cancelar: " + error.message);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
@@ -345,7 +472,14 @@ export default function App() {
 
   return (
     <Layout currentView={view} onNavigate={(v) => {
+      // Intercept Freight Integration for temporary notice
+      if (v === 'FREIGHT_INTEGRATION') {
+        setShowFreightNotice(true);
+        return;
+      }
+
       // Pro Features Guard
+
       const proFeatures: ViewState[] = ['AGENDA', 'GOALS', 'SUPPORT'];
       const hasProAccess = isActive; // isActive is true if Pro OR Trial
 
@@ -646,6 +780,17 @@ export default function App() {
         />
       )}
 
+      {view === 'FREIGHT_INTEGRATION' && (
+        <FreightIntegration
+          freights={freights}
+          ofretejaFreights={ofretejaFreights}
+          onApprove={handleApproveOFreteja}
+          onReject={handleRejectOFreteja}
+          onCancel={handleCancelOFreteja}
+          onBack={() => setView('DASHBOARD')}
+        />
+      )}
+
       {view === 'NOTICES' && currentUser && (
         <NoticesCenter user={currentUser} onBack={() => setView('DASHBOARD')} />
       )}
@@ -663,6 +808,10 @@ export default function App() {
           setView('PAYMENT');
         }}
       />
+      {showFreightNotice && (
+        <FreightNoticeModal onClose={() => setShowFreightNotice(false)} />
+      )}
     </Layout>
+
   );
 };

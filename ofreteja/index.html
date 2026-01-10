@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O FreteJá - Dashboard de Empresas</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">O Frete<span>Já</span></div>
+            <p id="headerSubtitle">O seu frete, na hora certa.</p>
+            <div id="userInfo" class="hidden">
+                <span id="userEmail"></span>
+                <button onclick="handleLogout()" class="btn-text-only">Sair</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Auth View -->
+            <div id="authView" class="card">
+                <div class="tabs">
+                    <button onclick="switchTab('login')" id="loginTab" class="active">Login</button>
+                    <button onclick="switchTab('signup')" id="signupTab">Cadastrar</button>
+                </div>
+
+                <form id="authForm">
+                    <div id="signupFields" class="hidden">
+                        <div class="form-group">
+                            <label for="company_name">Nome da Empresa</label>
+                            <input type="text" id="company_name" placeholder="Ex: Logística S.A.">
+                        </div>
+                        <div class="form-group">
+                            <label for="company_phone">Telefone / WhatsApp</label>
+                            <input type="text" id="company_phone" placeholder="(00) 00000-0000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Senha</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" id="authBtn">Entrar</button>
+                </form>
+            </div>
+
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="hidden">
+                <div class="dashboard-grid">
+                    <!-- Coluna 1: Formulário -->
+                    <div class="card" id="formCard">
+                        <h2>Nova Solicitação</h2>
+                        <p class="subtitle">Preencha os dados da carga para receber cotações.</p>
+
+                        <form id="freightForm">
+                            <!-- Origem -->
+                            <div class="section">
+                                <h3><span class="step">1</span> Origem</h3>
+                                <!-- Endereço: Layout Otimizado -->
+                                <div class="grid grid-3-cols mb-1">
+                                    <div class="form-group">
+                                        <label>CEP</label>
+                                        <input type="text" name="origin_cep" placeholder="00000-000" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Nº</label>
+                                        <input type="text" name="origin_number" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Complemento</label>
+                                        <input type="text" name="origin_complement" placeholder="Apto, Sala...">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Endereço / Logradouro</label>
+                                    <input type="text" name="origin_address" placeholder="Rua, Avenida, Praça..."
+                                        required>
+                                </div>
+                            </div>
+
+                            <!-- Entrega -->
+                            <div class="section">
+                                <h3><span class="step">2</span> Entrega Final</h3>
+                                <!-- Endereço: Layout Otimizado -->
+                                <div class="grid grid-3-cols mb-1">
+                                    <div class="form-group">
+                                        <label>CEP</label>
+                                        <input type="text" name="delivery_cep" placeholder="00000-000" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Nº</label>
+                                        <input type="text" name="delivery_number" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Complemento</label>
+                                        <input type="text" name="delivery_complement" placeholder="Apto, Sala...">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Endereço Final / Logradouro</label>
+                                    <input type="text" name="delivery_address" placeholder="Rua, Avenida, Praça..."
+                                        required>
+                                </div>
+                            </div>
+
+                            <!-- Paradas -->
+                            <div class="section">
+                                <div class="flex-between">
+                                    <h3><span class="step">+</span> Paradas Extras</h3>
+                                    <button type="button" onclick="addStop()" class="btn-add">+ Adicionar
+                                        Parada</button>
+                                </div>
+                                <div id="stopsContainer"></div>
+                            </div>
+
+                            <!-- Categoria de Veículo -->
+                            <div class="section">
+                                <h3><span class="step">3</span> Categoria de Veículo</h3>
+                                <div class="category-grid" id="categoryGrid">
+                                    <!-- Categorias injetadas via JS -->
+                                </div>
+                            </div>
+
+                            <!-- Informações Adicionais -->
+                            <div class="section">
+                                <h3><span class="step">4</span> Detalhes da Carga</h3>
+                                <div class="grid grid-3">
+                                    <div class="form-group">
+                                        <label>Peso Total (kg)</label>
+                                        <input type="number" id="load_weight" name="weight" placeholder="Ex: 50"
+                                            required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>WhatsApp / Tel</label>
+                                        <input type="text" name="contact_phone" placeholder="(00) 00000-0000" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Data da Coleta</label>
+                                        <input type="date" id="collection_date" name="date" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cálculo Estimado -->
+                            <div id="calculationSection" class="section">
+                                <button type="button" id="calcBtn" class="btn-secondary" onclick="calculateEstimate()">
+                                    Calcular Valor Estimado
+                                </button>
+
+                                <div id="estimateResult" class="hidden estimate-box">
+                                    <div class="estimate-header">
+                                        <span class="label">Valor Estimado</span>
+                                        <span id="estimatedValueDisplay" class="value">R$ 0,00</span>
+                                    </div>
+                                    <p class="disclaimer">
+                                        Este é um valor estimado com base em uma distância padrão (10km).
+                                        O frete final será analisado e aprovado manualmente pelo ControlFrete.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button type="submit" id="submitBtn" class="hidden">Solicitar Frete</button>
+                        </form>
+                    </div>
+
+                    <!-- Coluna 1: Resumo (Hidden initially) -->
+                    <div class="card hidden" id="summaryCard">
+                        <h2>Resumo da Solicitação</h2>
+                        <p class="subtitle">Confira os dados antes de confirmar.</p>
+
+                        <div id="summaryContent">
+                            <!-- Injetado via JS -->
+                        </div>
+
+                        <div class="summary-actions">
+                            <button onclick="confirmSubmission()" class="btn-primary" id="confirmBtn">Confirmar
+                                Solicitação</button>
+                            <button onclick="editForm()" class="btn-text-only">Editar informações</button>
+                        </div>
+                    </div>
+
+                    <!-- Coluna 2: Minhas Solicitações -->
+                    <div class="card">
+                        <h2>Minhas Solicitações</h2>
+                        <p class="subtitle">Acompanhe o status dos seus pedidos.</p>
+                        <div id="myRequestsContainer" class="requests-list">
+                            <p class="text-muted">Carregando solicitações...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div id="successMessage" class="card hidden">
+                <div class="success-icon">✓</div>
+                <h3>Solicitação Enviada!</h3>
+                <p>Sua solicitação está em <strong>"Aguardando aprovação"</strong>. Você receberá uma notificação em
+                    breve.</p>
+                <button onclick="location.reload()" class="btn-secondary">Fazer Nova Solicitação</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 O FreteJá. Integrado ao ControlFrete.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -22,6 +22,33 @@ export interface Freight {
   dueDate?: string;      // Date to receive the pending amount
 }
 
+export interface OFretejaFreight {
+  id: string;
+  empresa_id: string;
+  origin_cep: string;
+  origin_address: string;
+  origin_number: string;
+  origin_complement?: string;
+  delivery_cep: string;
+  delivery_address: string;
+  delivery_number: string;
+  delivery_complement?: string;
+  stops: Array<{ cep: string; address: string; number: string; complement?: string }>;
+  vehicle_category_id: string;
+  weight: number;
+  contact_phone?: string;
+  date: string;
+  description?: string;
+  status: 'AGUARDANDO_ANALISE' | 'AGUARDANDO_APROVACAO' | 'APROVADO' | 'REPROVADO' | 'IMPORTED' | 'CANCELLED';
+  created_at: string;
+  distance_km?: number;
+  estimated_value?: number;
+  rejection_reason?: string;
+  // Extended info for join
+  empresas_ofreteja?: { name: string; email: string; phone?: string };
+  categorias_veiculos?: { name: string; capacity: string };
+}
+
 export interface Booking {
   id: string;
   date: string;
@@ -98,7 +125,7 @@ export interface AppSettings {
   issuerAddressZip?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS' | 'FREIGHT_INTEGRATION';
 
 export interface DashboardStats {
   monthTotal: number;
