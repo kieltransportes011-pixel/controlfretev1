@@ -130,25 +130,39 @@ serve(async (req) => {
                             .single();
 
                         if (payerProfile?.referrer_id) {
-                            // Calculate 20%
-                            const commissionAmount = Number(paymentData.transaction_amount) * 0.20;
+                            // Requirement: Primeira conversão apenas. 
+                            // Check if this user (referred) already generated a commission before.
+                            const { data: previousComm } = await supabase
+                                .from('referral_commissions')
+                                .select('id')
+                                .eq('referred_id', userId)
+                                .limit(1);
 
-                            // Idempotent Insert
-                            const { error: commError } = await supabase.from('commissions').insert({
-                                referrer_id: payerProfile.referrer_id,
-                                referred_id: userId,
-                                amount: commissionAmount,
-                                base_amount: paymentData.transaction_amount,
-                                source_payment_id: paymentId.toString(),
-                                status: 'pending' // Requirement: pending initially
-                            });
-
-                            if (commError) {
-                                if (!commError.message.includes('unique constraint')) {
-                                    console.error("Error creating commission:", commError);
-                                }
+                            if (previousComm && previousComm.length > 0) {
+                                console.log(`Referral commission skipped: User ${userId} already has a previous commission.`);
                             } else {
-                                console.log(`Referral commission recorded for referrer ${payerProfile.referrer_id}`);
+                                // Calculate 20%
+                                const commissionPercentage = 20;
+                                const commissionAmount = Number(paymentData.transaction_amount) * (commissionPercentage / 100);
+
+                                // Idempotent Insert (by transaction_id/paymentId)
+                                const { error: commError } = await supabase.from('referral_commissions').insert({
+                                    referrer_id: payerProfile.referrer_id,
+                                    referred_id: userId,
+                                    amount: commissionAmount,
+                                    base_amount: paymentData.transaction_amount,
+                                    commission_percentage: commissionPercentage,
+                                    transaction_id: paymentId.toString(),
+                                    status: 'pending'
+                                });
+
+                                if (commError) {
+                                    if (!commError.message.includes('unique constraint')) {
+                                        console.error("Error creating commission:", commError);
+                                    }
+                                } else {
+                                    console.log(`Referral commission recorded (20%) for referrer ${payerProfile.referrer_id} from referred ${userId}`);
+                                }
                             }
                         }
                     } catch (refError) {

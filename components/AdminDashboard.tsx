@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus, DollarSign, Calendar, Zap } from 'lucide-react';
+import { Loader2, Users, Shield, ArrowLeft, Search, Edit2, Ban, Lock, Save, X, MessageCircle, CheckCircle, Clock, AlertTriangle, FileText, Activity, Bell, Trash2, Tag, Eye, Megaphone, Plus, DollarSign, Calendar, Zap, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice } from '../types';
 
 interface AdminDashboardProps {
@@ -32,7 +32,7 @@ interface UserProfile {
     role: string;
 }
 
-type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS';
+type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
     const [activeTab, setActiveTab] = useState<TabView>('USERS');
@@ -48,7 +48,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         activeNotices: 0,
         sessionNewUsers: 0
     });
-    const [realtimeAlert, setRealtimeAlert] = useState<{ name: string, email: string } | null>(null);
+    const [realtimeAlert, setRealtimeAlert] = useState<{ name: string, email: string, type: 'user' | 'commission' } | null>(null);
+
+    // Helper Component
+    function AdminStatCard({ title, value, icon, bg, subtext, highlight }: any) {
+        return (
+            <div className={`bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-start justify-between transition-all ${highlight ? 'ring-2 ring-green-500/20 bg-green-50/10' : ''}`}>
+                <div>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{value}</h3>
+                    {subtext && <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tight">{subtext}</p>}
+                </div>
+                <div className={`p-3 rounded-lg ${bg}`}>
+                    {icon}
+                </div>
+            </div>
+        );
+    }
+
 
 
 
@@ -81,9 +98,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [commissions, setCommissions] = useState<any[]>([]);
     const [referralSearch, setReferralSearch] = useState('');
 
+    // Revenue State
+    const [revenueStats, setRevenueStats] = useState<any>(null);
+    const [revenuePeriod, setRevenuePeriod] = useState<7 | 30>(30);
+    const [revenueLoading, setRevenueLoading] = useState(false);
+
     useEffect(() => {
         fetchAdminData();
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'REVENUE') {
+            fetchRevenueData(revenuePeriod);
+        }
+    }, [activeTab, revenuePeriod]);
+
+    const fetchRevenueData = async (days: number) => {
+        setRevenueLoading(true);
+        try {
+            const { data, error } = await supabase.rpc('get_revenue_dashboard_stats', { days_count: days });
+            if (error) throw error;
+            setRevenueStats(data);
+        } catch (err) {
+            console.error("Revenue Load Error:", err);
+        } finally {
+            setRevenueLoading(false);
+        }
+    };
 
     const fetchAdminData = async () => {
         try {
@@ -123,7 +164,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             // Fetch Commissions
             const { data: allCommissions, error: commError } = await supabase
-                .from('commissions')
+                .from('referral_commissions')
                 .select('*, referrer:profiles!referrer_id(name, email), referred:profiles!referred_id(name, email)')
                 .order('created_at', { ascending: false });
 
@@ -164,9 +205,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         }
     };
 
-    // Realtime Subscription for New Users
+    // Realtime Subscriptions
     useEffect(() => {
-        const channel = supabase
+        // 1. New Users
+        const usersChannel = supabase
             .channel('admin-users-realtime')
             .on(
                 'postgres_changes',
@@ -188,14 +230,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     }));
 
                     // Trigger Live Alert
-                    setRealtimeAlert({ name: newUser.name || 'Novo Usuário', email: newUser.email });
+                    setRealtimeAlert({ name: newUser.name || 'Novo Usuário', email: newUser.email, type: 'user' });
+                    setTimeout(() => setRealtimeAlert(null), 5000);
+                }
+            )
+            .subscribe();
+
+        // 2. New Commissions
+        const commsChannel = supabase
+            .channel('admin-comms-realtime')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'referral_commissions'
+                },
+                async (payload) => {
+                    const newComm = payload.new;
+                    // Add to list (without join info for now, will refresh on tab change or just leave as is)
+                    setCommissions(prev => [newComm, ...prev]);
+
+                    // Trigger Live Alert
+                    setRealtimeAlert({
+                        name: 'Nova Comissão Pendente!',
+                        email: `Valor: R$ ${newComm.amount}`,
+                        type: 'commission'
+                    });
                     setTimeout(() => setRealtimeAlert(null), 5000);
                 }
             )
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(usersChannel);
+            supabase.removeChannel(commsChannel);
         };
     }, []);
 
@@ -348,7 +417,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const handleUpdateCommission = async (id: string, newStatus: string) => {
         if (!confirm(`Confirmar alteração de status para: ${newStatus}?`)) return;
         try {
-            const { error } = await supabase.from('commissions').update({ status: newStatus }).eq('id', id);
+            const { error } = await supabase.from('referral_commissions').update({
+                status: newStatus,
+                updated_at: new Date().toISOString()
+            }).eq('id', id);
             if (error) throw error;
             await logAction('UPDATE_COMMISSION', 'system', id, `Alterou status da comissão para ${newStatus}`);
             await fetchAdminData();
@@ -454,16 +526,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 {/* Stats */}
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <StatCard title="Total de Usuários" value={stats.totalUsers} icon={<Users className="w-6 h-6 text-blue-600" />} bg="bg-blue-50 dark:bg-blue-900/20" />
-                    <StatCard title="Novos Hoje" value={stats.newUsersToday} icon={<Clock className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" subtext="Últimas 24h (Dia)" />
-                    <StatCard title="Últimos 7 Dias" value={stats.newUsersWeek} icon={<Calendar className="w-6 h-6 text-indigo-600" />} bg="bg-indigo-50 dark:bg-indigo-900/20" />
-                    <StatCard title="Últimos 30 Dias" value={stats.newUsersMonth} icon={<Calendar className="w-6 h-6 text-teal-600" />} bg="bg-teal-50 dark:bg-teal-900/20" />
+                    <AdminStatCard title="Total de Usuários" value={stats.totalUsers} icon={<Users className="w-6 h-6 text-blue-600" />} bg="bg-blue-50 dark:bg-blue-900/20" />
+                    <AdminStatCard title="Novos Hoje" value={stats.newUsersToday} icon={<Clock className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" subtext="Últimas 24h (Dia)" />
+                    <AdminStatCard title="Últimos 7 Dias" value={stats.newUsersWeek} icon={<Calendar className="w-6 h-6 text-indigo-600" />} bg="bg-indigo-50 dark:bg-indigo-900/20" />
+                    <AdminStatCard title="Últimos 30 Dias" value={stats.newUsersMonth} icon={<Calendar className="w-6 h-6 text-teal-600" />} bg="bg-teal-50 dark:bg-teal-900/20" />
 
-                    <StatCard title="Assinantes PRO" value={stats.activeProUsers} icon={<Shield className="w-6 h-6 text-green-600" />} bg="bg-green-50 dark:bg-green-900/20" subtext="Pagantes ativos" />
-                    <StatCard title="Usuários Banidos" value={stats.bannedUsers} icon={<Ban className="w-6 h-6 text-red-600" />} bg="bg-red-50 dark:bg-red-900/20" />
-                    <StatCard title="Tickets Abertos" value={stats.openTickets} icon={<MessageCircle className="w-6 h-6 text-orange-600" />} bg="bg-orange-50 dark:bg-orange-900/20" />
-                    <StatCard title="Avisos Ativos" value={stats.activeNotices} icon={<Megaphone className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" />
-                    <StatCard
+                    <AdminStatCard title="Assinantes PRO" value={stats.activeProUsers} icon={<Shield className="w-6 h-6 text-green-600" />} bg="bg-green-50 dark:bg-green-900/20" subtext="Pagantes ativos" />
+                    <AdminStatCard title="Usuários Banidos" value={stats.bannedUsers} icon={<Ban className="w-6 h-6 text-red-600" />} bg="bg-red-50 dark:bg-red-900/20" />
+                    <AdminStatCard title="Tickets Abertos" value={stats.openTickets} icon={<MessageCircle className="w-6 h-6 text-orange-600" />} bg="bg-orange-50 dark:bg-orange-900/20" />
+                    <AdminStatCard title="Avisos Ativos" value={stats.activeNotices} icon={<Megaphone className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" />
+                    <AdminStatCard
                         title="Novos (Nesta Sessão)"
                         value={stats.sessionNewUsers}
                         icon={<Activity className="w-6 h-6 text-green-500" />}
@@ -476,11 +548,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 {/* Realtime Alert Toast */}
                 {realtimeAlert && (
                     <div className="fixed bottom-10 right-10 z-[100] bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 animate-in slide-in-from-right duration-300 flex items-center gap-4">
-                        <div className="bg-green-500 p-2 rounded-full animate-pulse">
-                            <Zap className="w-5 h-5 text-white" />
+                        <div className={`p-2 rounded-full animate-pulse ${realtimeAlert.type === 'commission' ? 'bg-orange-500' : 'bg-green-500'}`}>
+                            {realtimeAlert.type === 'commission' ? <DollarSign className="w-5 h-5 text-white" /> : <Zap className="w-5 h-5 text-white" />}
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-green-400 uppercase tracking-widest">Novo Cadastro Realtime</p>
+                            <p className={`text-[10px] font-bold uppercase tracking-widest ${realtimeAlert.type === 'commission' ? 'text-orange-400' : 'text-green-400'}`}>
+                                {realtimeAlert.type === 'commission' ? 'Nova Comissão Gerada' : 'Novo Cadastro Realtime'}
+                            </p>
                             <p className="text-sm font-bold">{realtimeAlert.name}</p>
                             <p className="text-[10px] text-slate-400">{realtimeAlert.email}</p>
                         </div>
@@ -522,6 +596,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     >
                         <DollarSign className="w-4 h-4" />
                         Indicações ({commissions.filter(c => c.status === 'pending').length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('REVENUE')}
+                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'REVENUE' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <BarChart3 className="w-4 h-4" />
+                        Faturamento
                     </button>
                 </div>
 
@@ -824,103 +905,309 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                 {/* --- REFERRALS TAB --- */}
                 {activeTab === 'REFERRALS' && (
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <DollarSign className="w-5 h-5 text-slate-500" />
-                                Gestão de Indicações ({filteredCommissions.length})
-                            </h2>
-                            <div className="relative w-full md:w-96">
-                                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar por indicador ou indicado..."
-                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                                    value={referralSearch}
-                                    onChange={(e) => setReferralSearch(e.target.value)}
-                                    autoFocus
-                                />
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {/* Referral Stats Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600">
+                                        <Users className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Total de Indicações</span>
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                    {users.filter(u => u.referrer_id).length}
+                                </h2>
+                                <p className="text-[10px] text-slate-400 mt-1">Usuários que usaram link ref</p>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600">
+                                        <Zap className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Conversões em PRO</span>
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                    {new Set(commissions.map(c => c.referred_id)).size}
+                                </h2>
+                                <p className="text-[10px] text-slate-400 mt-1">Indicados que ativaram PRO</p>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-lg text-orange-600">
+                                        <DollarSign className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Comissão Gerada</span>
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                        commissions.filter(c => c.status !== 'cancelled').reduce((sum, c) => sum + Number(c.amount), 0)
+                                    )}
+                                </h2>
+                                <p className="text-[10px] text-slate-400 mt-1">Total acumulado (Pendente/Pago)</p>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg text-green-600">
+                                        <CheckCircle className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Comissão Paga</span>
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                        commissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.amount), 0)
+                                    )}
+                                </h2>
+                                <p className="text-[10px] text-slate-400 mt-1">Valores já liquidados</p>
                             </div>
                         </div>
-                        <div className="overflow-x-auto flex-1">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
-                                    <tr>
-                                        <th className="px-6 py-4">Data</th>
-                                        <th className="px-6 py-4">Indicador (Recebe)</th>
-                                        <th className="px-6 py-4">Indicado (Pagou)</th>
-                                        <th className="px-6 py-4 text-right">Valor Comissão</th>
-                                        <th className="px-6 py-4 text-center">Status</th>
-                                        <th className="px-6 py-4 text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {filteredCommissions.map((comm) => (
-                                        <tr key={comm.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                            <td className="px-6 py-4">
-                                                <div className="text-slate-900 dark:text-white font-medium">
-                                                    {new Date(comm.created_at).toLocaleDateString()}
-                                                </div>
-                                                <div className="text-xs text-slate-400">
-                                                    {new Date(comm.created_at).toLocaleTimeString()}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-bold text-blue-600 dark:text-blue-400">
-                                                    {comm.referrer?.name || 'Desconhecido'}
-                                                </div>
-                                                <div className="text-xs text-slate-500">{comm.referrer?.email}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-slate-800 dark:text-white">
-                                                    {comm.referred?.name || 'Desconhecido'}
-                                                </div>
-                                                <div className="text-xs text-slate-500">{comm.referred?.email}</div>
-                                                <div className="text-[10px] text-green-600 mt-1">
-                                                    Base: R$ {comm.base_amount}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-bold text-lg text-slate-900 dark:text-white">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(comm.amount)}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${comm.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                                    comm.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                        'bg-orange-100 text-orange-700'
-                                                    }`}>
-                                                    {comm.status === 'approved' ? 'Aprovado' : comm.status === 'cancelled' ? 'Cancelado' : 'Pendente'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                {comm.status === 'pending' && (
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            onClick={() => handleUpdateCommission(comm.id, 'approved')}
-                                                            className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Aprovar/Pagar">
-                                                            <CheckCircle className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleUpdateCommission(comm.id, 'cancelled')}
-                                                            className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Cancelar">
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {comm.status === 'approved' && (
-                                                    <span className="text-xs text-green-600 font-bold flex items-center justify-end gap-1">
-                                                        <CheckCircle className="w-3 h-3" /> Pago
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filteredCommissions.length === 0 && (
-                                <div className="p-12 text-center text-slate-400">
-                                    Nenhuma indicação encontrada.
+
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <DollarSign className="w-5 h-5 text-slate-500" />
+                                    Gestão de Indicações ({filteredCommissions.length})
+                                </h2>
+                                <div className="relative w-full md:w-96">
+                                    <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por indicador ou indicado..."
+                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                        value={referralSearch}
+                                        onChange={(e) => setReferralSearch(e.target.value)}
+                                        autoFocus
+                                    />
                                 </div>
-                            )}
+                            </div>
+                            <div className="overflow-x-auto flex-1">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                        <tr>
+                                            <th className="px-6 py-4">Data</th>
+                                            <th className="px-6 py-4">Indicador</th>
+                                            <th className="px-6 py-4">Indicado</th>
+                                            <th className="px-6 py-4 text-right">Comissão</th>
+                                            <th className="px-6 py-4 text-center">Status</th>
+                                            <th className="px-6 py-4 text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {filteredCommissions.map((comm) => (
+                                            <tr key={comm.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                <td className="px-6 py-4">
+                                                    <div className="text-slate-900 dark:text-white font-medium">
+                                                        {new Date(comm.created_at).toLocaleDateString()}
+                                                    </div>
+                                                    <div className="text-xs text-slate-400">
+                                                        {new Date(comm.created_at).toLocaleTimeString()}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-blue-600 dark:text-blue-400">
+                                                        {comm.referrer?.name || 'Desconhecido'}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500">{comm.referrer?.email}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-medium text-slate-800 dark:text-white">
+                                                        {comm.referred?.name || 'Desconhecido'}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500">{comm.referred?.email}</div>
+                                                    <div className="text-[10px] text-green-600 mt-1">
+                                                        Plano: {comm.subscription_id || 'PRO'} (R$ {comm.base_amount})
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="font-bold text-lg text-slate-900 dark:text-white">
+                                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(comm.amount)}
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 uppercase font-bold">{comm.commission_percentage}% de comissão</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${comm.status === 'paid' ? 'bg-green-100 text-green-700' :
+                                                        comm.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+                                                            comm.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                                'bg-orange-100 text-orange-700'
+                                                        }`}>
+                                                        {comm.status === 'paid' ? 'Liquidado' :
+                                                            comm.status === 'approved' ? 'Aprovado' :
+                                                                comm.status === 'cancelled' ? 'Cancelado' : 'Pendente'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        {comm.status === 'pending' && (
+                                                            <button
+                                                                onClick={() => handleUpdateCommission(comm.id, 'approved')}
+                                                                className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Aprovar">
+                                                                <CheckCircle className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {(comm.status === 'approved' || comm.status === 'pending') && (
+                                                            <button
+                                                                onClick={() => handleUpdateCommission(comm.id, 'paid')}
+                                                                className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Marcar como Pago">
+                                                                <DollarSign className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {comm.status !== 'cancelled' && comm.status !== 'paid' && (
+                                                            <button
+                                                                onClick={() => handleUpdateCommission(comm.id, 'cancelled')}
+                                                                className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Cancelar">
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {comm.status === 'paid' && (
+                                                            <span className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-1">
+                                                                <CheckCircle className="w-3 h-3" /> Concluído
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {filteredCommissions.length === 0 && (
+                                    <div className="p-12 text-center text-slate-400">
+                                        Nenhuma indicação encontrada.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- REVENUE TAB --- */}
+                {activeTab === 'REVENUE' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {/* Current/Hero Metrics */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700 relative overflow-hidden group">
+                                <div className="absolute -right-4 -top-4 bg-orange-600/10 w-32 h-32 rounded-full blur-3xl group-hover:bg-orange-600/20 transition-colors" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="bg-orange-600 p-2 rounded-lg">
+                                            <TrendingUp className="w-5 h-5 text-white" />
+                                        </div>
+                                        <span className="text-slate-400 text-sm font-bold uppercase tracking-wider">MRR — Receita Mensal Recorrente</span>
+                                    </div>
+                                    <h2 className="text-4xl font-black text-white">
+                                        {revenueLoading ? (
+                                            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                                        ) : (
+                                            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueStats?.mrr || 0)
+                                        )}
+                                    </h2>
+                                    <p className="text-slate-500 text-sm mt-2">Soma de todas as assinaturas PRO ativas</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between group">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600">
+                                            <Shield className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Assinaturas PRO Ativas</span>
+                                    </div>
+                                    <h2 className="text-4xl font-black text-slate-900 dark:text-white">
+                                        {revenueLoading ? (
+                                            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                                        ) : (
+                                            revenueStats?.active_pro || 0
+                                        )}
+                                    </h2>
+                                    <p className="text-slate-400 text-sm mt-2">Métrica base para o MRR</p>
+                                </div>
+                                <div className="h-16 w-1 bottom-0 right-0 bg-purple-600 rounded-full group-hover:h-24 transition-all" />
+                            </div>
+                        </div>
+
+                        {/* Period Metrics */}
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Desempenho por Período</h3>
+                                    <p className="text-xs text-slate-500">Métricas baseadas em transações aprovadas e logs de sistema</p>
+                                </div>
+                                <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
+                                    <button
+                                        onClick={() => setRevenuePeriod(7)}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${revenuePeriod === 7 ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        7 Dias
+                                    </button>
+                                    <button
+                                        onClick={() => setRevenuePeriod(30)}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${revenuePeriod === 30 ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        30 Dias
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800">
+                                <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Receita no Período</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <h4 className="text-2xl font-black text-slate-900 dark:text-white">
+                                            {revenueLoading ? (
+                                                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                            ) : (
+                                                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueStats?.period_revenue || 0)
+                                            )}
+                                        </h4>
+                                    </div>
+                                    <div className="mt-4 flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded w-fit">
+                                        <TrendingUp className="w-3 h-3" />
+                                        <span className="text-[10px] font-bold">Total Faturado</span>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Novas Assinaturas PRO</p>
+                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white">
+                                        {revenueLoading ? (
+                                            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                        ) : (
+                                            revenueStats?.period_new_subs || 0
+                                        )}
+                                    </h4>
+                                    <div className="mt-4 flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded w-fit">
+                                        <Plus className="w-3 h-3" />
+                                        <span className="text-[10px] font-bold">Ativações</span>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Cancelamentos</p>
+                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white">
+                                        {revenueLoading ? (
+                                            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                        ) : (
+                                            revenueStats?.period_cancellations || 0
+                                        )}
+                                    </h4>
+                                    <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded w-fit">
+                                        <TrendingDown className="w-3 h-3" />
+                                        <span className="text-[10px] font-bold">Perdas</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Info Note */}
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                            <div className="text-xs text-blue-800 dark:text-blue-300">
+                                <p className="font-bold mb-1">Nota sobre os dados:</p>
+                                <p>O MRR é calculado ponderando assinaturas anuais (Valor/12) e mensais. As métricas de período consideram todas as transações com status "approved" e alterações de plano registradas nos logs de auditoria.</p>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1248,17 +1535,4 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             )}
         </div>
     );
-}
-
-const StatCard = ({ title, value, icon, bg, subtext, highlight }: any) => (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-start justify-between">
-        <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{value}</h3>
-            {subtext && <p className="text-xs text-slate-400 mt-1">{subtext}</p>}
-        </div>
-        <div className={`p-3 rounded-lg ${bg} ${highlight ? 'animate-pulse ring-4 ring-green-500/20' : ''}`}>
-            {icon}
-        </div>
-    </div>
-);
+};

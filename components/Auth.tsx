@@ -148,7 +148,37 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
       if (authData.user) {
         const userId = authData.user.id;
 
-        // 3. Profile Creation (Manual & Explicit)
+        // 3. Resolve Referral Code if present
+        let finalReferrerId = null;
+        const params = new URLSearchParams(window.location.search);
+        const refCode = params.get('ref');
+
+        if (refCode) {
+          // Check if it's a UUID (Legacy) or a Short Code (New)
+          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(refCode);
+
+          if (isUUID) {
+            finalReferrerId = refCode;
+          } else {
+            // Resolve Short Code to UUID
+            const { data: refProfile } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('referral_code', refCode.toUpperCase())
+              .single();
+
+            if (refProfile) {
+              finalReferrerId = refProfile.id;
+            }
+          }
+
+          // Anti-self-referral check
+          if (finalReferrerId === userId) {
+            finalReferrerId = null;
+          }
+        }
+
+        // 4. Profile Creation (Manual & Explicit)
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -157,12 +187,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
             name: formData.name,
             cpf: formData.cpf,
             plano: 'FREE', // Enforce logic
-            referrer_id: (() => {
-              const params = new URLSearchParams(window.location.search);
-              const ref = params.get('ref');
-              // Simple UUID regex check to prevent DB errors
-              return (ref && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref)) ? ref : null;
-            })()
+            referrer_id: finalReferrerId
           });
 
         if (profileError) {

@@ -130,6 +130,7 @@ export default function App() {
         profile_photo_url: data.profile_photo_url,
         profile_photo_changes_used: data.profile_photo_changes_used || 0,
         role: data.role || 'user',
+        referral_code: data.referral_code,
 
         account_status: data.account_status || 'active',
         privacy_policy_accepted_at: data.privacy_policy_accepted_at

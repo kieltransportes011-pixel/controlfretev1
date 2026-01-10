@@ -94,6 +94,7 @@ export interface User {
   privacy_accepted?: boolean;
   privacy_accepted_at?: string; // ISO Date string
   referrer_id?: string;
+  referral_code?: string;
 }
 
 export interface GoalHistoryEntry {

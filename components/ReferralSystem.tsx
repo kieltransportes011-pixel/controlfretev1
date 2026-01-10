@@ -25,10 +25,10 @@ export const ReferralSystem: React.FC<ReferralSystemProps> = ({ user, onBack }) 
 
     useEffect(() => {
         // Generate Link
-        const link = `${window.location.origin}/?ref=${user.id}`;
+        const link = `${window.location.origin}/?ref=${user.referral_code || user.id}`;
         setReferralLink(link);
         fetchData();
-    }, [user.id]);
+    }, [user.id, user.referral_code]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -41,7 +41,7 @@ export const ReferralSystem: React.FC<ReferralSystemProps> = ({ user, onBack }) 
 
             // Fetch Commissions
             const { data: comms } = await supabase
-                .from('commissions')
+                .from('referral_commissions')
                 .select('*, referred:profiles!referred_id(name, email)')
                 .eq('referrer_id', user.id)
                 .order('created_at', { ascending: false });
