@@ -677,6 +677,21 @@ Obs: ${of.description || 'Sem observações'}`;
             await supabase.from('contas_a_pagar').delete().eq('id', id);
             fetchData();
           }}
+          onUpdateAccountPayable={async (acc) => {
+            if (!currentUser) return;
+            const { error } = await supabase.from('contas_a_pagar').update({
+              description: acc.description,
+              value: acc.value,
+              due_date: acc.due_date,
+              recurrence: acc.recurrence,
+              status: acc.status
+            }).eq('id', acc.id);
+            if (error) {
+              console.error("Error updating account payable:", error);
+              throw error;
+            }
+            fetchData();
+          }}
           onToggleAccountPayableStatus={async (acc) => {
             if (!currentUser) return;
             const newStatus = acc.status === 'aberto' ? 'pago' : 'aberto';

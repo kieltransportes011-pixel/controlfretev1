@@ -18,7 +18,8 @@ import {
   FileText,
   X,
   CreditCard,
-  Circle
+  Circle,
+  Pencil
 } from 'lucide-react';
 
 interface ScheduleProps {
@@ -27,6 +28,7 @@ interface ScheduleProps {
   accountsPayable: AccountPayable[];
   onAddAccountPayable: (acc: Omit<AccountPayable, 'id' | 'user_id'>) => Promise<void>;
   onDeleteAccountPayable: (id: string) => Promise<void>;
+  onUpdateAccountPayable: (acc: AccountPayable) => Promise<void>;
   onToggleAccountPayableStatus: (acc: AccountPayable) => Promise<void>;
 }
 
@@ -38,6 +40,7 @@ export const Schedule: React.FC<ScheduleProps> = ({
   accountsPayable,
   onAddAccountPayable,
   onDeleteAccountPayable,
+  onUpdateAccountPayable,
   onToggleAccountPayableStatus
 }) => {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -51,6 +54,9 @@ export const Schedule: React.FC<ScheduleProps> = ({
   const [newBillValue, setNewBillValue] = useState('');
   const [newBillDate, setNewBillDate] = useState('');
   const [newBillRecurrence, setNewBillRecurrence] = useState<'unica' | 'mensal' | 'semanal'>('unica');
+
+  // Edit Bill State
+  const [editingBill, setEditingBill] = useState<AccountPayable | null>(null);
 
   const getDaysUntilDue = (dueDateStr?: string) => {
     if (!dueDateStr) return 999;
@@ -69,19 +75,39 @@ export const Schedule: React.FC<ScheduleProps> = ({
     e.preventDefault();
     if (!newBillDesc || !newBillValue || !newBillDate) return;
 
-    await onAddAccountPayable({
-      description: newBillDesc,
-      value: parseFloat(newBillValue),
-      due_date: newBillDate,
-      status: 'aberto',
-      recurrence: newBillRecurrence
-    });
+    if (editingBill) {
+      await onUpdateAccountPayable({
+        ...editingBill,
+        description: newBillDesc,
+        value: parseFloat(newBillValue),
+        due_date: newBillDate,
+        recurrence: newBillRecurrence
+      });
+      setEditingBill(null);
+    } else {
+      await onAddAccountPayable({
+        description: newBillDesc,
+        value: parseFloat(newBillValue),
+        due_date: newBillDate,
+        status: 'aberto',
+        recurrence: newBillRecurrence
+      });
+    }
 
     setShowAddBillModal(false);
     setNewBillDesc('');
     setNewBillValue('');
     setNewBillDate('');
     setNewBillRecurrence('unica');
+  };
+
+  const handleEditBill = (bill: AccountPayable) => {
+    setEditingBill(bill);
+    setNewBillDesc(bill.description);
+    setNewBillValue(bill.value.toString());
+    setNewBillDate(bill.due_date);
+    setNewBillRecurrence(bill.recurrence);
+    setShowAddBillModal(true);
   };
 
   const allPending = useMemo(() => {
@@ -363,12 +389,20 @@ export const Schedule: React.FC<ScheduleProps> = ({
                   </div>
 
                   <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-50 dark:border-slate-800/50">
-                    <button
-                      onClick={() => onDeleteAccountPayable(bill.id)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditBill(bill)}
+                        className="p-2 text-slate-400 hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 rounded-lg transition-all"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteAccountPayable(bill.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                     <Button
                       variant={isDraft ? "primary" : "outline"}
                       onClick={() => onToggleAccountPayableStatus(bill)}
@@ -392,7 +426,17 @@ export const Schedule: React.FC<ScheduleProps> = ({
       {showAddBillModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
           <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slideUp relative">
-            <button onClick={() => setShowAddBillModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+            <button
+              onClick={() => {
+                setShowAddBillModal(false);
+                setEditingBill(null);
+                setNewBillDesc('');
+                setNewBillValue('');
+                setNewBillDate('');
+                setNewBillRecurrence('unica');
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+            >
               <X className="w-6 h-6" />
             </button>
 
@@ -400,8 +444,8 @@ export const Schedule: React.FC<ScheduleProps> = ({
               <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center text-red-500 mb-3">
                 <CreditCard className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Nova Conta</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Adicione uma conta a pagar ao seu controle.</p>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">{editingBill ? 'Editar Conta' : 'Nova Conta'}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{editingBill ? 'Atualize as informações da conta.' : 'Adicione uma conta a pagar ao seu controle.'}</p>
             </div>
 
             <form onSubmit={handleSaveBill} className="space-y-4">
@@ -463,7 +507,7 @@ export const Schedule: React.FC<ScheduleProps> = ({
 
               <div className="pt-4">
                 <Button type="submit" fullWidth className="bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 h-12 text-sm">
-                  CADASTRAR CONTA
+                  {editingBill ? 'ATUALIZAR CONTA' : 'CADASTRAR CONTA'}
                 </Button>
               </div>
             </form>
