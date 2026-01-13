@@ -479,7 +479,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               onClick={() => { setIsMenuOpen(false); onAddFreight(); }}
               className="flex items-center gap-3 bg-brand text-white py-2.5 px-5 rounded-2xl shadow-xl animate-slideUp"
             >
-              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Novo Frete</span>
+              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Lançar Entrada</span>
               <Plus className="w-5 h-5" />
             </button>
           </>
