@@ -19,7 +19,9 @@ import {
   X,
   CreditCard,
   Circle,
-  Pencil
+  Pencil,
+  Briefcase,
+  Truck
 } from 'lucide-react';
 
 interface ScheduleProps {
@@ -29,7 +31,7 @@ interface ScheduleProps {
   onAddAccountPayable: (acc: Omit<AccountPayable, 'id' | 'user_id'>) => Promise<void>;
   onDeleteAccountPayable: (id: string) => Promise<void>;
   onUpdateAccountPayable: (acc: AccountPayable) => Promise<void>;
-  onToggleAccountPayableStatus: (acc: AccountPayable) => Promise<void>;
+  onToggleAccountPayableStatus: (acc: AccountPayable, source?: string) => Promise<void>;
 }
 
 type FilterStatus = 'ALL' | 'OVERDUE' | 'SOON' | 'FUTURE';
@@ -57,6 +59,8 @@ export const Schedule: React.FC<ScheduleProps> = ({
 
   // Edit Bill State
   const [editingBill, setEditingBill] = useState<AccountPayable | null>(null);
+  const [payingBill, setPayingBill] = useState<AccountPayable | null>(null);
+  const [showSourceModal, setShowSourceModal] = useState(false);
 
   const getDaysUntilDue = (dueDateStr?: string) => {
     if (!dueDateStr) return 999;
@@ -405,7 +409,14 @@ export const Schedule: React.FC<ScheduleProps> = ({
                     </div>
                     <Button
                       variant={isDraft ? "primary" : "outline"}
-                      onClick={() => onToggleAccountPayableStatus(bill)}
+                      onClick={() => {
+                        if (isDraft) {
+                          setPayingBill(bill);
+                          setShowSourceModal(true);
+                        } else {
+                          onToggleAccountPayableStatus(bill);
+                        }
+                      }}
                       className={`px-4 py-2 text-[10px] flex items-center gap-2 ${isDraft ? 'bg-accent-success hover:bg-green-600 border-none' : ''}`}
                     >
                       {isDraft ? (
@@ -511,6 +522,70 @@ export const Schedule: React.FC<ScheduleProps> = ({
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Source Selection Modal */}
+      {showSourceModal && payingBill && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slideUp relative">
+            <button
+              onClick={() => {
+                setShowSourceModal(false);
+                setPayingBill(null);
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="mb-6">
+              <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center text-accent-success mb-3">
+                <Wallet className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white text-center">Descontar de onde?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-2">Selecione a origem para o pagamento de <span className="font-bold">{formatCurrency(payingBill.value)}</span></p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {[
+                { id: 'COMPANY', label: 'EMPRESA', icon: Briefcase, color: 'text-blue-500', bg: 'bg-blue-50' },
+                { id: 'DRIVER', label: 'MOTORISTA', icon: Truck, color: 'text-orange-500', bg: 'bg-orange-50' },
+                { id: 'RESERVE', label: 'RESERVA', icon: Wallet, color: 'text-purple-500', bg: 'bg-purple-50' }
+              ].map((src) => (
+                <button
+                  key={src.id}
+                  onClick={async () => {
+                    await onToggleAccountPayableStatus(payingBill, src.id);
+                    setShowSourceModal(false);
+                    setPayingBill(null);
+                  }}
+                  className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-brand-secondary hover:ring-4 hover:ring-brand-secondary/10 transition-all group text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`${src.bg} p-3 rounded-xl dark:bg-slate-800`}>
+                      <src.icon className={`w-5 h-5 ${src.color}`} />
+                    </div>
+                    <div>
+                      <span className="block font-bold text-slate-800 dark:text-white uppercase tracking-wider">{src.label}</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-medium tracking-tight">Utilizar saldo da {src.label.toLowerCase()}</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-brand-secondary group-hover:translate-x-1 transition-all" />
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setShowSourceModal(false);
+                setPayingBill(null);
+              }}
+              className="w-full mt-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}

@@ -145,6 +145,7 @@ export interface AccountPayable {
   status: 'aberto' | 'pago';
   recurrence: 'unica' | 'mensal' | 'semanal';
   user_id: string;
+  payment_source?: ExpenseSource;
 }
 
 export interface SupportTicket {

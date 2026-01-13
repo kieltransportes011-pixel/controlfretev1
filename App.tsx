@@ -272,7 +272,10 @@ export default function App() {
       .order('due_date', { ascending: true });
 
     if (payablesData) {
-      setAccountsPayable(payablesData as AccountPayable[]);
+      setAccountsPayable(payablesData.map(p => ({
+        ...p,
+        payment_source: p.payment_source
+      })) as AccountPayable[]);
     }
 
     // Fetch O FreteJá Freights (with joins)
@@ -692,10 +695,13 @@ Obs: ${of.description || 'Sem observações'}`;
             }
             fetchData();
           }}
-          onToggleAccountPayableStatus={async (acc) => {
+          onToggleAccountPayableStatus={async (acc, source) => {
             if (!currentUser) return;
             const newStatus = acc.status === 'aberto' ? 'pago' : 'aberto';
-            await supabase.from('contas_a_pagar').update({ status: newStatus }).eq('id', acc.id);
+            await supabase.from('contas_a_pagar').update({
+              status: newStatus,
+              payment_source: newStatus === 'pago' ? source : null
+            }).eq('id', acc.id);
             fetchData();
           }}
         />

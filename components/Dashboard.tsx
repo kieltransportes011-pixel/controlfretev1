@@ -106,6 +106,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       if (exp.source === 'RESERVE') incomeStats.totalReserve -= exp.value;
     });
 
+    // Deduct paid accounts payable based on source
+    accountsPayable?.forEach(bill => {
+      if (bill.status === 'pago' && bill.payment_source) {
+        if (bill.payment_source === 'COMPANY') incomeStats.totalCompany -= bill.value;
+        if (bill.payment_source === 'DRIVER') incomeStats.totalDriver -= bill.value;
+        if (bill.payment_source === 'RESERVE') incomeStats.totalReserve -= bill.value;
+      }
+    });
+
     return incomeStats;
   }, [freights, expenses]);
 
