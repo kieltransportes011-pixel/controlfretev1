@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Freight, Expense, DashboardStats, User, AccountPayable } from '../types';
+import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -18,14 +18,21 @@ interface DashboardProps {
   onUpgrade: () => void;
   onViewAgenda: () => void;
   accountsPayable: AccountPayable[];
+  extraIncomes: ExtraIncome[];
   onRequestUpgrade?: () => void;
   onViewReferrals?: () => void;
+  onAddExtraIncome: (ei: Omit<ExtraIncome, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
+  onDeleteExtraIncome: (id: string) => Promise<void>;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onAddExtraIncome, onDeleteExtraIncome }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
+  const [showExtraIncomeModal, setShowExtraIncomeModal] = useState(false);
+  const [eiDesc, setEiDesc] = useState('');
+  const [eiValue, setEiValue] = useState('');
+  const [eiSource, setEiSource] = useState<'COMPANY' | 'DRIVER' | 'RESERVE'>('COMPANY');
 
   React.useEffect(() => {
     if (user.isPremium) return;
@@ -115,8 +122,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       }
     });
 
+    // Add Extra Incomes
+    extraIncomes?.forEach(ei => {
+      if (ei.source === 'COMPANY') incomeStats.totalCompany += ei.value;
+      if (ei.source === 'DRIVER') incomeStats.totalDriver += ei.value;
+      if (ei.source === 'RESERVE') incomeStats.totalReserve += ei.value;
+    });
+
     return incomeStats;
-  }, [freights, expenses]);
+  }, [freights, expenses, extraIncomes]);
 
   const receivableStats = useMemo(() => {
     const today = new Date();
@@ -143,13 +157,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
   const recentActivity = useMemo(() => {
     const allItems = [
       ...freights.map(f => ({ ...f, type: 'INCOME' as const, sortDate: new Date(f.date) })),
-      ...expenses.map(e => ({ ...e, type: 'EXPENSE' as const, sortDate: new Date(e.date) }))
+      ...expenses.map(e => ({ ...e, type: 'EXPENSE' as const, sortDate: new Date(e.date) })),
+      ...extraIncomes.map(ei => ({ ...ei, type: 'EXTRA' as const, sortDate: new Date(ei.date) }))
     ];
 
     return allItems
       .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
       .slice(0, 5);
-  }, [freights, expenses]);
+  }, [freights, expenses, extraIncomes]);
 
   const pendingPercentage = stats.totalPending > 0
     ? Math.min(100, Math.round((receivableStats.next7Total / stats.totalPending) * 100))
@@ -401,14 +416,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           {recentActivity.map((item) => (
             <div key={item.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-50 dark:border-slate-700 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <div className={`w-1 h-8 rounded-full ${item.type === 'INCOME' ? 'bg-accent-success' : 'bg-accent-error'}`}></div>
+                <div className={`w-1 h-8 rounded-full ${item.type === 'INCOME' || item.type === 'EXTRA' ? 'bg-accent-success' : 'bg-accent-error'}`}></div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-800 dark:text-white leading-tight">{(item as any).client || (item as any).description}</h3>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">{formatDate(item.date)}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[10px] text-slate-400 font-medium">{formatDate(item.date)}</p>
+                    {item.type === 'EXTRA' && (
+                      <span className="text-[8px] font-bold bg-green-100 text-green-600 px-1 rounded uppercase tracking-tighter">Entrada Extra</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <span className={`font-bold tabular-nums text-sm ${item.type === 'INCOME' ? 'text-accent-success' : 'text-accent-error'}`}>
-                {item.type === 'INCOME' ? '+' : '-'}{formatCurrency((item as any).totalValue || (item as any).value)}
+              <span className={`font-bold tabular-nums text-sm ${item.type === 'INCOME' || item.type === 'EXTRA' ? 'text-accent-success' : 'text-accent-error'}`}>
+                {item.type === 'INCOME' || item.type === 'EXTRA' ? '+' : '-'}{formatCurrency((item as any).totalValue || (item as any).value)}
               </span>
             </div>
           ))}
@@ -419,6 +439,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end space-y-3">
         {isMenuOpen && (
           <>
+            <button
+              onClick={() => { setIsMenuOpen(false); setShowExtraIncomeModal(true); }}
+              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-accent-success py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
+            >
+              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Injetar Saldo</span>
+              <TrendingUp className="w-5 h-5" />
+            </button>
             <button
               onClick={() => { setIsMenuOpen(false); onOpenCalculator(); }}
               className="flex items-center gap-3 bg-white dark:bg-slate-800 text-brand-secondary py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
@@ -498,6 +525,95 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             <Button onClick={() => { setShowBillAlert(false); onViewSchedule(); }} fullWidth>
               VER CONTAS
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Extra Income Modal */}
+      {showExtraIncomeModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slideUp relative">
+            <button
+              onClick={() => setShowExtraIncomeModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="mb-6 text-center">
+              <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center text-accent-success mb-3 mx-auto">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Injetar Saldo</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Adicione saldo manualmente sem descontos de serviço.</p>
+            </div>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!eiDesc || !eiValue) return;
+              await onAddExtraIncome({
+                description: eiDesc,
+                value: parseFloat(eiValue),
+                source: eiSource,
+                date: new Date().toISOString().split('T')[0]
+              });
+              setShowExtraIncomeModal(false);
+              setEiDesc('');
+              setEiValue('');
+            }} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descrição</label>
+                <input
+                  type="text"
+                  required
+                  value={eiDesc}
+                  onChange={(e) => setEiDesc(e.target.value)}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-medium text-slate-800 dark:text-white"
+                  placeholder="Ex: Aporte de Capital"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Valor (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={eiValue}
+                  onChange={(e) => setEiValue(e.target.value)}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-medium text-slate-800 dark:text-white"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Conta de Destino</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'COMPANY', label: 'Empresa' },
+                    { id: 'DRIVER', label: 'Mot.' },
+                    { id: 'RESERVE', label: 'Res.' }
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setEiSource(s.id as any)}
+                      className={`py-2 text-[10px] font-bold uppercase rounded-xl border transition-all ${eiSource === s.id
+                        ? 'bg-brand text-white border-brand'
+                        : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-50'}`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <Button type="submit" fullWidth className="bg-brand hover:bg-brand-hover text-white shadow-lg shadow-brand/20 h-14 text-sm uppercase tracking-widest font-black rounded-2xl">
+                  INJETAR AGORA
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

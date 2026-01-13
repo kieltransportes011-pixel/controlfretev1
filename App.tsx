@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -44,6 +44,7 @@ export default function App() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
   const [ofretejaFreights, setOfretejaFreights] = useState<OFretejaFreight[]>([]);
+  const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([]);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
   const [permissionError, setPermissionError] = useState(false);
@@ -289,6 +290,17 @@ export default function App() {
       setOfretejaFreights(ofretejaData as OFretejaFreight[]);
     }
 
+    // Fetch Extra Incomes
+    const { data: extraIncomesData } = await supabase
+      .from('entradas_extras')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('date', { ascending: false });
+
+    if (extraIncomesData) {
+      setExtraIncomes(extraIncomesData as ExtraIncome[]);
+    }
+
     setSyncing(false);
   };
 
@@ -509,6 +521,7 @@ Obs: ${of.description || 'Sem observações'}`;
           freights={freights}
           expenses={expenses}
           accountsPayable={accountsPayable}
+          extraIncomes={extraIncomes}
           onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
           onAddExpense={() => setView('ADD_EXPENSE')}
           onViewSchedule={() => setView('RECEIVABLES')}
@@ -518,6 +531,21 @@ Obs: ${of.description || 'Sem observações'}`;
           onViewAgenda={() => setView('AGENDA')}
           onRequestUpgrade={() => handleOpenUpgrade('GENERAL')}
           onViewReferrals={() => setView('REFERRALS')}
+          onAddExtraIncome={async (ei) => {
+            if (!currentUser) return;
+            const { error } = await supabase.from('entradas_extras').insert([{
+              user_id: currentUser.id,
+              description: ei.description,
+              value: ei.value,
+              source: ei.source,
+              date: ei.date
+            }]);
+            if (!error) fetchData();
+          }}
+          onDeleteExtraIncome={async (id) => {
+            const { error } = await supabase.from('entradas_extras').delete().eq('id', id);
+            if (!error) fetchData();
+          }}
         />
       )}
 

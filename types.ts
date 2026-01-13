@@ -198,3 +198,13 @@ export interface AccountActivityLog {
   actor: 'user' | 'admin' | 'system';
   created_at: string;
 }
+
+export interface ExtraIncome {
+  id: string;
+  user_id: string;
+  date: string;
+  description: string;
+  value: number;
+  source: ExpenseSource;
+  created_at: string;
+}
