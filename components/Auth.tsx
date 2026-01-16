@@ -8,9 +8,10 @@ import { supabase } from '../supabase';
 interface AuthProps {
   onLogin: (user: User) => void;
   onBack?: () => void;
+  initialView?: AuthView;
 }
 
-type AuthView = 'LOGIN' | 'REGISTER' | 'SUCCESS';
+type AuthView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD';
 
 // Defined OUTSIDE to prevent re-mounting on every render (Fixes focus loss issue)
 const InputField = ({
@@ -41,8 +42,13 @@ const InputField = ({
   </div>
 );
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
-  const [view, setView] = useState<AuthView>('LOGIN');
+export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGIN' }) => {
+  const [view, setView] = useState<AuthView>(initialView);
+
+  // Sync internal state if initialView changes (e.g. from App.tsx listener)
+  React.useEffect(() => {
+    if (initialView) setView(initialView);
+  }, [initialView]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -56,6 +62,46 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
     password: '',
     confirmPassword: ''
   });
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.email) { setError('Por favor, informe seu e-mail.'); return; }
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+      redirectTo: window.location.origin,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+      setView('LOGIN');
+    }
+    setLoading(false);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.password.length < 6) { setError('Senha deve ter min. 6 caracteres.'); return; }
+    if (formData.password !== formData.confirmPassword) { setError('As senhas não coincidem.'); return; }
+
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.updateUser({
+      password: formData.password
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      alert('Senha atualizada com sucesso!');
+      setView('LOGIN');
+    }
+    setLoading(false);
+  };
 
   const handleChange = (field: string, value: string) => {
     let v = value;
@@ -300,7 +346,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
                 {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENTRAR'}
               </Button>
 
-              <div className="text-center pt-2">
+              <div className="flex flex-col items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setView('FORGOT_PASSWORD')}
+                  className="text-slate-400 hover:text-brand text-[10px] font-bold uppercase tracking-wider transition-colors"
+                >
+                  Esqueceu sua senha?
+                </button>
+                <div className="w-full border-t border-slate-100 dark:border-slate-800 my-1"></div>
                 <button
                   type="button"
                   onClick={() => setView('REGISTER')}
@@ -309,6 +363,64 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
                   Não tem conta? Cadastre-se
                 </button>
               </div>
+            </form>
+          ) : view === 'FORGOT_PASSWORD' ? (
+            <form onSubmit={handleResetPassword} className="space-y-5">
+              <button
+                type="button"
+                onClick={() => setView('LOGIN')}
+                className="flex items-center text-slate-400 hover:text-slate-600 text-[10px] font-bold uppercase tracking-widest mb-4 transition-colors"
+              >
+                <ChevronLeft size={14} className="mr-1" /> Voltar para Login
+              </button>
+
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Recuperar Senha</h3>
+                <p className="text-slate-500 text-xs">Informe seu e-mail para receber as instruções de redefinição.</p>
+              </div>
+
+              <InputField
+                label="E-mail"
+                value={formData.email}
+                onChange={(v: string) => handleChange('email', v)}
+                icon={<Mail size={18} />}
+              />
+
+              <Button type="submit" fullWidth disabled={loading} className="py-4">
+                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENVIAR E-MAIL'}
+              </Button>
+            </form>
+          ) : view === 'UPDATE_PASSWORD' ? (
+            <form onSubmit={handleUpdatePassword} className="space-y-5">
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Nova Senha</h3>
+                <p className="text-slate-500 text-xs">Crie uma nova senha de acesso para sua conta.</p>
+              </div>
+
+              <InputField
+                label="Nova Senha"
+                value={formData.password}
+                onChange={(v: string) => handleChange('password', v)}
+                type="password"
+                icon={<Lock size={18} />}
+                isPass
+                passVisible={showPassword}
+                onTogglePass={() => setShowPassword(!showPassword)}
+              />
+              <InputField
+                label="Confirmar Nova Senha"
+                value={formData.confirmPassword}
+                onChange={(v: string) => handleChange('confirmPassword', v)}
+                type="password"
+                icon={<Lock size={18} />}
+                isPass
+                passVisible={showConfirmPassword}
+                onTogglePass={() => setShowConfirmPassword(!showConfirmPassword)}
+              />
+
+              <Button type="submit" fullWidth disabled={loading} className="py-4">
+                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ATUALIZAR SENHA'}
+              </Button>
             </form>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">

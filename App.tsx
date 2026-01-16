@@ -59,6 +59,7 @@ export default function App() {
     description: ''
   });
   const [showFreightNotice, setShowFreightNotice] = useState(false);
+  const [initialAuthView, setInitialAuthView] = useState<'LOGIN' | 'UPDATE_PASSWORD'>('LOGIN');
 
 
   const handleOpenUpgrade = (reason: 'LIMIT' | 'FEATURE' | 'GENERAL' = 'GENERAL') => {
@@ -95,7 +96,12 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setInitialAuthView('UPDATE_PASSWORD');
+        setShowLanding(false); // Make sure Auth is visible
+      }
+
       if (session?.user) {
         // Optionally refresh profile
         fetchUserProfile(session.user.id);
@@ -459,7 +465,18 @@ Obs: ${of.description || 'Sem observações'}`;
     if (showLanding) {
       return <LandingPage onLogin={() => setShowLanding(false)} />;
     }
-    return <Auth onLogin={setCurrentUser} onBack={() => setShowLanding(true)} />;
+    return (
+      <Auth
+        onLogin={setCurrentUser}
+        onBack={() => {
+          setShowLanding(true);
+          setInitialAuthView('LOGIN'); // Reset if goes back
+        }}
+        // @ts-ignore - Adding a temporary prop to Auth to handle initial view if needed
+        // Or better: update Auth.tsx to use a prop for initial view
+        initialView={initialAuthView}
+      />
+    );
   }
 
   // Blocking Paywall removed to comply with "No forced redirect" rule.
