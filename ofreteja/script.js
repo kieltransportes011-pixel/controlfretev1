@@ -10,8 +10,13 @@ let pricingConfig = [];
 let selectedCategoryId = null;
 let stops = [];
 let currentEstimate = 0;
-let currentDistance = 10; // Mock 10km for Phase 3
+let currentDistance = 0;
 let pendingSubmissionData = null;
+
+// Map Variables
+let map = null;
+let markers = [];
+let routeLine = null;
 
 // Obter transportador_id da URL (Ex: ?u=USER_ID)
 const urlParams = new URLSearchParams(window.location.search);
@@ -38,8 +43,17 @@ const summaryContent = document.getElementById('summaryContent');
 
 async function init() {
     checkSession();
-    await fetchPricing(); // Load pricing first to show limits
+    await fetchPricing();
     fetchCategories();
+    initMap();
+}
+
+function initMap() {
+    // Initial center (São Paulo)
+    map = L.map('map').setView([-23.5505, -46.6333], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 }
 
 async function checkSession() {
@@ -68,12 +82,50 @@ async function fetchPricing() {
 
 // --- Navigation ---
 
-function switchTab(mode) {
+// --- Navigation ---
+
+function switchAuthTab(mode) {
     authMode = mode;
     document.getElementById('loginTab').classList.toggle('active', mode === 'login');
     document.getElementById('signupTab').classList.toggle('active', mode === 'signup');
     document.getElementById('signupFields').classList.toggle('hidden', mode === 'login');
-    document.getElementById('authBtn').innerText = mode === 'login' ? 'Entrar' : 'Criar Conta';
+    document.getElementById('authBtn').innerText = mode === 'login' ? 'Entrar no Portal' : 'Criar Conta';
+}
+
+function switchTab(tabId) {
+    // Nav Items
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        const onclick = item.getAttribute('onclick');
+        if (onclick && onclick.includes(`switchTab('${tabId}')`)) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // Views
+    const dashboardView = document.getElementById('dashboardView');
+    const historyView = document.getElementById('historyView');
+    const pageTitle = document.getElementById('pageTitle');
+
+    // Default: Reset views
+    const freightFormCard = document.querySelector('.workspace-grid');
+
+    if (tabId === 'new') {
+        freightFormCard.classList.remove('hidden');
+        historyView.classList.add('hidden');
+        pageTitle.innerText = 'Nova Solicitação';
+
+        // Ensure form is visible (in case we were in summary)
+        document.querySelector('.main-column').classList.remove('hidden');
+        if (summaryCard) summaryCard.classList.add('hidden');
+    } else if (tabId === 'history') {
+        freightFormCard.classList.add('hidden');
+        historyView.classList.remove('hidden');
+        pageTitle.innerText = 'Meu Histórico';
+        fetchMyRequests();
+    }
 }
 
 async function showDashboard(user) {
@@ -81,7 +133,6 @@ async function showDashboard(user) {
     const { data: profile } = await client.from('empresas_ofreteja').select('*').eq('id', user.id).single();
 
     if (!profile) {
-        // Fallback: create a profile for existing users if it doesn't exist
         await client.from('empresas_ofreteja').insert([{ id: user.id, name: 'Empresa ' + user.email.split('@')[0], email: user.email }]);
     }
 
@@ -89,7 +140,7 @@ async function showDashboard(user) {
     dashboardView.classList.remove('hidden');
     userInfo.classList.remove('hidden');
     userEmailSpan.innerText = user.email;
-    document.getElementById('headerSubtitle').innerText = 'Dashboard da Empresa';
+
     fetchMyRequests();
 }
 
@@ -115,7 +166,7 @@ function renderMyRequests(requests) {
     if (!container) return;
 
     if (requests.length === 0) {
-        container.innerHTML = '<p class="text-muted">Nenhuma solicitação encontrada.</p>';
+        container.innerHTML = '<div class="col-span-full text-center py-20 opacity-30"><p>Nenhuma solicitação encontrada.</p></div>';
         return;
     }
 
@@ -126,17 +177,25 @@ function renderMyRequests(requests) {
         const value = req.estimated_value ? req.estimated_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Sob Consulta';
 
         return `
-            <div class="request-item">
-                <div class="request-header">
-                    <span class="request-date">${date}</span>
-                    <span class="status-badge ${statusClass}">${statusLabel}</span>
+            <div class="request-item card" style="padding: 24px; border-radius: 16px; margin-bottom: 0;">
+                <div class="request-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span class="request-date" style="font-size: 11px; font-weight: 700; color: var(--text-muted); opacity: 0.6;">${date}</span>
+                    <span class="status-badge ${statusClass}" style="font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase;">${statusLabel}</span>
                 </div>
-                <div class="request-body">
-                    <p><strong>De:</strong> ${req.origin_address}</p>
-                    <p><strong>Para:</strong> ${req.delivery_address}</p>
-                    <p><strong>Veículo:</strong> ${req.categorias_veiculos?.name || 'Não inf.'}</p>
-                    <p class="request-price">${value}</p>
-                    ${req.rejection_reason ? `<p class="rejection-box"><strong>Motivo:</strong> ${req.rejection_reason}</p>` : ''}
+                <div class="request-body" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 13px;">
+                        <span style="color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 2px;">Trajeto</span>
+                        <p style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${req.origin_address} → ${req.delivery_address}</p>
+                    </div>
+                    <div style="font-size: 13px;">
+                        <span style="color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 2px;">Veículo</span>
+                        <p style="font-weight: 600;">${req.categorias_veiculos?.name || 'Não inf.'}</p>
+                    </div>
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 18px; font-weight: 900; color: var(--primary);">${value}</span>
+                        <button class="btn-text-only" style="font-size: 11px;">Ver Detalhes</button>
+                    </div>
+                    ${req.rejection_reason ? `<div style="margin-top: 8px; padding: 8px; background: #FEF2F2; border-radius: 8px; color: #991B1B; font-size: 11px;"><strong>Motivo:</strong> ${req.rejection_reason}</div>` : ''}
                 </div>
             </div>
         `;
@@ -147,7 +206,6 @@ function showAuth() {
     authView.classList.remove('hidden');
     dashboardView.classList.add('hidden');
     userInfo.classList.add('hidden');
-    document.getElementById('headerSubtitle').innerText = 'O seu frete, na hora certa.';
 }
 
 // --- Auth Logic ---
@@ -164,7 +222,6 @@ authForm.addEventListener('submit', async (e) => {
             const { data, error } = await client.auth.signUp({ email, password });
             if (error) throw error;
 
-            // Create company profile
             if (data.user) {
                 const { error: profileError } = await client.from('empresas_ofreteja').insert([{
                     id: data.user.id,
@@ -172,13 +229,10 @@ authForm.addEventListener('submit', async (e) => {
                     email: email,
                     phone: companyPhone
                 }]);
-                if (profileError) {
-                    console.error('Erro ao criar perfil:', profileError);
-                    alert('Usuário criado, mas erro ao salvar dados da empresa. Tente fazer login.');
-                }
+                if (profileError) console.error('Erro ao criar perfil:', profileError);
             }
             alert('Conta criada com sucesso! Por favor, faça login.');
-            switchTab('login');
+            switchAuthTab('login');
         } else {
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
@@ -199,13 +253,19 @@ async function handleLogout() {
 function renderCategories() {
     categoryGrid.innerHTML = categories.map(cat => {
         const config = pricingConfig.find(p => p.categoria === cat.name);
-        const weightLimit = config ? `<span class="weight-limit">Até ${config.peso_maximo}kg</span>` : '';
+        const weightLimit = config ? `${config.peso_maximo}kg` : '';
+
+        // Vehicle Category Icons (Lalamove Style)
+        const icon = cat.name.toLowerCase().includes('moto') ? '🛵' :
+            cat.name.toLowerCase().includes('furg') ? '🚐' :
+                cat.name.toLowerCase().includes('vuc') ? '🚛' :
+                    cat.name.toLowerCase().includes('caminh') ? '🚚' : '📦';
 
         return `
-            <div class="category-card ${selectedCategoryId === cat.id ? 'selected' : ''}" onclick="selectCategory('${cat.id}')">
-                <h4>${cat.name}</h4>
-                <p>${cat.capacity}</p>
-                ${weightLimit}
+            <div class="vehicle-option ${selectedCategoryId === cat.id ? 'selected' : ''}" onclick="selectCategory('${cat.id}')">
+                <span class="vehicle-icon">${icon}</span>
+                <span class="vehicle-name">${cat.name}</span>
+                <span class="vehicle-capacity">${weightLimit}</span>
             </div>
         `;
     }).join('');
@@ -216,45 +276,169 @@ function selectCategory(id) {
     renderCategories();
 }
 
+// --- Address Autocomplete ---
+
+function setupAutocomplete(input) {
+    let timeout = null;
+    let resultsDiv = null;
+
+    input.addEventListener('input', () => {
+        clearTimeout(timeout);
+        const query = input.value;
+        if (query.length < 4) {
+            if (resultsDiv) resultsDiv.remove();
+            return;
+        }
+
+        timeout = setTimeout(async () => {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=br`);
+            const data = await response.json();
+
+            if (resultsDiv) resultsDiv.remove();
+            resultsDiv = document.createElement('div');
+            resultsDiv.className = 'autocomplete-results';
+
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.innerText = item.display_name;
+                div.onclick = () => {
+                    input.value = item.display_name;
+                    resultsDiv.remove();
+                    updateMapRoute();
+                };
+                resultsDiv.appendChild(div);
+            });
+
+            input.parentElement.appendChild(resultsDiv);
+        }, 500);
+    });
+
+    // Close on blur (delayed to allow click)
+    input.addEventListener('blur', () => {
+        setTimeout(() => { if (resultsDiv) resultsDiv.remove(); }, 200);
+    });
+}
+
 function addStop() {
     const stopId = Date.now();
     const stopHtml = `
-        <div class="stop-item" id="stop-${stopId}">
-            <div class="flex-between" style="margin-bottom: 8px;">
-                <p class="text-muted" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">Parada Intermediária</p>
-                <button type="button" class="btn-remove" onclick="removeStop(${stopId})">Remover</button>
+        <div class="stop-item" id="stop-${stopId}" style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid var(--border); position: relative; animation: slideUp 0.3s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <label style="margin-bottom: 0;">Parada Intermediária</label>
+                <button type="button" onclick="removeStop(${stopId})" style="background: none; border: none; color: var(--accent-rose); font-size: 10px; font-weight: 800; cursor: pointer;">REMOVER</button>
             </div>
-            <div class="grid grid-3-cols mb-1">
-                <div class="form-group">
-                    <label>CEP</label>
-                    <input type="text" data-stop-field="cep" placeholder="00000-000">
-                </div>
-                <div class="form-group">
-                    <label>Nº</label>
-                    <input type="text" data-stop-field="number">
-                </div>
-                <div class="form-group">
-                    <label>Complemento</label>
-                    <input type="text" data-stop-field="complement">
-                </div>
+            <div style="display: grid; grid-template-columns: 140px 1fr; gap: 12px; margin-bottom: 12px; position: relative;">
+                <input type="text" data-stop-field="cep" placeholder="CEP" required>
+                <input type="text" data-stop-field="address" placeholder="Endereço da parada..." required class="stop-address-input">
             </div>
-            <div class="form-group">
-                <label>Endereço</label>
-                <input type="text" data-stop-field="address" placeholder="Rua, Av...">
+            <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px;">
+                <input type="text" data-stop-field="number" placeholder="Nº" required>
+                <input type="text" data-stop-field="complement" placeholder="Apto, Sala, Referência...">
             </div>
         </div>
     `;
     stopsContainer.insertAdjacentHTML('beforeend', stopHtml);
+    const stopEl = document.getElementById(`stop-${stopId}`);
+    setupAutocomplete(stopEl.querySelector('.stop-address-input'));
 }
+
+// Initialize autocomplete for main address fields
+document.addEventListener('DOMContentLoaded', () => {
+    const originInput = document.querySelector('[name="origin_address"]');
+    const deliveryInput = document.querySelector('[name="delivery_address"]');
+    if (originInput) setupAutocomplete(originInput);
+    if (deliveryInput) setupAutocomplete(deliveryInput);
+});
 
 function removeStop(id) {
     document.getElementById(`stop-${id}`).remove();
 }
 
+// --- Map & Routing Logic ---
+
+async function geocode(address) {
+    if (!address || address.length < 5) return null;
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon)
+            };
+        }
+    } catch (e) {
+        console.error('Geocoding error:', e);
+    }
+    return null;
+}
+
+async function updateMapRoute() {
+    const origin = document.querySelector('[name="origin_address"]').value;
+    const dest = document.querySelector('[name="delivery_address"]').value;
+    const stopsElements = stopsContainer.querySelectorAll('.stop-item');
+
+    if (!origin || !dest) return;
+
+    const waypoints = [];
+
+    const originCoord = await geocode(origin);
+    if (originCoord) waypoints.push(originCoord);
+
+    for (let el of stopsElements) {
+        const addr = el.querySelector('[data-stop-field="address"]').value;
+        const coord = await geocode(addr);
+        if (coord) waypoints.push(coord);
+    }
+
+    const destCoord = await geocode(dest);
+    if (destCoord) waypoints.push(destCoord);
+
+    if (waypoints.length < 2) return;
+
+    // Clear old stuff
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+    if (routeLine) map.removeLayer(routeLine);
+
+    // Add Markers
+    waypoints.forEach((wp, idx) => {
+        const icon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background: ${idx === 0 ? 'var(--secondary)' : idx === waypoints.length - 1 ? 'var(--primary)' : '#94A3B8'}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
+            iconSize: [12, 12]
+        });
+        const m = L.marker([wp.lat, wp.lng], { icon }).addTo(map);
+        markers.push(m);
+    });
+
+    // Get Route from OSRM
+    const coordsStr = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
+    try {
+        const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`);
+        const data = await response.json();
+
+        if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            currentDistance = route.distance / 1000; // in km
+
+            routeLine = L.geoJSON(route.geometry, {
+                style: { color: 'var(--primary)', weight: 4, opacity: 0.8 }
+            }).addTo(map);
+
+            map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+        }
+    } catch (e) {
+        console.error('Routing error:', e);
+    }
+}
+
 // --- Calculation Logic ---
 
-function calculateEstimate() {
-    const weight = parseFloat(document.getElementById('load_weight').value);
+async function calculateEstimate() {
+    const weightInput = document.getElementById('load_weight');
+    const weight = parseFloat(weightInput.value);
 
     if (!selectedCategoryId) {
         alert('Selecione uma categoria de veículo primeiro.');
@@ -274,26 +458,33 @@ function calculateEstimate() {
         return;
     }
 
-    // Weight validation
     if (weight > config.peso_maximo) {
         alert(`O peso informado (${weight}kg) excede o limite da categoria ${category.name} (${config.peso_maximo}kg). Escolha uma categoria superior.`);
         return;
     }
 
-    // Calculation formula
-    const numStops = stopsContainer.querySelectorAll('.stop-item').length;
-    const distanceFixed = 10; // Phase 3 Mock
+    const calcBtn = document.getElementById('calcBtn');
+    const originalText = calcBtn.innerText;
+    calcBtn.disabled = true;
+    calcBtn.innerText = 'Calculando Rota...';
 
-    const total = parseFloat(config.tarifa_base) + (distanceFixed * parseFloat(config.valor_km)) + (numStops * parseFloat(config.valor_parada));
+    // Trigger map update before calculation
+    await updateMapRoute();
+
+    const numStops = stopsContainer.querySelectorAll('.stop-item').length;
+    const distance = currentDistance > 0 ? currentDistance : 10;
+
+    const total = parseFloat(config.tarifa_base) + (distance * parseFloat(config.valor_km)) + (numStops * parseFloat(config.valor_parada));
 
     currentEstimate = total;
-    currentDistance = distanceFixed;
 
     estimatedValueDisplay.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     estimateResult.classList.remove('hidden');
     submitBtn.classList.remove('hidden');
+    calcBtn.classList.add('hidden');
+    calcBtn.disabled = false;
+    calcBtn.innerText = originalText;
 
-    // Smooth scroll to result
     estimateResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -312,7 +503,6 @@ freightForm.addEventListener('submit', async (e) => {
 
     const { data: { session } } = await client.auth.getSession();
 
-    // Parse stops
     const stopsElements = stopsContainer.querySelectorAll('.stop-item');
     const stopsData = Array.from(stopsElements).map(el => ({
         cep: el.querySelector('[data-stop-field="cep"]').value,
@@ -351,104 +541,70 @@ function showSummary() {
 
     const cat = categories.find(c => c.id === pendingSubmissionData.vehicle_category_id);
     const stopsHtml = pendingSubmissionData.stops.map((s, idx) => `
-        <div class="summary-address-item">
-            <div class="address-dot stop"></div>
-            <div class="address-text">
+        <div class="summary-address-item" style="display: flex; gap: 12px; margin-bottom: 8px;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #94A3B8; margin-top: 6px;"></div>
+            <div style="font-size: 13px;">
                 <strong>Parada ${idx + 1}:</strong> ${s.address}, ${s.number}${s.complement ? ` - ${s.complement}` : ''}
             </div>
         </div>
     `).join('');
 
     summaryContent.innerHTML = `
-        <div class="summary-content">
-            <div class="summary-section">
-                <h4>Trajeto</h4>
-                <div class="summary-address-box">
-                    <div class="summary-address-item">
-                        <div class="address-dot origin"></div>
-                        <div class="address-text">
-                            <strong>Origem:</strong> ${pendingSubmissionData.origin_address}, ${pendingSubmissionData.origin_number}${pendingSubmissionData.origin_complement ? ` - ${pendingSubmissionData.origin_complement}` : ''}
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <div>
+                <h4 style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;">Rota e Trajeto</h4>
+                <div style="background: var(--bg-main); padding: 20px; border-radius: 16px;">
+                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--secondary); margin-top: 6px;"></div>
+                        <div style="font-size: 13px;">
+                            <strong>Coleta:</strong> ${pendingSubmissionData.origin_address}, ${pendingSubmissionData.origin_number}
                         </div>
                     </div>
                     ${stopsHtml}
-                    <div class="summary-address-item">
-                        <div class="address-dot dest"></div>
-                        <div class="address-text">
-                            <strong>Entrega Final:</strong> ${pendingSubmissionData.delivery_address}, ${pendingSubmissionData.delivery_number}${pendingSubmissionData.delivery_complement ? ` - ${pendingSubmissionData.delivery_complement}` : ''}
+                    <div style="display: flex; gap: 12px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px;"></div>
+                        <div style="font-size: 13px;">
+                            <strong>Entrega Final:</strong> ${pendingSubmissionData.delivery_address}, ${pendingSubmissionData.delivery_number}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="summary-section">
-                <h4>Veículo e Carga</h4>
-                <div class="summary-row">
-                    <span class="label">Categoria:</span>
-                    <span class="value">${cat?.name || 'Não informada'}</span>
+            <div>
+                <h4 style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;">Detalhes Carga</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="background: var(--bg-main); padding: 12px; border-radius: 12px; font-size: 12px;">
+                        <span style="display: block; opacity: 0.6; font-size: 10px;">VEÍCULO</span>
+                        <strong>${cat?.name}</strong>
+                    </div>
+                    <div style="background: var(--bg-main); padding: 12px; border-radius: 12px; font-size: 12px;">
+                        <span style="display: block; opacity: 0.6; font-size: 10px;">PESO</span>
+                        <strong>${pendingSubmissionData.weight}kg</strong>
+                    </div>
                 </div>
-                <div class="summary-row">
-                    <span class="label">Peso informado:</span>
-                    <span class="value">${pendingSubmissionData.weight} kg</span>
+                <div style="margin-top: 16px; background: var(--bg-main); padding: 12px; border-radius: 12px; font-size: 12px;">
+                    <span style="display: block; opacity: 0.6; font-size: 10px;">DISTÂNCIA TOTAL</span>
+                    <strong>${currentDistance.toFixed(2)} km</strong>
                 </div>
-                <div class="summary-row">
-                    <span class="label">Data de Coleta:</span>
-                    <span class="value">${new Date(pendingSubmissionData.date).toLocaleDateString('pt-BR')}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="label">Contato:</span>
-                    <span class="value">${pendingSubmissionData.contact_phone}</span>
-                </div>
-            </div>
-
-            <div class="summary-section bg-primary-soft">
-                <h4>Resumo Financeiro</h4>
-                <div class="summary-row">
-                    <span class="label">Distância (Est.):</span>
-                    <span class="value">${pendingSubmissionData.distance_km} km</span>
-                </div>
-                <div class="summary-row" style="font-size: 1.2rem; color: var(--primary); margin-top: 0.5rem;">
-                    <span class="label" style="color: var(--primary);">Valor Estimado:</span>
-                    <span class="value">${pendingSubmissionData.estimated_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                </div>
-                <p class="disclaimer" style="margin-top: 10px; font-size: 0.75rem;">
-                    O valor final está sujeito a aprovação manual.
-                </p>
             </div>
         </div>
     `;
 
-    formCard.classList.add('hidden');
-    summaryCard.classList.remove('hidden');
-    summaryCard.scrollIntoView({ behavior: 'smooth' });
-}
-
-function editForm() {
-    summaryCard.classList.add('hidden');
-    formCard.classList.remove('hidden');
-    formCard.scrollIntoView({ behavior: 'smooth' });
+    document.querySelector('.main-column').classList.add('hidden');
+    document.getElementById('confirmBtn').classList.remove('hidden');
 }
 
 async function confirmSubmission() {
     if (!pendingSubmissionData) return;
 
-    const confirmBtn = document.getElementById('confirmBtn');
-    confirmBtn.disabled = true;
-    confirmBtn.innerText = 'Enviando...';
-
     try {
         const { error } = await client.from('fretes_ofreteja').insert([pendingSubmissionData]);
         if (error) throw error;
-
-        // Refresh local list before showing success
         fetchMyRequests();
-
         dashboardView.classList.add('hidden');
         successMessage.classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
         alert('Erro ao enviar: ' + err.message);
-        confirmBtn.disabled = false;
-        confirmBtn.innerText = 'Confirmar Solicitação';
     }
 }
 
