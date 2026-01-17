@@ -162,6 +162,9 @@ export interface DashboardStats {
   expenseMonth: number;
   extraMonth: number;
   netProfit: number;
+  netCompany: number;
+  netDriver: number;
+  netReserve: number;
 }
 
 export interface AccountPayable {

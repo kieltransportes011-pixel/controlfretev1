@@ -67,6 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
   const [eiDesc, setEiDesc] = useState('');
   const [eiValue, setEiValue] = useState('');
   const [eiSource, setEiSource] = useState<'COMPANY' | 'DRIVER' | 'RESERVE'>('COMPANY');
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
 
   React.useEffect(() => {
     if (user.isPremium) return;
@@ -124,7 +125,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       if (isThisWeek) acc.weekTotal += curr.totalValue;
 
       const received = curr.receivedValue ?? (curr.status === 'PAID' ? curr.totalValue : 0);
-      const ratio = curr.totalValue > 0 ? received / curr.totalValue : 0;
 
       if (isThisMonth) {
         acc.companyMonth += curr.companyValue;
@@ -136,29 +136,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       return acc;
     }, { monthTotal: 0, weekTotal: 0, companyMonth: 0, driverMonth: 0, reserveMonth: 0, receivedMonth: 0 });
 
-    const expenseTotal = expenses.reduce((acc, curr) => {
+    const expenseStats = expenses.reduce((acc, curr) => {
       const date = new Date(curr.date + 'T12:00:00');
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-        return acc + curr.value;
+        acc.total += curr.value;
+        if (curr.source === 'COMPANY') acc.company += curr.value;
+        if (curr.source === 'DRIVER') acc.driver += curr.value;
+        if (curr.source === 'RESERVE') acc.reserve += curr.value;
       }
       return acc;
-    }, 0);
+    }, { total: 0, company: 0, driver: 0, reserve: 0 });
 
-    const extraTotal = extraIncomes.reduce((acc, curr) => {
+    const extraStats = extraIncomes.reduce((acc, curr) => {
       const date = new Date(curr.date + 'T12:00:00');
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-        return acc + curr.value;
+        acc.total += curr.value;
+        if (curr.source === 'COMPANY') acc.company += curr.value;
+        if (curr.source === 'DRIVER') acc.driver += curr.value;
+        if (curr.source === 'RESERVE') acc.reserve += curr.value;
       }
       return acc;
-    }, 0);
+    }, { total: 0, company: 0, driver: 0, reserve: 0 });
 
-    const netProfit = incomeStats.monthTotal - expenseTotal + extraTotal;
+    const netProfit = incomeStats.monthTotal - expenseStats.total + extraStats.total;
+    const netCompany = incomeStats.companyMonth - expenseStats.company + extraStats.company;
+    const netDriver = incomeStats.driverMonth - expenseStats.driver + extraStats.driver;
+    const netReserve = incomeStats.reserveMonth - expenseStats.reserve + extraStats.reserve;
 
     return {
       ...incomeStats,
-      expenseMonth: expenseTotal,
-      extraMonth: extraTotal,
-      netProfit
+      expenseMonth: expenseStats.total,
+      extraMonth: extraStats.total,
+      netProfit,
+      netCompany,
+      netDriver,
+      netReserve
     };
   }, [freights, expenses, extraIncomes]);
 
@@ -299,14 +311,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.monthTotal)}</p>
             </Card>
 
-            <Card className="border-l-4 border-l-blue-500">
+            <Card onClick={() => setShowBalanceModal(true)} className="border-l-4 border-l-blue-500 group cursor-pointer hover:border-blue-500/30 transition-all">
               <div className="flex items-center gap-2 text-slate-400 mb-1">
                 <TrendingUp className="w-3 h-3" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Saldo Líquido</span>
+                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-blue-500 transition-colors">Saldo Líquido</span>
               </div>
-              <p className={`text - lg font - black ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'} `}>
-                {formatCurrency(stats.netProfit)}
-              </p>
+              <div className="flex items-end justify-between">
+                <p className={`text-lg font-black ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {formatCurrency(stats.netProfit)}
+                </p>
+                <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              </div>
             </Card>
 
             <Card onClick={onViewGoals} className="group cursor-pointer hover:border-orange-500/30 transition-all border-l-4 border-l-orange-500">
@@ -527,6 +542,77 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               </Button>
             </div>
           </Card>
+        </div>
+      )}
+
+      {showBalanceModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-sm"
+          >
+            <Card className="space-y-6 p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Composição do Saldo</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Mês Atual ({new Date().toLocaleDateString('pt-BR', { month: 'long' })})</p>
+                </div>
+                <button onClick={() => setShowBalanceModal(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Empresa</span>
+                    <span className={`text-sm font-black ${stats.netCompany >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {formatCurrency(stats.netCompany)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-brand h-full" style={{ width: `${Math.max(0, Math.min(100, (stats.netCompany / (stats.netProfit || 1)) * 100))}%` }}></div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motorista</span>
+                    <span className={`text-sm font-black ${stats.netDriver >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {formatCurrency(stats.netDriver)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full" style={{ width: `${Math.max(0, Math.min(100, (stats.netDriver / (stats.netProfit || 1)) * 100))}%` }}></div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reserva</span>
+                    <span className={`text-sm font-black ${stats.netReserve >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {formatCurrency(stats.netReserve)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-amber-500 h-full" style={{ width: `${Math.max(0, Math.min(100, (stats.netReserve / (stats.netProfit || 1)) * 100))}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <span className="text-xs font-black text-slate-800 dark:text-white uppercase">Total Líquido</span>
+                <span className={`text-lg font-black ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {formatCurrency(stats.netProfit)}
+                </span>
+              </div>
+
+              <Button fullWidth onClick={() => setShowBalanceModal(false)}>
+                Fechar Detalhes
+              </Button>
+            </Card>
+          </motion.div>
         </div>
       )}
 
