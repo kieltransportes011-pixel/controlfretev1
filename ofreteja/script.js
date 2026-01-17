@@ -46,6 +46,87 @@ async function init() {
     await fetchPricing();
     fetchCategories();
     initMap();
+    setupInputMasks();
+    setupCEPValidation();
+    setupRealtime();
+}
+
+// --- Input Intelligence ---
+
+function setupInputMasks() {
+    const phoneInput = document.querySelector('[name="contact_phone"]');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+
+            if (value.length > 2) {
+                value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+            }
+            if (value.length > 9) {
+                value = `${value.slice(0, 9)}-${value.slice(9)}`; // (11) 9XXXX-XXXX
+            }
+            e.target.value = value;
+        });
+    }
+}
+
+function setupCEPValidation() {
+    // Delegate for dynamic inputs (modal or added stops)
+    document.addEventListener('focusout', async (e) => {
+        if (e.target.matches('input[name*="cep"], input[data-stop-field="cep"]')) {
+            const input = e.target;
+            const cep = input.value.replace(/\D/g, '');
+
+            if (cep.length !== 8) return;
+
+            // Find sibling address fields
+            let container = input.closest('.form-step, .stop-item, .address-group');
+            // Fallback if not inside expected container
+            if (!container) container = input.parentElement.parentElement;
+
+            let addressInput, numberInput;
+
+            if (input.name === 'origin_cep') {
+                addressInput = document.querySelector('[name="origin_address"]');
+            } else if (input.name === 'delivery_cep') {
+                addressInput = document.querySelector('[name="delivery_address"]');
+            } else if (input.dataset.stopField === 'cep') {
+                const stop = input.closest('.stop-item');
+                addressInput = stop.querySelector('[data-stop-field="address"]');
+            }
+
+            if (!addressInput) return;
+
+            showToast('Buscando CEP...', 'info');
+
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const data = await response.json();
+
+                if (!data.erro) {
+                    addressInput.value = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
+                    showToast('Endereço encontrado!', 'success');
+                    updateMapRoute();
+                } else {
+                    showToast('CEP não encontrado.', 'error');
+                }
+            } catch (err) {
+                console.error('CEP Error:', err);
+                showToast('Erro ao buscar CEP', 'error');
+            }
+        }
+    });
+
+    // Mask for CEP
+    document.addEventListener('input', (e) => {
+        if (e.target.matches('input[name*="cep"], input[data-stop-field="cep"]')) {
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length > 8) v = v.slice(0, 8);
+            if (v.length > 5) v = `${v.slice(0, 5)}-${v.slice(5)}`;
+            e.target.value = v;
+        }
+    });
 }
 
 function initMap() {
@@ -141,7 +222,59 @@ async function showDashboard(user) {
     userInfo.classList.remove('hidden');
     userEmailSpan.innerText = user.email;
 
+    setupRealtime();
     fetchMyRequests();
+}
+
+// --- Real-time Feedback Loop ---
+
+function setupRealtime() {
+    client.channel('public:fretes_ofreteja')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fretes_ofreteja' }, payload => {
+            const { new: newRecord, old: oldRecord } = payload;
+
+            // Reload if status changed
+            if (newRecord.status !== oldRecord.status) {
+                fetchMyRequests(); // Refresh list to update badge
+
+                // Play Sound if status is approved or rejected
+                if (newRecord.status === 'APROVADO') playSound('success');
+                if (newRecord.status === 'REJEITADO') playSound('error');
+
+                showToast(`Status atualizado: ${newRecord.status.replace('_', ' ')}`, 'info');
+            }
+        })
+        .subscribe();
+}
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+    // Simple oscillator beep to avoid external dependencies
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    if (type === 'success') {
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.5);
+    } else {
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+        oscillator.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.3);
+    }
 }
 
 async function fetchMyRequests() {
@@ -476,6 +609,37 @@ async function calculateEstimate() {
 
     const total = parseFloat(config.tarifa_base) + (distance * parseFloat(config.valor_km)) + (numStops * parseFloat(config.valor_parada));
 
+    // --- Radical Transparency: Pricing Breakdown ---
+    const pricingHTML = `
+        <div class="pricing-breakdown" id="pricingBreakdown">
+            <div class="breakdown-row">
+                <span>Tarifa Base (${category.name})</span>
+                <span>R$ ${parseFloat(config.tarifa_base).toFixed(2)}</span>
+            </div>
+            <div class="breakdown-row">
+                <span>Distância (${distance.toFixed(1)} km x R$ ${config.valor_km})</span>
+                <span>R$ ${(distance * parseFloat(config.valor_km)).toFixed(2)}</span>
+            </div>
+            <div class="breakdown-row">
+                <span>Paradas (${numStops} x R$ ${config.valor_parada})</span>
+                <span>R$ ${(numStops * parseFloat(config.valor_parada)).toFixed(2)}</span>
+            </div>
+            <div class="breakdown-row total">
+                <span>Total Estimado</span>
+                <span>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+            </div>
+        </div>
+    `;
+
+    // Cleanup old tooltip if exists
+    const oldTooltip = document.getElementById('pricingBreakdown');
+    if (oldTooltip) oldTooltip.remove();
+
+    estimateResult.insertAdjacentHTML('beforeend', pricingHTML);
+    estimateResult.style.position = 'relative';
+    estimateResult.onmouseenter = () => document.getElementById('pricingBreakdown').style.display = 'block';
+    estimateResult.onmouseleave = () => document.getElementById('pricingBreakdown').style.display = 'none';
+
     currentEstimate = total;
 
     estimatedValueDisplay.innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -487,6 +651,34 @@ async function calculateEstimate() {
 
     estimateResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+
+// Visual Weight Limit Blocker
+document.getElementById('load_weight').addEventListener('input', (e) => {
+    const weight = parseFloat(e.target.value);
+    const vehicleOptions = document.querySelectorAll('.vehicle-option');
+
+    vehicleOptions.forEach(opt => {
+        // Find category ID by index or data attribute if available.
+        // Since we render by index map order, we can infer config
+        // But cleaner is to re-render. Let's trigger a light re-render or just toggle class
+        // Re-fetching full category data here might be slow.
+        // Let's use name matching from innerText for now as quick fix or optimize later.
+        const name = opt.querySelector('.vehicle-name').innerText;
+        const config = pricingConfig.find(p => p.categoria === name);
+
+        if (config) {
+            if (weight > config.peso_maximo) {
+                opt.classList.add('disabled');
+                if (opt.classList.contains('selected')) {
+                    opt.classList.remove('selected');
+                    selectedCategoryId = null; // Deselect if invalid
+                }
+            } else {
+                opt.classList.remove('disabled');
+            }
+        }
+    });
+});
 
 freightForm.addEventListener('submit', async (e) => {
     e.preventDefault();
