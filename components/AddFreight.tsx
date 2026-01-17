@@ -1,20 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppSettings, Freight } from '../types';
+import { AppSettings, Freight, Client } from '../types';
 import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
 import { CalendarPicker } from './CalendarPicker';
-import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
+import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle, FileText, Search, User, MapPin } from 'lucide-react';
 
 interface AddFreightProps {
   settings: AppSettings;
+  clients?: Client[];
   onSave: (freight: Freight) => void;
   onCancel: () => void;
   initialData?: Partial<Freight>;
 }
 
-export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCancel, initialData }) => {
+export const AddFreight: React.FC<AddFreightProps> = ({ settings, clients = [], onSave, onCancel, initialData }) => {
   const [totalValue, setTotalValue] = useState<string>(initialData?.totalValue ? String(initialData.totalValue) : '');
   const [client, setClient] = useState(initialData?.client || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
@@ -35,6 +36,10 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCanc
   const [description, setDescription] = useState(initialData?.description || '');
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'PIX');
   const [clientDoc, setClientDoc] = useState(initialData?.clientDoc || '');
+
+  // UI State for Client Selection
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
 
   // Calculation Results
   const [calculated, setCalculated] = useState({
@@ -66,6 +71,36 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCanc
       setIsPaidInFull(false);
     }
   }, [initialData]);
+
+  // Handle client search suggestions
+  useEffect(() => {
+    if (client.length >= 2 && !initialData?.id) {
+      const filtered = clients.filter(c =>
+        c.name.toLowerCase().includes(client.toLowerCase())
+      );
+      setFilteredClients(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [client, clients]);
+
+  const handleSelectClient = (c: Client) => {
+    setClient(c.name);
+    setClientDoc(c.doc || '');
+
+    // Auto-fill destination if city is set
+    if (c.city && !destination) {
+      setDestination(`${c.city}, ${c.state || ''}`);
+    }
+
+    // Auto-fill origin if issuer settings have city
+    if (settings.issuerAddressCity && !origin) {
+      setOrigin(`${settings.issuerAddressCity}, ${settings.issuerAddressState || ''}`);
+    }
+
+    setShowSuggestions(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,15 +204,43 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCanc
             />
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Cliente <span className="text-slate-400 font-normal">(Opcional)</span></label>
-            <input
-              type="text"
-              value={client}
-              onChange={(e) => setClient(e.target.value)}
-              className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand dark:text-white"
-              placeholder="Nome do cliente"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
+                onFocus={() => client.length >= 2 && setShowSuggestions(filteredClients.length > 0)}
+                className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand dark:text-white"
+                placeholder="Nome do cliente"
+              />
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-[60] overflow-hidden animate-fadeIn">
+                  {filteredClients.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => handleSelectClient(c)}
+                      className="w-full text-left p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-3 border-b border-slate-50 dark:border-slate-700 last:border-0 transition-colors"
+                    >
+                      <div className="w-8 h-8 bg-brand/10 text-brand rounded-full flex items-center justify-center font-bold text-xs uppercase">
+                        {c.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-800 dark:text-white truncate">{c.name}</div>
+                        <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                          {c.doc && <span><FileText className="w-3 h-3 inline mr-1" />{c.doc}</span>}
+                          {c.city && <span><MapPin className="w-3 h-3 inline mr-1" />{c.city}</span>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Overlay to close suggestions */}
+            {showSuggestions && <div className="fixed inset-0 z-50" onClick={() => setShowSuggestions(false)} />}
           </div>
 
           <div>

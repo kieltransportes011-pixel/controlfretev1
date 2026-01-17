@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -27,6 +27,7 @@ import { ReferralSystem } from './components/ReferralSystem';
 import { UpgradeModal } from './components/UpgradeModal';
 import { FreightIntegration } from './components/FreightIntegration';
 import { FreightNoticeModal } from './components/FreightNoticeModal';
+import { Clients } from './components/Clients';
 
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
@@ -45,6 +46,7 @@ export default function App() {
   const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
   const [ofretejaFreights, setOfretejaFreights] = useState<OFretejaFreight[]>([]);
   const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
   const [permissionError, setPermissionError] = useState(false);
@@ -341,6 +343,17 @@ export default function App() {
       setExtraIncomes(extraIncomesData as ExtraIncome[]);
     }
 
+    // Fetch Clients
+    const { data: clientsData } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('name', { ascending: true });
+
+    if (clientsData) {
+      setClients(clientsData as Client[]);
+    }
+
     setSyncing(false);
   };
 
@@ -486,6 +499,68 @@ Obs: ${of.description || 'Sem observações'}`;
       .from('profiles')
       .update({ is_premium: updatedUser.isPremium }) // Update other fields if needed
       .eq('id', currentUser.id);
+  };
+
+  const handleSaveClient = async (client: Partial<Client>) => {
+    if (!currentUser) return;
+    try {
+      if (client.id) {
+        // Update
+        const { error } = await supabase
+          .from('clients')
+          .update({
+            name: client.name,
+            doc: client.doc,
+            phone: client.phone,
+            email: client.email,
+            street: client.street,
+            number: client.number,
+            neighborhood: client.neighborhood,
+            city: client.city,
+            state: client.state,
+            zip: client.zip
+          })
+          .eq('id', client.id);
+        if (error) throw error;
+      } else {
+        // Insert
+        const { error } = await supabase
+          .from('clients')
+          .insert([{
+            user_id: currentUser.id,
+            name: client.name,
+            doc: client.doc,
+            phone: client.phone,
+            email: client.email,
+            street: client.street,
+            number: client.number,
+            neighborhood: client.neighborhood,
+            city: client.city,
+            state: client.state,
+            zip: client.zip
+          }]);
+        if (error) throw error;
+      }
+      fetchData();
+    } catch (error: any) {
+      console.error("Erro ao salvar cliente:", error);
+      alert("Erro ao salvar cliente: " + (error.message || "Tente novamente."));
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (error: any) {
+      console.error("Erro ao excluir cliente:", error);
+      alert("Erro ao excluir cliente: " + (error.message || "Tente novamente."));
+    }
   };
 
 
@@ -662,6 +737,7 @@ Obs: ${of.description || 'Sem observações'}`;
       {view === 'ADD_FREIGHT' && (
         <AddFreight
           settings={settings}
+          clients={clients}
           onSave={async (f) => {
             if (!currentUser) return;
             try {
@@ -928,6 +1004,15 @@ Obs: ${of.description || 'Sem observações'}`;
           onApprove={handleApproveOFreteja}
           onReject={handleRejectOFreteja}
           onCancel={handleCancelOFreteja}
+          onBack={() => setView('DASHBOARD')}
+        />
+      )}
+
+      {view === 'CLIENTS' && (
+        <Clients
+          clients={clients}
+          onSaveClient={handleSaveClient}
+          onDeleteClient={handleDeleteClient}
           onBack={() => setView('DASHBOARD')}
         />
       )}

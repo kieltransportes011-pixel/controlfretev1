@@ -55,11 +55,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           </button>
 
           <button
-            onClick={() => onNavigate('REFERRALS')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'REFERRALS' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            onClick={() => onNavigate('CLIENTS')}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'CLIENTS' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
           >
-            <Users className="w-5 h-5" strokeWidth={currentView === 'REFERRALS' ? 2.5 : 2} />
-            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Indicar</span>
+            <Users className="w-5 h-5" strokeWidth={currentView === 'CLIENTS' ? 2.5 : 2} />
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Clientes</span>
           </button>
 
           <button

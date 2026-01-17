@@ -133,7 +133,23 @@ export interface AppSettings {
   issuerAddressZip?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS' | 'FREIGHT_INTEGRATION';
+export interface Client {
+  id: string;
+  user_id: string;
+  name: string;
+  doc?: string;
+  phone?: string;
+  email?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  created_at: string;
+}
+
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS' | 'FREIGHT_INTEGRATION' | 'CLIENTS';
 
 export interface DashboardStats {
   monthTotal: number;
