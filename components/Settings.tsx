@@ -35,6 +35,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   const [issuerCity, setIssuerCity] = useState(settings.issuerAddressCity || '');
   const [issuerState, setIssuerState] = useState(settings.issuerAddressState || '');
   const [issuerZip, setIssuerZip] = useState(settings.issuerAddressZip || '');
+  const [issuerLogoUrl, setIssuerLogoUrl] = useState(settings.issuerLogoUrl || '');
 
   // Sync state with props when they change (e.g. initial fetch completes)
   React.useEffect(() => {
@@ -50,6 +51,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
     setIssuerCity(settings.issuerAddressCity || '');
     setIssuerState(settings.issuerAddressState || '');
     setIssuerZip(settings.issuerAddressZip || '');
+    setIssuerLogoUrl(settings.issuerLogoUrl || '');
   }, [settings, user?.name]);
 
   // Check Unread Notices
@@ -180,6 +182,73 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Company Logo Upload Logic
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [logoPreviewBlob, setLogoPreviewBlob] = useState<Blob | null>(null);
+  const logoInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isActive) {
+      alert('Upload de logo é um recurso PRO.');
+      return;
+    }
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      alert('Formato inválido. Use JPG ou PNG.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Arquivo muito grande. Máximo 2MB.');
+      return;
+    }
+
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = async () => {
+      try {
+        const processed = await processImage(file);
+        setLogoPreviewBlob(processed);
+        setLogoPreviewUrl(URL.createObjectURL(processed));
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao processar imagem.');
+      }
+    };
+  };
+
+  const handleConfirmLogoUpload = async () => {
+    if (!logoPreviewBlob) return;
+
+    try {
+      setUploadingLogo(true);
+      const filePath = `logos/${user.id}_logo.webp`;
+      const processedFile = new File([logoPreviewBlob], 'logo.webp', { type: 'image/webp' });
+
+      // Upload to 'avatars' bucket (using it for logos too as it's already configured)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, processedFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const finalUrl = `${publicUrl}?t=${Date.now()}`;
+
+      setIssuerLogoUrl(finalUrl);
+      setLogoPreviewUrl(null);
+      setLogoPreviewBlob(null);
+      alert('Logo carregada com sucesso! Não esqueça de salvar as alterações.');
+    } catch (error: any) {
+      console.error(error);
+      alert('Erro ao salvar logo: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // Add saving state
 
@@ -200,6 +269,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         issuerCity,
         issuerAddressState: issuerState,
         issuerAddressZip: issuerZip,
+        issuerLogoUrl: issuerLogoUrl,
       });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
@@ -444,6 +514,61 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           Dados para Recibo
         </h2>
         <Card className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+              Logotipo da Empresa
+              {!isActive && <Crown className="w-3 h-3 text-brand" />}
+            </label>
+            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+              <div className="w-16 h-16 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                {logoPreviewUrl ? (
+                  <img src={logoPreviewUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                ) : issuerLogoUrl ? (
+                  <img src={issuerLogoUrl} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <Camera className="w-6 h-6 text-slate-300" />
+                )}
+              </div>
+              <div className="flex-1">
+                {logoPreviewUrl ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleConfirmLogoUpload}
+                      disabled={uploadingLogo}
+                      className="text-xs bg-brand text-white px-3 py-1.5 rounded-lg font-bold hover:bg-brand-600 disabled:opacity-50"
+                    >
+                      {uploadingLogo ? 'Carregando...' : 'Confirmar'}
+                    </button>
+                    <button
+                      onClick={() => { setLogoPreviewUrl(null); setLogoPreviewBlob(null); }}
+                      className="text-xs bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-300"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      ref={logoInputRef}
+                      className="hidden"
+                      accept="image/jpeg, image/png"
+                      onChange={handleLogoSelect}
+                    />
+                    <button
+                      onClick={() => logoInputRef.current?.click()}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${isActive ? 'bg-white dark:bg-slate-800 text-brand border border-brand/20 hover:bg-slate-50' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                    >
+                      {issuerLogoUrl ? 'Alterar Logo' : 'Adicionar Logo'}
+                    </button>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {isActive ? 'PNG ou JPG, máx 2MB' : 'Recurso disponível apenas no plano PRO'}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome do Emissor / Empresa</label>
             <input

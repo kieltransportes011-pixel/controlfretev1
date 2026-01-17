@@ -146,6 +146,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ freight, settings, o
               <div className="id" style={{ fontFamily: 'monospace', color: '#64748b', fontSize: '14px', marginTop: '4px' }}>
                 #{freight.id.substring(0, 8).toUpperCase()}
               </div>
+              {settings.issuerLogoUrl && (
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                  <img src={settings.issuerLogoUrl} alt="Logo" style={{ maxHeight: '60px', maxWidth: '180px', objectFit: 'contain' }} />
+                </div>
+              )}
             </div>
 
             <div className="section" style={{ marginBottom: '30px' }}>

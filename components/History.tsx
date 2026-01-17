@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Freight, Expense, AppSettings, ExpenseCategory } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
-import { CalendarRange, ArrowDownCircle, ArrowUpCircle, Trash2, AlertTriangle, X, Printer, Pencil, Filter, Fuel, Wrench, Receipt, Utensils, Tag, CalendarDays } from 'lucide-react';
+import { CalendarRange, ArrowDownCircle, ArrowUpCircle, Trash2, AlertTriangle, X, Printer, Pencil, Filter, Fuel, Wrench, Receipt, Utensils, Tag, CalendarDays, FileText } from 'lucide-react';
 import { Button } from './Button';
 import { ReceiptModal } from './ReceiptModal';
+import { MonthlyClosureModal } from './MonthlyClosureModal';
 
 interface HistoryProps {
   freights: Freight[];
@@ -28,6 +29,7 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'INCOME' | 'EXPENSE' } | null>(null);
   const [receiptFreight, setReceiptFreight] = useState<Freight | null>(null);
+  const [showClosure, setShowClosure] = useState(false);
 
   const filteredItems = useMemo(() => {
     const now = new Date();
@@ -97,7 +99,18 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
     <div className="pb-24 space-y-6 relative">
       <header>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Histórico</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Extrato completo</p>
+        <div className="flex justify-between items-center">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Extrato completo</p>
+          {filter === 'MONTH' && isPremium && (
+            <button
+              onClick={() => setShowClosure(true)}
+              className="flex items-center gap-2 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all border border-blue-100 dark:border-blue-800"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Gerar Fechamento PDF
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Date Filters */}
@@ -373,6 +386,16 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
           freight={receiptFreight}
           settings={settings}
           onClose={() => setReceiptFreight(null)}
+        />
+      )}
+
+      {showClosure && settings && (
+        <MonthlyClosureModal
+          month={new Date().toISOString().substring(0, 7)}
+          freights={filteredItems.filter(i => i.type === 'INCOME') as Freight[]}
+          expenses={filteredItems.filter(i => i.type === 'EXPENSE') as Expense[]}
+          settings={settings}
+          onClose={() => setShowClosure(false)}
         />
       )}
     </div>

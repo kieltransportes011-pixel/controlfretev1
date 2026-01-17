@@ -247,7 +247,8 @@ export default function App() {
         issuerAddressNeighborhood: settingsData.issuer_address_neighborhood,
         issuerAddressCity: settingsData.issuer_address_city,
         issuerAddressState: settingsData.issuer_address_state,
-        issuerAddressZip: settingsData.issuer_address_zip
+        issuerAddressZip: settingsData.issuer_address_zip,
+        issuerLogoUrl: settingsData.issuer_logo_url
       });
     }
 
@@ -918,8 +919,22 @@ Obs: ${of.description || 'Sem observações'}`;
             setSettings(s);
             await supabase.from('settings').upsert({
               user_id: currentUser.id,
-              monthly_goal: s.monthlyGoal
-            });
+              theme: s.theme,
+              default_company_percent: s.defaultCompanyPercent,
+              default_driver_percent: s.defaultDriverPercent,
+              default_reserve_percent: s.defaultReservePercent,
+              monthly_goal: s.monthlyGoal,
+              issuer_name: s.issuerName,
+              issuer_doc: s.issuerDoc,
+              issuer_phone: s.issuerPhone,
+              issuer_address_street: s.issuerAddressStreet,
+              issuer_address_number: s.issuerAddressNumber,
+              issuer_address_neighborhood: s.issuerAddressNeighborhood,
+              issuer_address_city: s.issuerAddressCity,
+              issuer_address_state: s.issuerAddressState,
+              issuer_address_zip: s.issuerAddressZip,
+              issuer_logo_url: s.issuerLogoUrl
+            }, { onConflict: 'user_id' });
           }}
           onBack={() => setView('DASHBOARD')}
         />
@@ -948,7 +963,8 @@ Obs: ${of.description || 'Sem observações'}`;
                 issuer_address_neighborhood: s.issuerAddressNeighborhood,
                 issuer_address_city: s.issuerAddressCity,
                 issuer_address_state: s.issuerAddressState,
-                issuer_address_zip: s.issuerAddressZip
+                issuer_address_zip: s.issuerAddressZip,
+                issuer_logo_url: s.issuerLogoUrl
               }, { onConflict: 'user_id' });
 
               if (error) {

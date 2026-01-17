@@ -131,6 +131,7 @@ export interface AppSettings {
   issuerAddressCity?: string;
   issuerAddressState?: string;
   issuerAddressZip?: string;
+  issuerLogoUrl?: string;
 }
 
 export interface Client {
