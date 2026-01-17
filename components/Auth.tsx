@@ -8,10 +8,9 @@ import { supabase } from '../supabase';
 interface AuthProps {
   onLogin: (user: User) => void;
   onBack?: () => void;
-  initialView?: AuthView;
 }
 
-type AuthView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD';
+type AuthView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'FORGOT_PASSWORD';
 
 // Defined OUTSIDE to prevent re-mounting on every render (Fixes focus loss issue)
 const InputField = ({
@@ -42,17 +41,13 @@ const InputField = ({
   </div>
 );
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGIN' }) => {
-  const [view, setView] = useState<AuthView>(initialView);
-
-  // Sync internal state if initialView changes (e.g. from App.tsx listener)
-  React.useEffect(() => {
-    if (initialView) setView(initialView);
-  }, [initialView]);
+export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
+  const [view, setView] = useState<AuthView>('LOGIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [recoveryStep, setRecoveryStep] = useState<'VALIDATE' | 'RESET'>('VALIDATE');
   const [justRegisteredUser, setJustRegisteredUser] = useState<User | null>(null);
 
   const [formData, setFormData] = useState({
@@ -63,26 +58,37 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
     confirmPassword: ''
   });
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleValidateRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email) { setError('Por favor, informe seu e-mail.'); return; }
+    if (!formData.email || !formData.cpf) {
+      setError('E-mail e CPF são obrigatórios.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-      redirectTo: window.location.origin,
-    });
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', formData.email)
+        .eq('cpf', formData.cpf)
+        .single();
 
-    if (error) {
-      setError(error.message);
-    } else {
-      alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
-      setView('LOGIN');
+      if (error || !data) {
+        throw new Error('Dados não conferem. Verifique seu E-mail e CPF.');
+      }
+
+      setRecoveryStep('RESET');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  const handleExecuteReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password.length < 6) { setError('Senha deve ter min. 6 caracteres.'); return; }
     if (formData.password !== formData.confirmPassword) { setError('As senhas não coincidem.'); return; }
@@ -90,17 +96,29 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.updateUser({
-      password: formData.password
-    });
+    try {
+      // Chamada para Edge Function que usa Admin API
+      const { data, error } = await supabase.functions.invoke('reset-password-admin', {
+        body: {
+          email: formData.email,
+          cpf: formData.cpf,
+          password: formData.password
+        }
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
       alert('Senha atualizada com sucesso!');
       setView('LOGIN');
+      setRecoveryStep('VALIDATE');
+      setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+    } catch (err: any) {
+      console.error(err);
+      setError('Erro ao atualizar senha. Tente novamente mais tarde.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleChange = (field: string, value: string) => {
@@ -365,63 +383,79 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
               </div>
             </form>
           ) : view === 'FORGOT_PASSWORD' ? (
-            <form onSubmit={handleResetPassword} className="space-y-5">
+            <div className="space-y-5">
               <button
                 type="button"
-                onClick={() => setView('LOGIN')}
+                onClick={() => {
+                  if (recoveryStep === 'RESET') {
+                    setRecoveryStep('VALIDATE');
+                  } else {
+                    setView('LOGIN');
+                  }
+                }}
                 className="flex items-center text-slate-400 hover:text-slate-600 text-[10px] font-bold uppercase tracking-widest mb-4 transition-colors"
               >
-                <ChevronLeft size={14} className="mr-1" /> Voltar para Login
+                <ChevronLeft size={14} className="mr-1" /> {recoveryStep === 'RESET' ? 'Voltar para Validação' : 'Voltar para Login'}
               </button>
 
               <div className="text-center mb-6">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Recuperar Senha</h3>
-                <p className="text-slate-500 text-xs">Informe seu e-mail para receber as instruções de redefinição.</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                  {recoveryStep === 'VALIDATE' ? 'Recuperar Senha' : 'Nova Senha'}
+                </h3>
+                <p className="text-slate-500 text-xs text-balance">
+                  {recoveryStep === 'VALIDATE'
+                    ? 'Valide sua identidade informando seu E-mail e CPF.'
+                    : 'Agora defina uma nova senha de acesso para sua conta.'
+                  }
+                </p>
               </div>
 
-              <InputField
-                label="E-mail"
-                value={formData.email}
-                onChange={(v: string) => handleChange('email', v)}
-                icon={<Mail size={18} />}
-              />
-
-              <Button type="submit" fullWidth disabled={loading} className="py-4">
-                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENVIAR E-MAIL'}
-              </Button>
-            </form>
-          ) : view === 'UPDATE_PASSWORD' ? (
-            <form onSubmit={handleUpdatePassword} className="space-y-5">
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Nova Senha</h3>
-                <p className="text-slate-500 text-xs">Crie uma nova senha de acesso para sua conta.</p>
-              </div>
-
-              <InputField
-                label="Nova Senha"
-                value={formData.password}
-                onChange={(v: string) => handleChange('password', v)}
-                type="password"
-                icon={<Lock size={18} />}
-                isPass
-                passVisible={showPassword}
-                onTogglePass={() => setShowPassword(!showPassword)}
-              />
-              <InputField
-                label="Confirmar Nova Senha"
-                value={formData.confirmPassword}
-                onChange={(v: string) => handleChange('confirmPassword', v)}
-                type="password"
-                icon={<Lock size={18} />}
-                isPass
-                passVisible={showConfirmPassword}
-                onTogglePass={() => setShowConfirmPassword(!showConfirmPassword)}
-              />
-
-              <Button type="submit" fullWidth disabled={loading} className="py-4">
-                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ATUALIZAR SENHA'}
-              </Button>
-            </form>
+              {recoveryStep === 'VALIDATE' ? (
+                <form onSubmit={handleValidateRecovery} className="space-y-4">
+                  <InputField
+                    label="E-mail"
+                    value={formData.email}
+                    onChange={(v: string) => handleChange('email', v)}
+                    icon={<Mail size={18} />}
+                  />
+                  <InputField
+                    label="CPF"
+                    value={formData.cpf}
+                    onChange={(v: string) => handleChange('cpf', v)}
+                    icon={<FileText size={18} />}
+                  />
+                  <Button type="submit" fullWidth disabled={loading} className="py-4">
+                    {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'VALIDAR DADOS'}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleExecuteReset} className="space-y-4">
+                  <InputField
+                    label="Nova Senha"
+                    value={formData.password}
+                    onChange={(v: string) => handleChange('password', v)}
+                    type="password"
+                    icon={<Lock size={18} />}
+                    isPass
+                    passVisible={showPassword}
+                    onTogglePass={() => setShowPassword(!showPassword)}
+                  />
+                  <InputField
+                    label="Confirmar Nova Senha"
+                    value={formData.confirmPassword}
+                    onChange={(v: string) => handleChange('confirmPassword', v)}
+                    type="password"
+                    icon={<Lock size={18} />}
+                    isPass
+                    passVisible={showConfirmPassword}
+                    onTogglePass={() => setShowConfirmPassword(!showConfirmPassword)}
+                  />
+                  <Button type="submit" fullWidth disabled={loading} className="py-4">
+                    {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'SALVAR NOVA SENHA'}
+                  </Button>
+                </form>
+              )}
+            </div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <button
