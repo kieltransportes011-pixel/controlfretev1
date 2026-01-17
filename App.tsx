@@ -722,6 +722,7 @@ Obs: ${of.description || 'Sem observações'}`;
               expenses={expenses}
               accountsPayable={accountsPayable}
               extraIncomes={extraIncomes}
+              settings={settings}
               loading={loadingData}
               onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
               onAddExpense={() => setView('ADD_EXPENSE')}

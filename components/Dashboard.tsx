@@ -1,12 +1,30 @@
 import React, { useMemo, useState } from 'react';
-import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome } from '../types';
+import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome, AppSettings } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
 import {
-  TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock,
-  Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield,
-  Gift, Users, Wrench, FileStack, ShieldCheck, Loader2
+  Zap,
+  Calendar,
+  TrendingUp,
+  Target,
+  Plus,
+  ArrowRight,
+  TrendingDown,
+  Calculator,
+  Minus,
+  Sparkles,
+  AlertTriangle,
+  X,
+  Shield,
+  Truck,
+  Wrench,
+  FileStack,
+  ShieldCheck,
+  ArrowUpRight,
+  Loader2,
+  Clock,
+  Briefcase
 } from 'lucide-react';
 import { CardSkeleton } from './Skeleton';
 import { useSubscription } from '../hooks/useSubscription';
@@ -20,6 +38,9 @@ interface DashboardProps {
   user: User;
   freights: Freight[];
   expenses: Expense[];
+  accountsPayable: AccountPayable[];
+  extraIncomes: ExtraIncome[];
+  settings: AppSettings;
   onAddFreight: () => void;
   onAddExpense: () => void;
   onViewSchedule: () => void;
@@ -27,8 +48,6 @@ interface DashboardProps {
   onViewGoals: () => void;
   onUpgrade: () => void;
   onViewAgenda: () => void;
-  accountsPayable: AccountPayable[];
-  extraIncomes: ExtraIncome[];
   onRequestUpgrade?: () => void;
   onViewReferrals?: () => void;
   onViewClients: () => void;
@@ -40,7 +59,7 @@ interface DashboardProps {
   loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -96,7 +115,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     const currentWeek = getWeekNumber(now);
 
     const incomeStats = freights.reduce((acc, curr) => {
-      const date = new Date(curr.date);
+      // Normalizing date to midday (12:00:00) to avoid timezone shifts affecting month/week calculation
+      const date = new Date(curr.date + 'T12:00:00');
       const isThisMonth = date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       const isThisWeek = getWeekNumber(date) === currentWeek && date.getFullYear() === currentYear;
 
@@ -117,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     }, { monthTotal: 0, weekTotal: 0, companyMonth: 0, driverMonth: 0, reserveMonth: 0, receivedMonth: 0 });
 
     const expenseTotal = expenses.reduce((acc, curr) => {
-      const date = new Date(curr.date);
+      const date = new Date(curr.date + 'T12:00:00');
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         return acc + curr.value;
       }
@@ -125,7 +145,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     }, 0);
 
     const extraTotal = extraIncomes.reduce((acc, curr) => {
-      const date = new Date(curr.date);
+      const date = new Date(curr.date + 'T12:00:00');
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         return acc + curr.value;
       }
@@ -284,7 +304,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
                 <TrendingUp className="w-3 h-3" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Saldo Líquido</span>
               </div>
-              <p className={`text-lg font-black ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              <p className={`text - lg font - black ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'} `}>
                 {formatCurrency(stats.netProfit)}
               </p>
             </Card>
@@ -296,7 +316,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               </div>
               <div className="flex items-end justify-between">
                 <p className="text-lg font-black text-slate-800 dark:text-white">
-                  {Math.round((stats.monthTotal / (user.monthlyGoal || 1)) * 100)}%
+                  {settings.monthlyGoal && settings.monthlyGoal > 0 ? Math.round((stats.monthTotal / settings.monthlyGoal) * 100) : 0}%
                 </p>
                 <ArrowRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -560,7 +580,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
 
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl shadow-brand/30 transition-all duration-300 ${isMenuOpen ? 'bg-slate-800 rotate-45 scale-90' : 'bg-brand rotate-0 hover:scale-110'}`}
+          className={`w - 14 h - 14 rounded - full flex items - center justify - center text - white shadow - xl shadow - brand / 30 transition - all duration - 300 ${isMenuOpen ? 'bg-slate-800 rotate-45 scale-90' : 'bg-brand rotate-0 hover:scale-110'} `}
         >
           <Plus className="w-7 h-7" />
         </button>

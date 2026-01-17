@@ -53,7 +53,8 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
     }
 
     const monthTotal = freights.reduce((acc, curr) => {
-      const date = new Date(curr.date);
+      // Normalizing date to midday (12:00:00) to avoid timezone shifts affecting month calculation
+      const date = new Date(curr.date + 'T12:00:00');
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         return acc + curr.totalValue;
       }
@@ -92,7 +93,7 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
       const monthKey = `${y}-${String(m + 1).padStart(2, '0')}`;
 
       const totalAchieved = freights.reduce((acc, curr) => {
-        const fDate = new Date(curr.date);
+        const fDate = new Date(curr.date + 'T12:00:00');
         if (fDate.getMonth() === m && fDate.getFullYear() === y) {
           return acc + curr.totalValue;
         }
