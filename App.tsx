@@ -60,7 +60,12 @@ export default function App() {
   });
   const [showFreightNotice, setShowFreightNotice] = useState(false);
   const [initialAuthView, setInitialAuthView] = useState<'LOGIN' | 'UPDATE_PASSWORD'>('LOGIN');
-  const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false);
+  const [isEmailConfirmed, setIsEmailConfirmed] = useState(true);
+
+  // Mandatory confirmation only for users registered AFTER Jan 16, 2026
+  const CUTOFF_DATE = new Date('2026-01-17T00:00:00Z').getTime();
+  const userCreatedAt = currentUser ? new Date(currentUser.createdAt).getTime() : 0;
+  const isNewUser = currentUser && userCreatedAt > CUTOFF_DATE;
 
 
   const handleOpenUpgrade = (reason: 'LIMIT' | 'FEATURE' | 'GENERAL' = 'GENERAL') => {
@@ -162,6 +167,21 @@ export default function App() {
     }
     setInitializing(false);
   };
+
+  // Check email confirmation status for new users
+  useEffect(() => {
+    if (currentUser && isNewUser) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user && !user.email_confirmed_at) {
+          setIsEmailConfirmed(false);
+        } else {
+          setIsEmailConfirmed(true);
+        }
+      });
+    } else {
+      setIsEmailConfirmed(true);
+    }
+  }, [currentUser, isNewUser]);
 
   // Handle successful payment redirection
   useEffect(() => {
@@ -488,29 +508,6 @@ Obs: ${of.description || 'Sem observações'}`;
   }
 
   // --- Visual Barrier for Unconfirmed New Users ---
-  // Mandatory confirmation only for users registered AFTER Jan 16, 2026
-  const CUTOFF_DATE = new Date('2026-01-16T00:00:00Z').getTime();
-  const userCreatedAt = currentUser ? new Date(currentUser.createdAt).getTime() : 0;
-
-  // Checking auth metadata for confirmation status
-  // Note: currentUser.email_confirmed_at is not standard in our User type, 
-  // we check via supabase session or metadata if needed, but let's assume we fetch it or check it here.
-  // Pro-tip: Supabase user object has email_confirmed_at.
-
-  const isNewUser = userCreatedAt > CUTOFF_DATE;
-  // We'll check the session directly for confidence
-  const [isEmailConfirmed, setIsEmailConfirmed] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && !user.email_confirmed_at && isNewUser) {
-        setIsEmailConfirmed(false);
-      } else {
-        setIsEmailConfirmed(true);
-      }
-    });
-  }, [currentUser, isNewUser]);
-
   if (!isEmailConfirmed && isNewUser && view !== 'PAYMENT') {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center z-[9999]">
