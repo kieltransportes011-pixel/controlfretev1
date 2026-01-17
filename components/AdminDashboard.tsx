@@ -53,13 +53,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     // Helper Component
     function AdminStatCard({ title, value, icon, bg, subtext, highlight }: any) {
         return (
-            <div className={`bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-start justify-between transition-all ${highlight ? 'ring-2 ring-green-500/20 bg-green-50/10' : ''}`}>
-                <div>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{value}</h3>
-                    {subtext && <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tight">{subtext}</p>}
+            <div className={`bg-white dark:bg-[#0B1221] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-start justify-between transition-all group hover:border-orange-500/50 ${highlight ? 'ring-2 ring-orange-500/20 bg-orange-50/5' : ''}`}>
+                <div className="flex-1">
+                    <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">{title}</p>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{value}</h3>
+                    {subtext && <p className="text-[10px] text-slate-400 mt-1 font-bold tracking-tight">{subtext}</p>}
                 </div>
-                <div className={`p-3 rounded-lg ${bg}`}>
+                <div className={`p-3 rounded-xl transition-transform group-hover:scale-110 duration-300 ${bg}`}>
                     {icon}
                 </div>
             </div>
@@ -504,481 +504,303 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 overflow-auto flex flex-col">
-            {/* Header */}
-            <div className="bg-slate-900 border-b border-slate-800 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10 shadow-md">
-                <div className="flex items-center gap-3">
-                    <div className="bg-orange-600 p-2 rounded-lg">
+        <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-[#020617] overflow-hidden flex">
+            {/* Sidebar */}
+            <aside className="w-64 bg-[#0B1221] border-r border-slate-800 flex flex-col shrink-0 z-20">
+                <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+                    <div className="bg-orange-600 p-2 rounded-lg shadow-lg shadow-orange-600/20">
                         <Shield className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold">Administração</h1>
-                        <p className="text-xs text-slate-400">Painel Geral</p>
+                        <h1 className="text-sm font-black text-white uppercase tracking-tighter">Control Frete</h1>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Painel Admin</p>
                     </div>
                 </div>
-                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
-                    <ArrowLeft className="w-4 h-4" />
-                    Voltar ao App
-                </button>
-            </div>
 
-            <div className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
-                {/* Stats */}
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <AdminStatCard title="Total de Usuários" value={stats.totalUsers} icon={<Users className="w-6 h-6 text-blue-600" />} bg="bg-blue-50 dark:bg-blue-900/20" />
-                    <AdminStatCard title="Novos Hoje" value={stats.newUsersToday} icon={<Clock className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" subtext="Últimas 24h (Dia)" />
-                    <AdminStatCard title="Últimos 7 Dias" value={stats.newUsersWeek} icon={<Calendar className="w-6 h-6 text-indigo-600" />} bg="bg-indigo-50 dark:bg-indigo-900/20" />
-                    <AdminStatCard title="Últimos 30 Dias" value={stats.newUsersMonth} icon={<Calendar className="w-6 h-6 text-teal-600" />} bg="bg-teal-50 dark:bg-teal-900/20" />
+                <nav className="flex-1 p-4 space-y-2 overflow-y-auto no-scrollbar">
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4 mb-4">Principal</p>
 
-                    <AdminStatCard title="Assinantes PRO" value={stats.activeProUsers} icon={<Shield className="w-6 h-6 text-green-600" />} bg="bg-green-50 dark:bg-green-900/20" subtext="Pagantes ativos" />
-                    <AdminStatCard title="Usuários Banidos" value={stats.bannedUsers} icon={<Ban className="w-6 h-6 text-red-600" />} bg="bg-red-50 dark:bg-red-900/20" />
-                    <AdminStatCard title="Tickets Abertos" value={stats.openTickets} icon={<MessageCircle className="w-6 h-6 text-orange-600" />} bg="bg-orange-50 dark:bg-orange-900/20" />
-                    <AdminStatCard title="Avisos Ativos" value={stats.activeNotices} icon={<Megaphone className="w-6 h-6 text-purple-600" />} bg="bg-purple-50 dark:bg-purple-900/20" />
-                    <AdminStatCard
-                        title="Novos (Nesta Sessão)"
-                        value={stats.sessionNewUsers}
-                        icon={<Activity className="w-6 h-6 text-green-500" />}
-                        bg="bg-green-50 dark:bg-green-900/20"
-                        subtext="Desde que você abriu o painel"
-                        highlight={stats.sessionNewUsers > 0}
-                    />
-                </div>
-
-                {/* Realtime Alert Toast */}
-                {realtimeAlert && (
-                    <div className="fixed bottom-10 right-10 z-[100] bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 animate-in slide-in-from-right duration-300 flex items-center gap-4">
-                        <div className={`p-2 rounded-full animate-pulse ${realtimeAlert.type === 'commission' ? 'bg-orange-500' : 'bg-green-500'}`}>
-                            {realtimeAlert.type === 'commission' ? <DollarSign className="w-5 h-5 text-white" /> : <Zap className="w-5 h-5 text-white" />}
-                        </div>
-                        <div>
-                            <p className={`text-[10px] font-bold uppercase tracking-widest ${realtimeAlert.type === 'commission' ? 'text-orange-400' : 'text-green-400'}`}>
-                                {realtimeAlert.type === 'commission' ? 'Nova Comissão Gerada' : 'Novo Cadastro Realtime'}
-                            </p>
-                            <p className="text-sm font-bold">{realtimeAlert.name}</p>
-                            <p className="text-[10px] text-slate-400">{realtimeAlert.email}</p>
-                        </div>
-                    </div>
-                )}
-
-
-                {/* Tabs */}
-                <div className="flex gap-4 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
-                    <button
-                        onClick={() => setActiveTab('USERS')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'USERS' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Gerenciar Usuários
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('SUPPORT')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'SUPPORT' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Suporte ({tickets.filter(t => t.status === 'open').length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('LOGS')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'LOGS' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <Activity className="w-4 h-4" />
-                        Logs Audit
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('NOTICES')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'NOTICES' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <Megaphone className="w-4 h-4" />
-                        Central de Avisos
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('REFERRALS')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'REFERRALS' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <DollarSign className="w-4 h-4" />
-                        Indicações ({commissions.filter(c => c.status === 'pending').length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('REVENUE')}
-                        className={`pb-4 px-4 font-bold text-sm transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'REVENUE' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <BarChart3 className="w-4 h-4" />
-                        Faturamento
-                    </button>
-                </div>
-
-                {/* --- USERS TAB --- */}
-                {activeTab === 'USERS' && (
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <Users className="w-5 h-5 text-slate-500" />
-                                Base de Usuários
-                            </h2>
-                            <div className="relative w-full md:w-96">
-                                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar por nome, email ou ID..."
-                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    autoFocus
-                                />
+                    {[
+                        { id: 'USERS', label: 'Usuários', icon: <Users className="w-4 h-4" /> },
+                        { id: 'REVENUE', label: 'Financeiro (BI)', icon: <BarChart3 className="w-4 h-4" /> },
+                        { id: 'SUPPORT', label: 'Suporte', icon: <MessageCircle className="w-4 h-4" />, badge: tickets.filter(t => t.status === 'open').length },
+                        { id: 'REFERRALS', label: 'Indicações', icon: <DollarSign className="w-4 h-4" />, badge: commissions.filter(c => c.status === 'pending').length },
+                        { id: 'NOTICES', label: 'Comunicados', icon: <Megaphone className="w-4 h-4" /> },
+                        { id: 'LOGS', label: 'Monitoramento', icon: <Activity className="w-4 h-4" /> },
+                    ].map((item) => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id as TabView)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${activeTab === item.id
+                                ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20'
+                                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                                }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className={activeTab === item.id ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'}>
+                                    {item.icon}
+                                </span>
+                                <span className="text-sm font-bold tracking-tight">{item.label}</span>
                             </div>
-                        </div>
+                            {item.badge ? (
+                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${activeTab === item.id ? 'bg-white text-orange-600' : 'bg-orange-600/10 text-orange-500'
+                                    }`}>
+                                    {item.badge}
+                                </span>
+                            ) : null}
+                        </button>
+                    ))}
+                </nav>
 
-                        <div className="overflow-x-auto flex-1">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
-                                    <tr>
-                                        <th className="px-6 py-4">Usuário / Email</th>
-                                        <th className="px-6 py-4 text-center">Plano</th>
-                                        <th className="px-6 py-4 text-center">Status Conta</th>
-                                        <th className="px-6 py-4 text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {filteredUsers.map((user) => (
-                                        <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                            <td className="px-6 py-4">
-                                                <div className="font-semibold text-slate-900 dark:text-slate-100">{user.name || 'Sem nome'}</div>
-                                                <div className="text-xs text-slate-500">{user.email}</div>
-                                                <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.id}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${user.plano === 'pro' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                                    }`}>
-                                                    {user.plano.toUpperCase()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${user.account_status === 'banned' ? 'bg-red-100 text-red-700' :
-                                                    user.account_status === 'suspended' ? 'bg-orange-100 text-orange-700' :
-                                                        'bg-green-100 text-green-700'
-                                                    }`}>
-                                                    {user.account_status || 'active'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => setEditingUser(user)}
-                                                    className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                <div className="p-4 border-t border-slate-800">
+                    <button
+                        onClick={onBack}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-red-500/10 rounded-xl transition-all group"
+                    >
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        <span className="text-sm font-bold">Sair do Admin</span>
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <main className="flex-1 overflow-auto flex flex-col relative">
+                {/* Internal Header */}
+                <header className="h-20 bg-white/80 dark:bg-[#020617]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-10">
+                    <div>
+                        <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                            {activeTab === 'USERS' && 'Gerenciamento de Usuários'}
+                            {activeTab === 'REVENUE' && 'Análise de Receita & BI'}
+                            {activeTab === 'SUPPORT' && 'Central de Atendimento'}
+                            {activeTab === 'LOGS' && 'Logs de Auditoria'}
+                            {activeTab === 'NOTICES' && 'Comunicados da Plataforma'}
+                            {activeTab === 'REFERRALS' && 'Programa de Afiliados'}
+                        </h2>
+                        <p className="text-xs text-slate-500 font-medium">Você está visualizando dados em tempo real</p>
                     </div>
-                )}
 
-                {/* --- SUPPORT TAB --- */}
-                {activeTab === 'SUPPORT' && (
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <MessageCircle className="w-5 h-5 text-slate-500" />
-                                Chamados de Suporte
-                            </h2>
-                            <div className="relative w-full md:w-96">
-                                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar por título, ID..."
-                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                                    value={ticketSearch}
-                                    onChange={(e) => setTicketSearch(e.target.value)}
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto flex-1">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
-                                    <tr>
-                                        <th className="px-6 py-4">Data / Status</th>
-                                        <th className="px-6 py-4">Usuário</th>
-                                        <th className="px-6 py-4">Título / Detalhe</th>
-                                        <th className="px-6 py-4 text-center">Prioridade</th>
-                                        <th className="px-6 py-4 text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {filteredTickets.map((ticket) => {
-                                        const ticketUser = users.find(u => u.id === ticket.user_id);
-                                        return (
-                                            <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase mb-1 ${ticket.status === 'open' ? 'bg-blue-100 text-blue-700' :
-                                                        ticket.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                                                            'bg-slate-100 text-slate-600'
-                                                        }`}>
-                                                        {ticket.status === 'open' ? 'Aberto' : ticket.status === 'in_progress' ? 'Em Análise' : ticket.status}
-                                                    </span>
-                                                    <div className="text-[10px] text-slate-400">{new Date(ticket.created_at).toLocaleDateString()}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="font-medium text-slate-800 dark:text-white">{ticketUser?.name || '...'}</div>
-                                                    <div className="text-xs text-slate-500">{ticketUser?.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4 max-w-xs">
-                                                    <div className="font-bold text-slate-800 dark:text-white truncate">{ticket.title}</div>
-                                                    <div className="text-xs text-slate-500 truncate">{ticket.category}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`text-xs font-bold ${ticket.priority === 'high' ? 'text-red-500' : 'text-slate-400'
-                                                        }`}>
-                                                        {ticket.priority.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingTicket(ticket);
-                                                            setTicketReply(ticket.admin_reply || '');
-                                                            setTicketStatus(ticket.status);
-                                                        }}
-                                                        className="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                            {filteredTickets.length === 0 && (
-                                <div className="p-8 text-center text-slate-500">
-                                    Nenhum ticket encontrado.
+                    <div className="flex items-center gap-4">
+                        <div className="flex -space-x-2">
+                            {users.slice(0, 5).map(u => (
+                                <div key={u.id} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                                    {u.name?.[0] || 'U'}
+                                </div>
+                            ))}
+                            {users.length > 5 && (
+                                <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-700 flex items-center justify-center text-[10px] font-bold text-white">
+                                    +{users.length - 5}
                                 </div>
                             )}
                         </div>
                     </div>
-                )}
+                </header>
 
-                {/* --- LOGS TAB --- */}
-                {activeTab === 'LOGS' && (
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-slate-500" />
-                                Logs de Auditoria
-                            </h2>
-                            <div className="relative w-full md:w-96">
-                                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar logs..."
-                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                                    value={logSearch}
-                                    onChange={(e) => setLogSearch(e.target.value)}
-                                    autoFocus
-                                />
+                <div className="p-8 max-w-7xl w-full mx-auto">
+                    {/* Realtime Alert Toast */}
+                    {realtimeAlert && (
+                        <div className="fixed bottom-10 right-10 z-[100] bg-[#0B1221] text-white p-5 rounded-3xl shadow-2xl border border-slate-700 animate-in slide-in-from-right duration-500 flex items-center gap-4">
+                            <div className={`p-3 rounded-2xl animate-pulse ${realtimeAlert.type === 'commission' ? 'bg-orange-500' : 'bg-emerald-500'}`}>
+                                {realtimeAlert.type === 'commission' ? <DollarSign className="w-5 h-5 text-white" /> : <Zap className="w-5 h-5 text-white" />}
+                            </div>
+                            <div>
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${realtimeAlert.type === 'commission' ? 'text-orange-400' : 'text-emerald-400'}`}>
+                                    {realtimeAlert.type === 'commission' ? 'Nova Comissão Gerada' : 'Novo Cadastro Detectado'}
+                                </p>
+                                <p className="text-sm font-black">{realtimeAlert.name}</p>
+                                <p className="text-xs text-slate-500 font-medium">{realtimeAlert.email}</p>
                             </div>
                         </div>
-                        <div className="overflow-x-auto flex-1">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
-                                    <tr>
-                                        <th className="px-6 py-4">Data / Hora</th>
-                                        <th className="px-6 py-4">Admin</th>
-                                        <th className="px-6 py-4">Ação</th>
-                                        <th className="px-6 py-4">Detalhes</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {filteredLogs.map((log) => {
-                                        const adminUser = users.find(u => u.id === log.admin_id);
-                                        return (
-                                            <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
-                                                    {new Date(log.created_at).toLocaleString()}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="font-medium text-slate-800 dark:text-white">{adminUser?.name || 'Admin'}</div>
-                                                    <div className="text-[10px] text-slate-400 font-mono">{log.admin_id.slice(0, 8)}...</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${log.action.includes('UPDATE') ? 'bg-orange-100 text-orange-700' :
-                                                        log.action.includes('DELETE') ? 'bg-red-100 text-red-700' :
-                                                            'bg-blue-100 text-blue-700'
-                                                        }`}>
-                                                        {log.action}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-slate-600 dark:text-slate-300 max-w-md truncate" title={log.description}>
-                                                    {log.description}
-                                                    {log.target_id && <span className="block text-[10px] text-slate-400 font-mono mt-0.5">Target: {log.target_id}</span>}
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                            {filteredLogs.length === 0 && (
-                                <div className="p-8 text-center text-slate-500">
-                                    Nenhum log encontrado.
-                                </div>
-                            )}
+                    )}
+
+                    {/* Stats Summary Section */}
+                    {(activeTab === 'USERS' || activeTab === 'REVENUE') && (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                            <AdminStatCard title="Usuários Totais" value={stats.totalUsers} icon={<Users className="w-5 h-5 text-blue-500" />} bg="bg-blue-500/10" />
+                            <AdminStatCard title="Novos Hoje" value={stats.newUsersToday} icon={<Zap className="w-5 h-5 text-purple-500" />} bg="bg-purple-500/10" highlight={stats.newUsersToday > 0} />
+                            <AdminStatCard title="Assinantes PRO" value={stats.activeProUsers} icon={<Shield className="w-5 h-5 text-emerald-500" />} bg="bg-emerald-500/10" />
+                            <AdminStatCard title="Conversão" value={`${Math.round((stats.activeProUsers / (stats.totalUsers || 1)) * 100)}%`} icon={<Activity className="w-5 h-5 text-orange-500" />} bg="bg-orange-500/10" />
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* --- NOTICES TAB --- */}
-                {activeTab === 'NOTICES' && (
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <Megaphone className="w-5 h-5 text-slate-500" />
-                                Gestão de Comunicados
-                            </h2>
-                            <button
-                                onClick={() => setEditingNotice({ content: '', title: '', level: 'info', is_active: true })}
-                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Novo Aviso
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto flex-1 p-6">
-                            <div className="grid gap-4">
-                                {notices.map((notice) => (
-                                    <div key={notice.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white dark:bg-slate-900 hover:shadow-md transition-shadow">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${notice.level === 'critical' ? 'bg-red-50 text-red-600 border-red-200' :
-                                                    notice.level === 'important' ? 'bg-orange-50 text-orange-600 border-orange-200' :
-                                                        'bg-blue-50 text-blue-600 border-blue-200'
-                                                    }`}>
-                                                    {notice.level}
-                                                </span>
-                                                {notice.is_mandatory && (
-                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200">
-                                                        Obrigatório
-                                                    </span>
-                                                )}
-                                                {!notice.is_active && (
-                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-400 border border-slate-200">
-                                                        Rascunho
-                                                    </span>
-                                                )}
-                                                <span className="text-xs text-slate-400 flex items-center gap-1">
-                                                    <Clock className="w-3 h-3" />
-                                                    {new Date(notice.created_at).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{notice.title}</h3>
-                                            <p className="text-sm text-slate-500 mt-1 line-clamp-1">{notice.summary || notice.content}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => setEditingNotice(notice)}
-                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                                title="Editar"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteNotice(notice.id, notice.title)}
-                                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                title="Excluir"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {notices.length === 0 && (
-                                    <div className="text-center py-12 text-slate-400">
-                                        Nenhum aviso cadastrado.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* --- REFERRALS TAB --- */}
-                {activeTab === 'REFERRALS' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        {/* Referral Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600">
-                                        <Users className="w-5 h-5" />
-                                    </div>
-                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Total de Indicações</span>
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                                    {users.filter(u => u.referrer_id).length}
-                                </h2>
-                                <p className="text-[10px] text-slate-400 mt-1">Usuários que usaram link ref</p>
-                            </div>
-
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600">
-                                        <Zap className="w-5 h-5" />
-                                    </div>
-                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Conversões em PRO</span>
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                                    {new Set(commissions.map(c => c.referred_id)).size}
-                                </h2>
-                                <p className="text-[10px] text-slate-400 mt-1">Indicados que ativaram PRO</p>
-                            </div>
-
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-lg text-orange-600">
-                                        <DollarSign className="w-5 h-5" />
-                                    </div>
-                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Comissão Gerada</span>
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                                        commissions.filter(c => c.status !== 'cancelled').reduce((sum, c) => sum + Number(c.amount), 0)
-                                    )}
-                                </h2>
-                                <p className="text-[10px] text-slate-400 mt-1">Total acumulado (Pendente/Pago)</p>
-                            </div>
-
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg text-green-600">
-                                        <CheckCircle className="w-5 h-5" />
-                                    </div>
-                                    <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Comissão Paga</span>
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                                        commissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.amount), 0)
-                                    )}
-                                </h2>
-                                <p className="text-[10px] text-slate-400 mt-1">Valores já liquidados</p>
-                            </div>
-                        </div>
-
+                    {/* --- USERS TAB --- */}
+                    {activeTab === 'USERS' && (
                         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
                             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
                                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                    <DollarSign className="w-5 h-5 text-slate-500" />
-                                    Gestão de Indicações ({filteredCommissions.length})
+                                    <Users className="w-5 h-5 text-slate-500" />
+                                    Base de Usuários
                                 </h2>
                                 <div className="relative w-full md:w-96">
                                     <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                     <input
                                         type="text"
-                                        placeholder="Buscar por indicador ou indicado..."
+                                        placeholder="Buscar por nome, email ou ID..."
                                         className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                                        value={referralSearch}
-                                        onChange={(e) => setReferralSearch(e.target.value)}
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto flex-1">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                        <tr>
+                                            <th className="px-6 py-4">Usuário / Email</th>
+                                            <th className="px-6 py-4 text-center">Plano</th>
+                                            <th className="px-6 py-4 text-center">Status Conta</th>
+                                            <th className="px-6 py-4 text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {filteredUsers.map((user) => (
+                                            <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                <td className="px-6 py-4">
+                                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{user.name || 'Sem nome'}</div>
+                                                    <div className="text-xs text-slate-500">{user.email}</div>
+                                                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.id}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.plano === 'pro'
+                                                        ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                                                        : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                                                        }`}>
+                                                        {user.plano || 'FREE'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.account_status === 'banned' ? 'bg-red-500/10 text-red-600' :
+                                                        user.account_status === 'suspended' ? 'bg-orange-500/10 text-orange-600' :
+                                                            'bg-emerald-500/10 text-emerald-600'
+                                                        }`}>
+                                                        {user.account_status === 'active' ? 'Ativo' :
+                                                            user.account_status === 'suspended' ? 'Suspenso' :
+                                                                user.account_status === 'banned' ? 'Banido' : 'Ativo'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => setEditingUser(user)}
+                                                        className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- SUPPORT TAB --- */}
+                    {activeTab === 'SUPPORT' && (
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <MessageCircle className="w-5 h-5 text-slate-500" />
+                                    Chamados de Suporte
+                                </h2>
+                                <div className="relative w-full md:w-96">
+                                    <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por título, ID..."
+                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                        value={ticketSearch}
+                                        onChange={(e) => setTicketSearch(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto flex-1">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                        <tr>
+                                            <th className="px-6 py-4">Data / Status</th>
+                                            <th className="px-6 py-4">Usuário</th>
+                                            <th className="px-6 py-4">Título / Detalhe</th>
+                                            <th className="px-6 py-4 text-center">Prioridade</th>
+                                            <th className="px-6 py-4 text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {filteredTickets.map((ticket) => {
+                                            const ticketUser = users.find(u => u.id === ticket.user_id);
+                                            return (
+                                                <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider mb-1 ${ticket.status === 'open' ? 'bg-blue-500/10 text-blue-600' :
+                                                            ticket.status === 'in_progress' ? 'bg-orange-500/10 text-orange-600' :
+                                                                ticket.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-600' :
+                                                                    'bg-slate-500/10 text-slate-600'
+                                                            }`}>
+                                                            {ticket.status === 'open' ? 'Aberto' :
+                                                                ticket.status === 'in_progress' ? 'Em Análise' :
+                                                                    ticket.status === 'resolved' ? 'Resolvido' :
+                                                                        ticket.status === 'closed' ? 'Encerrado' : ticket.status}
+                                                        </span>
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{new Date(ticket.created_at).toLocaleDateString()}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-slate-800 dark:text-white">{ticketUser?.name || '...'}</div>
+                                                        <div className="text-xs text-slate-500">{ticketUser?.email}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 max-w-xs">
+                                                        <div className="font-bold text-slate-800 dark:text-white truncate">{ticket.title}</div>
+                                                        <div className="text-xs text-slate-500 truncate">{ticket.category}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`text-xs font-bold ${ticket.priority === 'high' ? 'text-red-500' : 'text-slate-400'
+                                                            }`}>
+                                                            {ticket.priority.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingTicket(ticket);
+                                                                setTicketReply(ticket.admin_reply || '');
+                                                                setTicketStatus(ticket.status);
+                                                            }}
+                                                            className="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                {filteredTickets.length === 0 && (
+                                    <div className="p-8 text-center text-slate-500">
+                                        Nenhum ticket encontrado.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- LOGS TAB --- */}
+                    {activeTab === 'LOGS' && (
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-slate-500" />
+                                    Logs de Auditoria
+                                </h2>
+                                <div className="relative w-full md:w-96">
+                                    <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar logs..."
+                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                        value={logSearch}
+                                        onChange={(e) => setLogSearch(e.target.value)}
                                         autoFocus
                                     />
                                 </div>
@@ -987,552 +809,754 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
                                         <tr>
-                                            <th className="px-6 py-4">Data</th>
-                                            <th className="px-6 py-4">Indicador</th>
-                                            <th className="px-6 py-4">Indicado</th>
-                                            <th className="px-6 py-4 text-right">Comissão</th>
-                                            <th className="px-6 py-4 text-center">Status</th>
-                                            <th className="px-6 py-4 text-right">Ações</th>
+                                            <th className="px-6 py-4">Data / Hora</th>
+                                            <th className="px-6 py-4">Admin</th>
+                                            <th className="px-6 py-4">Ação</th>
+                                            <th className="px-6 py-4">Detalhes</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {filteredCommissions.map((comm) => (
-                                            <tr key={comm.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                <td className="px-6 py-4">
-                                                    <div className="text-slate-900 dark:text-white font-medium">
-                                                        {new Date(comm.created_at).toLocaleDateString()}
-                                                    </div>
-                                                    <div className="text-xs text-slate-400">
-                                                        {new Date(comm.created_at).toLocaleTimeString()}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="font-bold text-blue-600 dark:text-blue-400">
-                                                        {comm.referrer?.name || 'Desconhecido'}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500">{comm.referrer?.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="font-medium text-slate-800 dark:text-white">
-                                                        {comm.referred?.name || 'Desconhecido'}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500">{comm.referred?.email}</div>
-                                                    <div className="text-[10px] text-green-600 mt-1">
-                                                        Plano: {comm.subscription_id || 'PRO'} (R$ {comm.base_amount})
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="font-bold text-lg text-slate-900 dark:text-white">
-                                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(comm.amount)}
-                                                    </div>
-                                                    <div className="text-[10px] text-slate-400 uppercase font-bold">{comm.commission_percentage}% de comissão</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${comm.status === 'paid' ? 'bg-green-100 text-green-700' :
-                                                        comm.status === 'approved' ? 'bg-blue-100 text-blue-700' :
-                                                            comm.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                                'bg-orange-100 text-orange-700'
-                                                        }`}>
-                                                        {comm.status === 'paid' ? 'Liquidado' :
-                                                            comm.status === 'approved' ? 'Aprovado' :
-                                                                comm.status === 'cancelled' ? 'Cancelado' : 'Pendente'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        {comm.status === 'pending' && (
-                                                            <button
-                                                                onClick={() => handleUpdateCommission(comm.id, 'approved')}
-                                                                className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Aprovar">
-                                                                <CheckCircle className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        {(comm.status === 'approved' || comm.status === 'pending') && (
-                                                            <button
-                                                                onClick={() => handleUpdateCommission(comm.id, 'paid')}
-                                                                className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Marcar como Pago">
-                                                                <DollarSign className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        {comm.status !== 'cancelled' && comm.status !== 'paid' && (
-                                                            <button
-                                                                onClick={() => handleUpdateCommission(comm.id, 'cancelled')}
-                                                                className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Cancelar">
-                                                                <X className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        {comm.status === 'paid' && (
-                                                            <span className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-1">
-                                                                <CheckCircle className="w-3 h-3" /> Concluído
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {filteredLogs.map((log) => {
+                                            const adminUser = users.find(u => u.id === log.admin_id);
+                                            return (
+                                                <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                                                        {new Date(log.created_at).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-slate-800 dark:text-white">{adminUser?.name || 'Admin'}</div>
+                                                        <div className="text-[10px] text-slate-400 font-mono">{log.admin_id.slice(0, 8)}...</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${log.action.includes('UPDATE') ? 'bg-orange-100 text-orange-700' :
+                                                            log.action.includes('DELETE') ? 'bg-red-100 text-red-700' :
+                                                                'bg-blue-100 text-blue-700'
+                                                            }`}>
+                                                            {log.action}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300 max-w-md truncate" title={log.description}>
+                                                        {log.description}
+                                                        {log.target_id && <span className="block text-[10px] text-slate-400 font-mono mt-0.5">Target: {log.target_id}</span>}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                     </tbody>
                                 </table>
-                                {filteredCommissions.length === 0 && (
-                                    <div className="p-12 text-center text-slate-400">
-                                        Nenhuma indicação encontrada.
+                                {filteredLogs.length === 0 && (
+                                    <div className="p-8 text-center text-slate-500">
+                                        Nenhum log encontrado.
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* --- REVENUE TAB --- */}
-                {activeTab === 'REVENUE' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        {/* Current/Hero Metrics */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700 relative overflow-hidden group">
-                                <div className="absolute -right-4 -top-4 bg-orange-600/10 w-32 h-32 rounded-full blur-3xl group-hover:bg-orange-600/20 transition-colors" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="bg-orange-600 p-2 rounded-lg">
-                                            <TrendingUp className="w-5 h-5 text-white" />
-                                        </div>
-                                        <span className="text-slate-400 text-sm font-bold uppercase tracking-wider">MRR — Receita Mensal Recorrente</span>
-                                    </div>
-                                    <h2 className="text-4xl font-black text-white">
-                                        {revenueLoading ? (
-                                            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-                                        ) : (
-                                            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueStats?.mrr || 0)
-                                        )}
-                                    </h2>
-                                    <p className="text-slate-500 text-sm mt-2">Soma de todas as assinaturas PRO ativas</p>
-                                </div>
+                    {/* --- NOTICES TAB --- */}
+                    {activeTab === 'NOTICES' && (
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <Megaphone className="w-5 h-5 text-slate-500" />
+                                    Gestão de Comunicados
+                                </h2>
+                                <button
+                                    onClick={() => setEditingNotice({ content: '', title: '', level: 'info', is_active: true })}
+                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Novo Aviso
+                                </button>
                             </div>
-
-                            <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between group">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600">
-                                            <Shield className="w-5 h-5" />
+                            <div className="overflow-x-auto flex-1 p-6">
+                                <div className="grid gap-4">
+                                    {notices.map((notice) => (
+                                        <div key={notice.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white dark:bg-slate-900 hover:shadow-md transition-shadow">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${notice.level === 'critical' ? 'bg-red-50 text-red-600 border-red-200' :
+                                                        notice.level === 'important' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                                            'bg-blue-50 text-blue-600 border-blue-200'
+                                                        }`}>
+                                                        {notice.level}
+                                                    </span>
+                                                    {notice.is_mandatory && (
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                                                            Obrigatório
+                                                        </span>
+                                                    )}
+                                                    {!notice.is_active && (
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-400 border border-slate-200">
+                                                            Rascunho
+                                                        </span>
+                                                    )}
+                                                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        {new Date(notice.created_at).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{notice.title}</h3>
+                                                <p className="text-sm text-slate-500 mt-1 line-clamp-1">{notice.summary || notice.content}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setEditingNotice(notice)}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteNotice(notice.id, notice.title)}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <span className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Assinaturas PRO Ativas</span>
-                                    </div>
-                                    <h2 className="text-4xl font-black text-slate-900 dark:text-white">
-                                        {revenueLoading ? (
-                                            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
-                                        ) : (
-                                            revenueStats?.active_pro || 0
-                                        )}
-                                    </h2>
-                                    <p className="text-slate-400 text-sm mt-2">Métrica base para o MRR</p>
+                                    ))}
+                                    {notices.length === 0 && (
+                                        <div className="text-center py-12 text-slate-400">
+                                            Nenhum aviso cadastrado.
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="h-16 w-1 bottom-0 right-0 bg-purple-600 rounded-full group-hover:h-24 transition-all" />
                             </div>
                         </div>
+                    )}
 
-                        {/* Period Metrics */}
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Desempenho por Período</h3>
-                                    <p className="text-xs text-slate-500">Métricas baseadas em transações aprovadas e logs de sistema</p>
+                    {/* --- REFERRALS TAB --- */}
+                    {activeTab === 'REFERRALS' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            {/* Referral Stats Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600">
+                                            <Users className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Total de Indicações</span>
+                                    </div>
+                                    <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                        {users.filter(u => u.referrer_id).length}
+                                    </h2>
+                                    <p className="text-[10px] text-slate-400 mt-1">Usuários que usaram link ref</p>
                                 </div>
-                                <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
-                                    <button
-                                        onClick={() => setRevenuePeriod(7)}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${revenuePeriod === 7 ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                    >
-                                        7 Dias
-                                    </button>
-                                    <button
-                                        onClick={() => setRevenuePeriod(30)}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${revenuePeriod === 30 ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                    >
-                                        30 Dias
-                                    </button>
+
+                                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600">
+                                            <Zap className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Conversões em PRO</span>
+                                    </div>
+                                    <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                        {new Set(commissions.map(c => c.referred_id)).size}
+                                    </h2>
+                                    <p className="text-[10px] text-slate-400 mt-1">Indicados que ativaram PRO</p>
+                                </div>
+
+                                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-lg text-orange-600">
+                                            <DollarSign className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Comissão Gerada</span>
+                                    </div>
+                                    <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                            commissions.filter(c => c.status !== 'cancelled').reduce((sum, c) => sum + Number(c.amount), 0)
+                                        )}
+                                    </h2>
+                                    <p className="text-[10px] text-slate-400 mt-1">Total acumulado (Pendente/Pago)</p>
+                                </div>
+
+                                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg text-green-600">
+                                            <CheckCircle className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Comissão Paga</span>
+                                    </div>
+                                    <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                            commissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.amount), 0)
+                                        )}
+                                    </h2>
+                                    <p className="text-[10px] text-slate-400 mt-1">Valores já liquidados</p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800">
-                                <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Receita no Período</p>
-                                    <div className="flex items-baseline gap-2">
+                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                        <DollarSign className="w-5 h-5 text-slate-500" />
+                                        Gestão de Indicações ({filteredCommissions.length})
+                                    </h2>
+                                    <div className="relative w-full md:w-96">
+                                        <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por indicador ou indicado..."
+                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                            value={referralSearch}
+                                            onChange={(e) => setReferralSearch(e.target.value)}
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto flex-1">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                            <tr>
+                                                <th className="px-6 py-4">Data</th>
+                                                <th className="px-6 py-4">Indicador</th>
+                                                <th className="px-6 py-4">Indicado</th>
+                                                <th className="px-6 py-4 text-right">Comissão</th>
+                                                <th className="px-6 py-4 text-center">Status</th>
+                                                <th className="px-6 py-4 text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {filteredCommissions.map((comm) => (
+                                                <tr key={comm.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-slate-900 dark:text-white font-medium">
+                                                            {new Date(comm.created_at).toLocaleDateString()}
+                                                        </div>
+                                                        <div className="text-xs text-slate-400">
+                                                            {new Date(comm.created_at).toLocaleTimeString()}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-bold text-blue-600 dark:text-blue-400">
+                                                            {comm.referrer?.name || 'Desconhecido'}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500">{comm.referrer?.email}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-slate-800 dark:text-white">
+                                                            {comm.referred?.name || 'Desconhecido'}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500">{comm.referred?.email}</div>
+                                                        <div className="text-[10px] text-green-600 mt-1">
+                                                            Plano: {comm.subscription_id || 'PRO'} (R$ {comm.base_amount})
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="font-bold text-lg text-slate-900 dark:text-white">
+                                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(comm.amount)}
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-400 uppercase font-bold">{comm.commission_percentage}% de comissão</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold uppercase ${comm.status === 'paid' ? 'bg-green-100 text-green-700' :
+                                                            comm.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+                                                                comm.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                                    'bg-orange-100 text-orange-700'
+                                                            }`}>
+                                                            {comm.status === 'paid' ? 'Liquidado' :
+                                                                comm.status === 'approved' ? 'Aprovado' :
+                                                                    comm.status === 'cancelled' ? 'Cancelado' : 'Pendente'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            {comm.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => handleUpdateCommission(comm.id, 'approved')}
+                                                                    className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Aprovar">
+                                                                    <CheckCircle className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                            {(comm.status === 'approved' || comm.status === 'pending') && (
+                                                                <button
+                                                                    onClick={() => handleUpdateCommission(comm.id, 'paid')}
+                                                                    className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Marcar como Pago">
+                                                                    <DollarSign className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                            {comm.status !== 'cancelled' && comm.status !== 'paid' && (
+                                                                <button
+                                                                    onClick={() => handleUpdateCommission(comm.id, 'cancelled')}
+                                                                    className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Cancelar">
+                                                                    <X className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                            {comm.status === 'paid' && (
+                                                                <span className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-1">
+                                                                    <CheckCircle className="w-3 h-3" /> Concluído
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {filteredCommissions.length === 0 && (
+                                        <div className="p-12 text-center text-slate-400">
+                                            Nenhuma indicação encontrada.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- REVENUE TAB --- */}
+                    {activeTab === 'REVENUE' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            {/* Current/Hero Metrics */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700 relative overflow-hidden group">
+                                    <div className="absolute -right-4 -top-4 bg-orange-600/10 w-32 h-32 rounded-full blur-3xl group-hover:bg-orange-600/20 transition-colors" />
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="bg-orange-600 p-2 rounded-lg">
+                                                <TrendingUp className="w-5 h-5 text-white" />
+                                            </div>
+                                            <span className="text-slate-400 text-sm font-bold uppercase tracking-wider">MRR — Receita Mensal Recorrente</span>
+                                        </div>
+                                        <h2 className="text-4xl font-black text-white">
+                                            {revenueLoading ? (
+                                                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                                            ) : (
+                                                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueStats?.mrr || 0)
+                                            )}
+                                        </h2>
+                                        <p className="text-slate-500 text-sm mt-2">Soma de todas as assinaturas PRO ativas</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between group">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600">
+                                                <Shield className="w-5 h-5" />
+                                            </div>
+                                            <span className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Assinaturas PRO Ativas</span>
+                                        </div>
+                                        <h2 className="text-4xl font-black text-slate-900 dark:text-white">
+                                            {revenueLoading ? (
+                                                <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                                            ) : (
+                                                revenueStats?.active_pro || 0
+                                            )}
+                                        </h2>
+                                        <p className="text-slate-400 text-sm mt-2">Métrica base para o MRR</p>
+                                    </div>
+                                    <div className="h-16 w-1 bottom-0 right-0 bg-purple-600 rounded-full group-hover:h-24 transition-all" />
+                                </div>
+                            </div>
+
+                            {/* Period Metrics */}
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Desempenho por Período</h3>
+                                        <p className="text-xs text-slate-500">Métricas baseadas em transações aprovadas e logs de sistema</p>
+                                    </div>
+                                    <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
+                                        <button
+                                            onClick={() => setRevenuePeriod(7)}
+                                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${revenuePeriod === 7 ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            7 Dias
+                                        </button>
+                                        <button
+                                            onClick={() => setRevenuePeriod(30)}
+                                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${revenuePeriod === 30 ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            30 Dias
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800">
+                                    <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Receita no Período</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <h4 className="text-2xl font-black text-slate-900 dark:text-white">
+                                                {revenueLoading ? (
+                                                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                                ) : (
+                                                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueStats?.period_revenue || 0)
+                                                )}
+                                            </h4>
+                                        </div>
+                                        <div className="mt-4 flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded w-fit">
+                                            <TrendingUp className="w-3 h-3" />
+                                            <span className="text-[10px] font-bold">Total Faturado</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Novas Assinaturas PRO</p>
                                         <h4 className="text-2xl font-black text-slate-900 dark:text-white">
                                             {revenueLoading ? (
                                                 <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
                                             ) : (
-                                                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueStats?.period_revenue || 0)
+                                                revenueStats?.period_new_subs || 0
                                             )}
                                         </h4>
+                                        <div className="mt-4 flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded w-fit">
+                                            <Plus className="w-3 h-3" />
+                                            <span className="text-[10px] font-bold">Ativações</span>
+                                        </div>
                                     </div>
-                                    <div className="mt-4 flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded w-fit">
-                                        <TrendingUp className="w-3 h-3" />
-                                        <span className="text-[10px] font-bold">Total Faturado</span>
-                                    </div>
-                                </div>
 
-                                <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Novas Assinaturas PRO</p>
-                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white">
-                                        {revenueLoading ? (
-                                            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-                                        ) : (
-                                            revenueStats?.period_new_subs || 0
-                                        )}
-                                    </h4>
-                                    <div className="mt-4 flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded w-fit">
-                                        <Plus className="w-3 h-3" />
-                                        <span className="text-[10px] font-bold">Ativações</span>
-                                    </div>
-                                </div>
-
-                                <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Cancelamentos</p>
-                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white">
-                                        {revenueLoading ? (
-                                            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-                                        ) : (
-                                            revenueStats?.period_cancellations || 0
-                                        )}
-                                    </h4>
-                                    <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded w-fit">
-                                        <TrendingDown className="w-3 h-3" />
-                                        <span className="text-[10px] font-bold">Perdas</span>
+                                    <div className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Cancelamentos</p>
+                                        <h4 className="text-2xl font-black text-slate-900 dark:text-white">
+                                            {revenueLoading ? (
+                                                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                            ) : (
+                                                revenueStats?.period_cancellations || 0
+                                            )}
+                                        </h4>
+                                        <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded w-fit">
+                                            <TrendingDown className="w-3 h-3" />
+                                            <span className="text-[10px] font-bold">Perdas</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Info Note */}
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex items-start gap-3">
-                            <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                            <div className="text-xs text-blue-800 dark:text-blue-300">
-                                <p className="font-bold mb-1">Nota sobre os dados:</p>
-                                <p>O MRR é calculado ponderando assinaturas anuais (Valor/12) e mensais. As métricas de período consideram todas as transações com status "approved" e alterações de plano registradas nos logs de auditoria.</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* --- NOTICE EDIT MODAL --- */}
-            {editingNotice && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
-                        <div className="bg-slate-50 dark:bg-slate-800 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                                <Megaphone className="w-5 h-5 text-purple-600" />
-                                {editingNotice.id ? 'Editar Aviso' : 'Novo Aviso'}
-                            </h3>
-                            <button onClick={() => setEditingNotice(null)} className="text-slate-400 hover:text-red-500">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Título</label>
-                                <input
-                                    type="text"
-                                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                    value={editingNotice.title || ''}
-                                    onChange={(e) => setEditingNotice({ ...editingNotice, title: e.target.value })}
-                                    placeholder="Ex: Manutenção Programada"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Nível</label>
-                                    <select
-                                        className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                        value={editingNotice.level || 'info'}
-                                        onChange={(e) => setEditingNotice({ ...editingNotice, level: e.target.value as any })}
-                                    >
-                                        <option value="info">Informativo</option>
-                                        <option value="important">Importante</option>
-                                        <option value="critical">Crítico</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-2 pt-5">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={editingNotice.is_active || false}
-                                            onChange={(e) => setEditingNotice({ ...editingNotice, is_active: e.target.checked })}
-                                            className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                                        />
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Publicado</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={editingNotice.is_mandatory || false}
-                                            onChange={(e) => setEditingNotice({ ...editingNotice, is_mandatory: e.target.checked })}
-                                            className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
-                                        />
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Obrigatório (Modal)</span>
-                                    </label>
+                            {/* Info Note */}
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex items-start gap-3">
+                                <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                                <div className="text-xs text-blue-800 dark:text-blue-300">
+                                    <p className="font-bold mb-1">Nota sobre os dados:</p>
+                                    <p>O MRR é calculado ponderando assinaturas anuais (Valor/12) e mensais. As métricas de período consideram todas as transações com status "approved" e alterações de plano registradas nos logs de auditoria.</p>
                                 </div>
                             </div>
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Resumo Curto (Opcional)</label>
-                                <input
-                                    type="text"
-                                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                    value={editingNotice.summary || ''}
-                                    onChange={(e) => setEditingNotice({ ...editingNotice, summary: e.target.value })}
-                                    placeholder="Ex: Sistema ficará instável domingo à noite..."
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Conteúdo Completo</label>
-                                <textarea
-                                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white min-h-[150px]"
-                                    value={editingNotice.content || ''}
-                                    onChange={(e) => setEditingNotice({ ...editingNotice, content: e.target.value })}
-                                    placeholder="Descreva todos os detalhes aqui..."
-                                />
-                            </div>
                         </div>
-
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
-                            <button
-                                onClick={() => setEditingNotice(null)}
-                                className="px-4 py-2 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleSaveNotice}
-                                disabled={isSavingNotice}
-                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isSavingNotice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                Salvar Aviso
-                            </button>
-                        </div>
-                    </div>
+                    )}
                 </div>
-            )}
 
-            {/* --- USER EDIT MODAL --- */}
-            {editingUser && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
-                        <div className="bg-slate-50 dark:bg-slate-800 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                                <Edit2 className="w-4 h-4" />
-                                Gerenciar Usuário
-                            </h3>
-                            <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-red-500">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-6">
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Usuário</label>
-                                <div className="text-slate-900 dark:text-slate-100 font-medium">{editingUser.name || 'Sem Nome'}</div>
-                                <div className="text-sm text-slate-500">{editingUser.email}</div>
+                {/* --- NOTICE EDIT MODAL --- */}
+                {editingNotice && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                                    <Megaphone className="w-5 h-5 text-purple-600" />
+                                    {editingNotice.id ? 'Editar Aviso' : 'Novo Aviso'}
+                                </h3>
+                                <button onClick={() => setEditingNotice(null)} className="text-slate-400 hover:text-red-500">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="p-6 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Plano de Acesso</label>
-                                    <select
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Título</label>
+                                    <input
+                                        type="text"
                                         className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                        value={editingUser.plano}
-                                        onChange={(e) => setEditingUser({ ...editingUser, plano: e.target.value as 'free' | 'pro', is_premium: e.target.value === 'pro' })}
-                                    >
-                                        <option value="free">Free</option>
-                                        <option value="pro">Pro (Manual)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Status da Conta</label>
-                                    <select
-                                        className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                        value={editingUser.account_status || 'active'}
-                                        onChange={(e) => setEditingUser({ ...editingUser, account_status: e.target.value as any })}
-                                    >
-                                        <option value="active">Ativa</option>
-                                        <option value="suspended">Suspensa</option>
-                                        <option value="banned">Banida</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-slate-500 mb-6">
-                                <p className="flex items-center gap-2 mb-2 font-bold text-orange-600">
-                                    <Lock className="w-3 h-3" />
-                                    Ações Sensíveis
-                                </p>
-                                <p>Alterações manuais de plano não geram cobrança. Para banir, selecione "Banida" no status.</p>
-                            </div>
-
-                            <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-                                <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2 text-sm">
-                                    <Shield className="w-4 h-4 text-purple-600" />
-                                    Recuperação de Conta Assistida
-                                </h4>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <button
-                                        onClick={() => handleRecoveryAction('send_password_reset')}
-                                        disabled={recoveryLoading}
-                                        className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
-                                    >
-                                        <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors shrink-0">
-                                            <Lock className="w-4 h-4" />
-                                        </div>
-                                        <div>
-                                            <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Reset de Senha</span>
-                                            <span className="block text-xs text-slate-500">Enviar email de redefinição</span>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={() => handleRecoveryAction('force_logout')}
-                                        disabled={recoveryLoading}
-                                        className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
-                                    >
-                                        <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-full text-orange-600 group-hover:bg-orange-200 transition-colors shrink-0">
-                                            <Ban className="w-4 h-4" />
-                                        </div>
-                                        <div>
-                                            <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Forçar Logout</span>
-                                            <span className="block text-xs text-slate-500">Encerrar todas as sessões</span>
-                                        </div>
-                                    </button>
+                                        value={editingNotice.title || ''}
+                                        onChange={(e) => setEditingNotice({ ...editingNotice, title: e.target.value })}
+                                        placeholder="Ex: Manutenção Programada"
+                                    />
                                 </div>
 
-                                <div className="mt-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
-                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Correção de Email</label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="email"
-                                            placeholder="Novo email do usuário"
-                                            className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"
-                                            value={newEmail}
-                                            onChange={(e) => setNewEmail(e.target.value)}
-                                        />
-                                        <button
-                                            onClick={() => handleRecoveryAction('update_user_email', { email: newEmail })}
-                                            disabled={!newEmail || recoveryLoading}
-                                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Nível</label>
+                                        <select
+                                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                            value={editingNotice.level || 'info'}
+                                            onChange={(e) => setEditingNotice({ ...editingNotice, level: e.target.value as any })}
                                         >
-                                            Alterar
-                                        </button>
+                                            <option value="info">Informativo</option>
+                                            <option value="important">Importante</option>
+                                            <option value="critical">Crítico</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex flex-col gap-2 pt-5">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={editingNotice.is_active || false}
+                                                onChange={(e) => setEditingNotice({ ...editingNotice, is_active: e.target.checked })}
+                                                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                            />
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Publicado</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={editingNotice.is_mandatory || false}
+                                                onChange={(e) => setEditingNotice({ ...editingNotice, is_mandatory: e.target.checked })}
+                                                className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
+                                            />
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Obrigatório (Modal)</span>
+                                        </label>
                                     </div>
                                 </div>
-                            </div>
 
-                        </div>
-
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
-                            <button
-                                onClick={() => setEditingUser(null)}
-                                className="px-4 py-2 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={() => handleUpdateUser({
-                                    plano: editingUser.plano,
-                                    is_premium: editingUser.plano === 'pro',
-                                    account_status: editingUser.account_status
-                                })}
-                                disabled={isSavingUser}
-                                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                Salvar Alterações
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- TICKET EDIT MODAL --- */}
-            {editingTicket && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-                        <div className="bg-slate-50 dark:bg-slate-800 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                                <MessageCircle className="w-5 h-5 text-blue-600" />
-                                Responder Chamado
-                            </h3>
-                            <button onClick={() => setEditingTicket(null)} className="text-slate-400 hover:text-red-500">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-6 overflow-y-auto">
-                            {/* Original Ticket */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <h4 className="font-bold text-slate-800 dark:text-white mb-1">{editingTicket.title}</h4>
-                                <div className="text-xs text-slate-500 mb-3 flex gap-4">
-                                    <span>{new Date(editingTicket.created_at).toLocaleString()}</span>
-                                    <span>{editingTicket.category}</span>
-                                </div>
-                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                                    {editingTicket.description}
-                                </p>
-                            </div>
-
-                            {/* Response Form */}
-                            <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Sua Resposta</label>
-                                    <textarea
-                                        value={ticketReply}
-                                        onChange={(e) => setTicketReply(e.target.value)}
-                                        rows={6}
-                                        className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                                        placeholder="Digite a solução ou resposta ao cliente..."
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Resumo Curto (Opcional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                        value={editingNotice.summary || ''}
+                                        onChange={(e) => setEditingNotice({ ...editingNotice, summary: e.target.value })}
+                                        placeholder="Ex: Sistema ficará instável domingo à noite..."
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Status do Ticket</label>
-                                    <div className="flex gap-2">
-                                        {(['open', 'in_progress', 'resolved', 'closed'] as const).map(s => (
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Conteúdo Completo</label>
+                                    <textarea
+                                        className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white min-h-[150px]"
+                                        value={editingNotice.content || ''}
+                                        onChange={(e) => setEditingNotice({ ...editingNotice, content: e.target.value })}
+                                        placeholder="Descreva todos os detalhes aqui..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setEditingNotice(null)}
+                                    className="px-4 py-2 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleSaveNotice}
+                                    disabled={isSavingNotice}
+                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSavingNotice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Salvar Aviso
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- USER EDIT MODAL --- */}
+                {editingUser && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                                    <Edit2 className="w-4 h-4" />
+                                    Gerenciar Usuário
+                                </h3>
+                                <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-red-500">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Usuário</label>
+                                    <div className="text-slate-900 dark:text-slate-100 font-medium">{editingUser.name || 'Sem Nome'}</div>
+                                    <div className="text-sm text-slate-500">{editingUser.email}</div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Plano de Acesso</label>
+                                        <select
+                                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                            value={editingUser.plano}
+                                            onChange={(e) => setEditingUser({ ...editingUser, plano: e.target.value as 'free' | 'pro', is_premium: e.target.value === 'pro' })}
+                                        >
+                                            <option value="free">Free</option>
+                                            <option value="pro">Pro (Manual)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Status da Conta</label>
+                                        <select
+                                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                            value={editingUser.account_status || 'active'}
+                                            onChange={(e) => setEditingUser({ ...editingUser, account_status: e.target.value as any })}
+                                        >
+                                            <option value="active">Ativa</option>
+                                            <option value="suspended">Suspensa</option>
+                                            <option value="banned">Banida</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-slate-500 mb-6">
+                                    <p className="flex items-center gap-2 mb-2 font-bold text-orange-600">
+                                        <Lock className="w-3 h-3" />
+                                        Ações Sensíveis
+                                    </p>
+                                    <p>Alterações manuais de plano não geram cobrança. Para banir, selecione "Banida" no status.</p>
+                                </div>
+
+                                <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                                    <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2 text-sm">
+                                        <Shield className="w-4 h-4 text-purple-600" />
+                                        Recuperação de Conta Assistida
+                                    </h4>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => handleRecoveryAction('send_password_reset')}
+                                            disabled={recoveryLoading}
+                                            className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
+                                        >
+                                            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors shrink-0">
+                                                <Lock className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Reset de Senha</span>
+                                                <span className="block text-xs text-slate-500">Enviar email de redefinição</span>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleRecoveryAction('force_logout')}
+                                            disabled={recoveryLoading}
+                                            className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
+                                        >
+                                            <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-full text-orange-600 group-hover:bg-orange-200 transition-colors shrink-0">
+                                                <Ban className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Forçar Logout</span>
+                                                <span className="block text-xs text-slate-500">Encerrar todas as sessões</span>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div className="mt-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
+                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Correção de Email</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="email"
+                                                placeholder="Novo email do usuário"
+                                                className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"
+                                                value={newEmail}
+                                                onChange={(e) => setNewEmail(e.target.value)}
+                                            />
                                             <button
-                                                key={s}
-                                                onClick={() => setTicketStatus(s)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${ticketStatus === s
-                                                    ? 'bg-blue-600 text-white border-blue-600'
-                                                    : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-blue-400'
-                                                    }`}
+                                                onClick={() => handleRecoveryAction('update_user_email', { email: newEmail })}
+                                                disabled={!newEmail || recoveryLoading}
+                                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold disabled:opacity-50"
                                             >
-                                                {s}
+                                                Alterar
                                             </button>
-                                        ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setEditingUser(null)}
+                                    className="px-4 py-2 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => handleUpdateUser({
+                                        plano: editingUser.plano,
+                                        is_premium: editingUser.plano === 'pro',
+                                        account_status: editingUser.account_status
+                                    })}
+                                    disabled={isSavingUser}
+                                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Salvar Alterações
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- TICKET EDIT MODAL --- */}
+                {editingTicket && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                                    <MessageCircle className="w-5 h-5 text-blue-600" />
+                                    Responder Chamado
+                                </h3>
+                                <button onClick={() => setEditingTicket(null)} className="text-slate-400 hover:text-red-500">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6 overflow-y-auto">
+                                {/* Original Ticket */}
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                    <h4 className="font-bold text-slate-800 dark:text-white mb-1">{editingTicket.title}</h4>
+                                    <div className="text-xs text-slate-500 mb-3 flex gap-4">
+                                        <span>{new Date(editingTicket.created_at).toLocaleString()}</span>
+                                        <span>{editingTicket.category}</span>
+                                    </div>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                                        {editingTicket.description}
+                                    </p>
+                                </div>
+
+                                {/* Response Form */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Sua Resposta</label>
+                                        <textarea
+                                            value={ticketReply}
+                                            onChange={(e) => setTicketReply(e.target.value)}
+                                            rows={6}
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                            placeholder="Digite a solução ou resposta ao cliente..."
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Status do Ticket</label>
+                                        <div className="flex gap-2">
+                                            {(['open', 'in_progress', 'resolved', 'closed'] as const).map(s => (
+                                                <button
+                                                    key={s}
+                                                    onClick={() => setTicketStatus(s)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${ticketStatus === s
+                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                                                        }`}
+                                                >
+                                                    {s}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
-                            <button
-                                onClick={() => setEditingTicket(null)}
-                                className="px-4 py-2 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleUpdateTicket}
-                                disabled={isSavingTicket}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isSavingTicket ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                Salvar & Enviar
-                            </button>
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setEditingTicket(null)}
+                                    className="px-4 py-2 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleUpdateTicket}
+                                    disabled={isSavingTicket}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSavingTicket ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Salvar & Enviar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+            </main>
         </div>
     );
 };
