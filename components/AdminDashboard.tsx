@@ -1556,6 +1556,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             </div>
                         </div>
                     </div>
+                )}
             </main>
         </div>
     );
