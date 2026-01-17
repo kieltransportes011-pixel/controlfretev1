@@ -687,6 +687,7 @@ Obs: ${of.description || 'Sem observações'}`;
           onViewAgenda={() => setView('AGENDA')}
           onRequestUpgrade={() => handleOpenUpgrade('GENERAL')}
           onViewReferrals={() => setView('REFERRALS')}
+          onViewClients={() => setView('CLIENTS')}
           onAddExtraIncome={async (ei) => {
             if (!currentUser) return;
             const { error } = await supabase.from('entradas_extras').insert([{

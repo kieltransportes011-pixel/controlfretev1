@@ -3,7 +3,7 @@ import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome } f
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
-import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield, Gift } from 'lucide-react';
+import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield, Gift, Users } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 
 interface DashboardProps {
@@ -21,11 +21,12 @@ interface DashboardProps {
   extraIncomes: ExtraIncome[];
   onRequestUpgrade?: () => void;
   onViewReferrals?: () => void;
+  onViewClients: () => void;
   onAddExtraIncome: (ei: Omit<ExtraIncome, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
   onDeleteExtraIncome: (id: string) => Promise<void>;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onAddExtraIncome, onDeleteExtraIncome }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onAddExtraIncome, onDeleteExtraIncome }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -481,6 +482,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             >
               <span className="font-roboto font-bold text-xs uppercase tracking-wider">Lançar Entrada</span>
               <Plus className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => { setIsMenuOpen(false); onViewClients(); }}
+              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-brand-secondary py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
+            >
+              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Gestão de Clientes</span>
+              <Users className="w-5 h-5" />
             </button>
           </>
         )}
