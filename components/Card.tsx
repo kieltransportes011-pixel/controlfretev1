@@ -9,12 +9,12 @@ interface CardProps {
 export const Card: React.FC<CardProps> = ({ children, className = '', onClick }) => {
   // Verifica se a classe passada contém um override de cor de fundo
   const hasBgOverride = className.includes('bg-');
-  const bgClass = hasBgOverride ? '' : 'bg-white dark:bg-slate-800';
+  const bgClass = hasBgOverride ? '' : 'bg-white dark:bg-slate-900';
 
   return (
-    <div 
+    <div
       onClick={onClick}
-      className={`${bgClass} rounded-2xl p-5 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] border border-slate-100 dark:border-slate-700 transition-all duration-200 ${className}`}
+      className={`${bgClass} rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 transition-all duration-300 hover:shadow-md dark:hover:border-slate-700 ${className}`}
     >
       {children}
     </div>

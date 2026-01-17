@@ -3,12 +3,18 @@ import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome } f
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
-import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield, Gift, Users, Wrench, FileStack, ShieldCheck } from 'lucide-react';
+import {
+  TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock,
+  Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield,
+  Gift, Users, Wrench, FileStack, ShieldCheck, Loader2
+} from 'lucide-react';
+import { CardSkeleton } from './Skeleton';
 import { useSubscription } from '../hooks/useSubscription';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LineChart, Line
 } from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface DashboardProps {
   user: User;
@@ -31,9 +37,10 @@ interface DashboardProps {
   onViewDocuments: () => void;
   onAddExtraIncome: (ei: Omit<ExtraIncome, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
   onDeleteExtraIncome: (id: string) => Promise<void>;
+  loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -99,747 +106,478 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       const received = curr.receivedValue ?? (curr.status === 'PAID' ? curr.totalValue : 0);
       const ratio = curr.totalValue > 0 ? received / curr.totalValue : 0;
 
-      acc.totalCompany += (curr.companyValue * ratio);
-      acc.totalDriver += (curr.driverValue * ratio);
-      acc.totalReserve += (curr.reserveValue * ratio);
-
-      acc.totalPending += (curr.pendingValue || 0);
+      if (isThisMonth) {
+        acc.companyMonth += curr.companyValue;
+        acc.driverMonth += curr.driverValue;
+        acc.reserveMonth += curr.reserveValue;
+        acc.receivedMonth += received;
+      }
 
       return acc;
-    }, {
-      monthTotal: 0,
-      weekTotal: 0,
-      totalCompany: 0,
-      totalDriver: 0,
-      totalReserve: 0,
-      totalPending: 0
-    });
+    }, { monthTotal: 0, weekTotal: 0, companyMonth: 0, driverMonth: 0, reserveMonth: 0, receivedMonth: 0 });
 
-    expenses.forEach(exp => {
-      if (exp.source === 'COMPANY') incomeStats.totalCompany -= exp.value;
-      if (exp.source === 'DRIVER') incomeStats.totalDriver -= exp.value;
-      if (exp.source === 'RESERVE') incomeStats.totalReserve -= exp.value;
-    });
-
-    // Deduct paid accounts payable based on source
-    accountsPayable?.forEach(bill => {
-      if (bill.status === 'pago' && bill.payment_source) {
-        if (bill.payment_source === 'COMPANY') incomeStats.totalCompany -= bill.value;
-        if (bill.payment_source === 'DRIVER') incomeStats.totalDriver -= bill.value;
-        if (bill.payment_source === 'RESERVE') incomeStats.totalReserve -= bill.value;
+    const expenseTotal = expenses.reduce((acc, curr) => {
+      const date = new Date(curr.date);
+      if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+        return acc + curr.value;
       }
-    });
+      return acc;
+    }, 0);
 
-    // Add Extra Incomes
-    extraIncomes?.forEach(ei => {
-      if (ei.source === 'COMPANY') incomeStats.totalCompany += ei.value;
-      if (ei.source === 'DRIVER') incomeStats.totalDriver += ei.value;
-      if (ei.source === 'RESERVE') incomeStats.totalReserve += ei.value;
-    });
-
-    return incomeStats;
-  }, [freights, expenses, extraIncomes]);
-
-  const receivableStats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const next7Days = new Date(today);
-    next7Days.setDate(today.getDate() + 7);
-
-    let next7Total = 0;
-
-    freights.forEach(f => {
-      if (f.status !== 'PAID' && f.pendingValue > 0 && f.dueDate) {
-        const [y, m, d] = f.dueDate.split('-').map(Number);
-        const due = new Date(y, m - 1, d);
-        due.setHours(0, 0, 0, 0);
-        if (due <= next7Days) {
-          next7Total += f.pendingValue;
-        }
+    const extraTotal = extraIncomes.reduce((acc, curr) => {
+      const date = new Date(curr.date);
+      if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+        return acc + curr.value;
       }
-    });
+      return acc;
+    }, 0);
 
-    return { next7Total };
-  }, [freights]);
+    const netProfit = incomeStats.monthTotal - expenseTotal + extraTotal;
 
-  const recentActivity = useMemo(() => {
-    const allItems = [
-      ...freights.map(f => ({ ...f, type: 'INCOME' as const, sortDate: new Date(f.date) })),
-      ...expenses.map(e => ({ ...e, type: 'EXPENSE' as const, sortDate: new Date(e.date) })),
-      ...extraIncomes.map(ei => ({ ...ei, type: 'EXTRA' as const, sortDate: new Date(ei.date) }))
-    ];
-
-    return allItems
-      .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
-      .slice(0, 5);
+    return {
+      ...incomeStats,
+      expenseMonth: expenseTotal,
+      extraMonth: extraTotal,
+      netProfit
+    };
   }, [freights, expenses, extraIncomes]);
 
   const chartData = useMemo(() => {
-    const last30Days = Array.from({ length: 15 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (14 - i));
-      return d.toISOString().split('T')[0];
-    });
-
-    return last30Days.map(date => {
-      const dayIncomes = freights
-        .filter(f => f.date === date)
-        .reduce((sum, f) => sum + f.totalValue, 0);
-
-      const dayExpenses = expenses
-        .filter(e => e.date === date)
-        .reduce((sum, e) => sum + e.value, 0);
-
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const now = new Date();
+    const weekData = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - (6 - i));
       return {
-        name: formatDate(date).split('/')[0] + '/' + formatDate(date).split('/')[1],
-        entrada: dayIncomes,
-        saida: dayExpenses,
+        name: days[d.getDay()],
+        total: freights
+          .filter(f => new Date(f.date).toDateString() === d.toDateString())
+          .reduce((sum, f) => sum + f.totalValue, 0)
       };
     });
-  }, [freights, expenses]);
+    return weekData;
+  }, [freights]);
 
-  const distributionData = [
-    { name: 'Empresa', value: Math.max(0, stats.totalCompany), color: '#3B82F6' },
-    { name: 'Motorista', value: Math.max(0, stats.totalDriver), color: '#10B981' },
-    { name: 'Reserva', value: Math.max(0, stats.totalReserve), color: '#F59E0B' },
-  ];
-
-  const pendingPercentage = stats.totalPending > 0
-    ? Math.min(100, Math.round((receivableStats.next7Total / stats.totalPending) * 100))
-    : 0;
-
-  const { daysRemaining, isTrial, isExpired, isActive } = useSubscription(user);
+  const { isActive, isTrial } = useSubscription(user);
 
   return (
-    <div className="pb-24 space-y-6">
-      {/* Pro Badge / Upgrade Banner */}
-      {isActive ? (
-        <div className={`border p-4 rounded-2xl flex items-center justify-between mb-2 ${isTrial ? 'bg-gradient-to-r from-brand to-brand-secondary border-brand/20 text-white' : 'bg-gradient-to-r from-accent-success/10 to-accent-success/5 border-accent-success/20'}`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${isTrial ? 'bg-white/20' : 'bg-accent-success text-white'}`}>
-              {isTrial ? <Zap className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
-            </div>
-            <div>
-              <h3 className={`font-bold text-sm uppercase tracking-tight ${isTrial ? 'text-white' : 'text-accent-success'}`}>
-                {isTrial ? 'Período de Teste Ativo' : 'Plano Profissional Ativo'}
-              </h3>
-              <p className={`text-[10px] font-medium uppercase tracking-wider ${isTrial ? 'opacity-90' : 'text-accent-success/70'}`}>
-                {isTrial ? `Você tem ${daysRemaining} dias restantes de acesso total` : 'Acesso Total Liberado'}
-              </p>
-            </div>
+    <div className="pb-24 space-y-6 animate-fadeIn">
+      {/* Header */}
+      <header className="flex justify-between items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 -m-4 mb-2 sticky top-0 z-10 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-brand rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20">
+            <Zap className="w-6 h-6 fill-current" />
           </div>
-          {isTrial && (
-            <button
-              onClick={onUpgrade}
-              className="bg-white text-brand px-3 py-1.5 rounded-lg font-black text-[9px] uppercase tracking-wider hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              Assinar Agora
+          <div>
+            <h1 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Painel Principal</h1>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
+              {user.isPremium ? <><Shield className="w-3 h-3 text-brand" /> Plano Pro Ativo</> : 'Acesso Limitado'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={onOpenCalculator} className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-brand hover:text-white transition-all">
+            <Calculator className="w-5 h-5" />
+          </button>
+          {!user.isPremium && (
+            <button onClick={onUpgrade} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:scale-105 transition-all">
+              <Sparkles className="w-4 h-4" /> Virar Pro
             </button>
           )}
-          {!isTrial && <Sparkles className="w-5 h-5 text-accent-success animate-pulse" />}
         </div>
-      ) : (
-        <div className="bg-red-500 p-4 rounded-2xl shadow-lg shadow-red-500/20 text-white flex items-center justify-between mb-2">
+      </header>
+
+      {/* Bill Alerts */}
+      {upcomingBills.length > 0 && showBillAlert && (
+        <div className="bg-red-500 text-white p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-red-500/20 animate-bounce-subtle">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5" />
+            <div className="bg-white/20 p-2 rounded-xl">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
             <div>
-              <h3 className="font-bold text-sm uppercase">Período de Teste Expirado</h3>
-              <p className="text-[10px] font-medium">Assine o Pro para liberar todos os recursos.</p>
+              <p className="text-xs font-black uppercase tracking-tight">Contas Próximas do Vencimento</p>
+              <p className="text-[10px] opacity-90 font-bold">{upcomingBills.length} pendência(s) para os próximos 3 dias.</p>
             </div>
           </div>
-          <button
-            onClick={onUpgrade}
-            className="bg-white text-red-500 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider"
-          >
+          <button onClick={() => setShowBillAlert(false)} className="bg-white/10 p-1.5 rounded-lg hover:bg-white/20">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Trial Banner */}
+      {isTrial && trialDaysRemaining > 0 && (
+        <div className="bg-gradient-to-r from-brand to-blue-600 text-white p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-brand/20">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-tight">Período de Teste Grátis</p>
+              <p className="text-[10px] opacity-90 font-bold">Você tem {trialDaysRemaining} dias de acesso PRO liberado.</p>
+            </div>
+          </div>
+          <button onClick={onUpgrade} className="bg-white text-brand px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
             Assinar Agora
           </button>
         </div>
       )}
 
-      {/* Usage Trigger Banner */}
-      {showUsageBanner && !user.isPremium && (
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-2xl shadow-lg text-white flex items-center justify-between mb-4 animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-full">
-              <Sparkles className="w-5 h-5 text-yellow-300" />
+      {/* Usage Banner */}
+      {showUsageBanner && (
+        <Card className="bg-slate-900 border-none p-6 text-white overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-brand/20 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand/40 transition-all"></div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black leading-tight uppercase tracking-tight">Evolua seu negócio <br /><span className="text-brand">Vire um profissional PRO</span></h2>
+              <p className="text-slate-400 text-sm font-bold flex items-center gap-2">
+                <Truck className="w-4 h-4" /> Gestão Completa • Sem Limites • Relatórios PDF
+              </p>
             </div>
-            <div>
-              <h3 className="font-bold text-sm uppercase">Uso Intenso Detectado!</h3>
-              <p className="text-[10px] opacity-90">Você está aproveitando bem o sistema. Vire PRO para não ter limites.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowUsageBanner(false)} className="px-6 py-3 border border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-colors">
+                Depois
+              </button>
+              <button
+                onClick={onUpgrade}
+                className="px-8 py-3 bg-brand text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-brand/20 hover:scale-105 transition-all flex items-center gap-2"
+              >
+                Começar Agora <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setShowUsageBanner(false);
-                localStorage.setItem('control_frete_upgrade_prompt', new Date().toISOString());
-              }}
-              className="p-2 text-white/60 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onRequestUpgrade || onUpgrade}
-              className="bg-white text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-blue-50 transition-colors"
-            >
-              Vire PRO
-            </button>
-          </div>
-        </div>
+        </Card>
       )}
 
-      <header className="flex items-center justify-between py-2">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight uppercase">Visão Geral</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-roboto uppercase tracking-widest mt-0.5">Gestão Financeira</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isActive && (
-            <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5 ring-4 ${isTrial ? 'bg-brand/20 text-brand border-brand/30 ring-brand/5' : 'bg-accent-success/10 text-accent-success border-accent-success/20 ring-accent-success/5'}`}>
-              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTrial ? 'bg-brand' : 'bg-accent-success'}`} />
-              {isTrial ? 'TRIAL' : 'PRO'}
-            </div>
-          )}
-          <div className="h-10 w-10 bg-brand/5 dark:bg-slate-800 rounded-xl flex items-center justify-center border border-slate-100 dark:border-slate-700">
-            <Truck className="w-5 h-5 text-brand dark:text-brand-300" />
-          </div>
-        </div>
-      </header>
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {loading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <Card
+              onClick={onViewSchedule}
+              className="group cursor-pointer hover:border-brand/30 transition-all border-l-4 border-l-brand"
+            >
+              <div className="flex items-center gap-2 text-slate-400 mb-1">
+                <Calendar className="w-3 h-3" />
+                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-brand transition-colors">Faturamento Semanal</span>
+              </div>
+              <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.weekTotal)}</p>
+            </Card>
 
-      {/* Main Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-brand text-white border-none shadow-lg shadow-brand/20 relative overflow-hidden">
-          <div className="flex items-center gap-2 mb-2">
-            <Calendar className="w-3.5 h-3.5 text-blue-200" />
-            <span className="text-[10px] font-roboto font-bold text-blue-100 uppercase tracking-widest">Receita Mês</span>
-          </div>
-          <p className="text-2xl font-bold text-white tabular-nums relative z-10">{formatCurrency(stats.monthTotal)}</p>
-          <div className="absolute -right-4 -bottom-4 opacity-10">
-            <TrendingUp className="w-20 h-20" />
-          </div>
-        </Card>
+            <Card className="border-l-4 border-l-emerald-500">
+              <div className="flex items-center gap-2 text-slate-400 mb-1">
+                <TrendingUp className="w-3 h-3" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Faturamento do Mês</span>
+              </div>
+              <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.monthTotal)}</p>
+            </Card>
 
-        <Card className="bg-white dark:bg-slate-800 border-slate-100">
-          <div className="flex items-center gap-2 mb-2 text-slate-500">
-            <TrendingUp className="w-3.5 h-3.5 text-accent-success" />
-            <span className="text-[10px] font-roboto font-bold uppercase tracking-widest">Semanal</span>
-          </div>
-          <p className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums">{formatCurrency(stats.weekTotal)}</p>
-        </Card>
+            <Card className="border-l-4 border-l-blue-500">
+              <div className="flex items-center gap-2 text-slate-400 mb-1">
+                <TrendingUp className="w-3 h-3" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Saldo Líquido</span>
+              </div>
+              <p className={`text-lg font-black ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                {formatCurrency(stats.netProfit)}
+              </p>
+            </Card>
+
+            <Card onClick={onViewGoals} className="group cursor-pointer hover:border-orange-500/30 transition-all border-l-4 border-l-orange-500">
+              <div className="flex items-center gap-2 text-slate-400 mb-1">
+                <Target className="w-3 h-3" />
+                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-orange-500 transition-colors">Meta Mensal</span>
+              </div>
+              <div className="flex items-end justify-between">
+                <p className="text-lg font-black text-slate-800 dark:text-white">
+                  {Math.round((stats.monthTotal / (user.monthlyGoal || 1)) * 100)}%
+                </p>
+                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Card>
+          </>
+        )}
       </div>
 
-      {/* Goal Widget */}
-      <Card
-        onClick={onViewGoals}
-        className="relative overflow-hidden border border-slate-100 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-all group p-4"
-      >
-        <div className="flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="bg-slate-100 dark:bg-slate-700 text-brand dark:text-brand-300 p-2.5 rounded-xl">
-              <Target className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 dark:text-white text-sm">Metas de Faturamento</h3>
-              <p className="text-[10px] font-roboto text-slate-500 dark:text-slate-400 uppercase tracking-wider">Acompanhar progresso mensal</p>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-brand-secondary group-hover:translate-x-1 transition-all" />
-        </div>
-      </Card>
-
-      {/* Referral Shortcut Widget - PRO Only */}
-      {isActive && (
-        <Card
-          onClick={onViewReferrals}
-          className="relative overflow-hidden border-none bg-gradient-to-br from-slate-900 to-black hover:from-black hover:to-slate-900 cursor-pointer transition-all group p-5 shadow-xl shadow-brand/10"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-2xl -mr-10 -mt-10 opacity-30" />
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-4">
-              <div className="bg-brand text-white p-2.5 rounded-xl shadow-lg shadow-brand/20">
-                <Gift className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-sm">Convide e Ganhe R$</h3>
-                <p className="text-[10px] font-bold text-brand uppercase tracking-widest mt-0.5">Ganhe 20% de cada indicação</p>
-              </div>
-            </div>
-            <div className="bg-white/10 p-2 rounded-lg text-white group-hover:bg-brand group-hover:text-white transition-all">
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Asset Management Section - PRO Only */}
+      {/* Pro Features Shortcuts */}
       {isActive && (
         <div className="space-y-3">
-          <h2 className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
+          <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
             <ShieldCheck className="w-3 h-3" /> Gestão de Ativos (Frota)
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Card
-              onClick={onViewFleet}
-              className="group border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-brand-secondary transition-all cursor-pointer flex items-center gap-4"
-            >
-              <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-brand group-hover:bg-brand-secondary group-hover:text-white transition-all">
-                <Truck className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white">Minha Frota</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Caminhões e Dados</p>
-              </div>
-            </Card>
-
-            <Card
-              onClick={onViewMaintenance}
-              className="group border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-orange-400 transition-all cursor-pointer flex items-center gap-4"
-            >
-              <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                <Wrench className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white">Manutenção</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Logs e Alertas de KM</p>
+            <Card onClick={onViewFleet} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-brand">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 group-hover:text-brand group-hover:bg-brand/10 transition-all">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Caminhões</h3>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase">Frota Ativa</p>
+                </div>
               </div>
             </Card>
-
-            <Card
-              onClick={onViewDocuments}
-              className="group border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-blue-400 transition-all cursor-pointer flex items-center gap-4"
-            >
-              <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                <FileStack className="w-5 h-5" />
+            <Card onClick={onViewMaintenance} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-orange-500">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 group-hover:text-orange-500 group-hover:bg-orange-500/10 transition-all">
+                  <Wrench className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Manutenção</h3>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase">Alertas de Revisão</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white">Documentos</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Nuvem de Arquivos</p>
+            </Card>
+            <Card onClick={onViewDocuments} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-blue-500">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 group-hover:text-blue-500 group-hover:bg-blue-500/10 transition-all">
+                  <FileStack className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Documentos</h3>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase">Cofre de Arquivos</p>
+                </div>
               </div>
             </Card>
           </div>
         </div>
       )}
 
-      {/* Analytics Section */}
+      {/* Main Charts & Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Chart */}
-        <Card className="lg:col-span-2 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden p-6">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">Fluxo de Caixa</h3>
-              <p className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Últimos 15 dias</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-brand" />
-                <span className="text-[10px] font-black uppercase text-slate-400">Entradas</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-accent-error" />
-                <span className="text-[10px] font-black uppercase text-slate-400">Saídas</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[240px] w-full -ml-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorEntrada" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorSaida" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.3} />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 9, fontWeight: 700, fill: '#94A3B8' }}
-                  dy={10}
-                />
-                <YAxis hide />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: '16px',
-                    border: 'none',
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                    fontSize: '11px',
-                    fontWeight: 800
-                  }}
-                  itemStyle={{ padding: '2px 0' }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="entrada"
-                  stroke="#3B82F6"
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#colorEntrada)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="saida"
-                  stroke="#EF4444"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  fillOpacity={1}
-                  fill="url(#colorSaida)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Distribution Chart */}
-        <Card className="border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 flex flex-col items-center justify-center">
-          <div className="w-full text-left mb-4">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">Divisão de Saldo</h3>
-            <p className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Porcentagem Real</p>
-          </div>
-
-          <div className="h-[180px] w-full relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={distributionData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={75}
-                  paddingAngle={8}
-                  dataKey="value"
-                >
-                  {distributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} cornerRadius={4} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Center Label */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
-              <span className="text-lg font-black text-slate-800 dark:text-white">
-                {formatCurrency(stats.totalCompany + stats.totalDriver + stats.totalReserve)}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 w-full gap-2 mt-4">
-            {distributionData.map((item, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">{item.name}</span>
-                </div>
-                <span className="text-[11px] font-black text-slate-800 dark:text-white tabular-nums">
-                  {((item.value / (stats.totalCompany + stats.totalDriver + stats.totalReserve || 1)) * 100).toFixed(0)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Receivables Widget */}
-      {stats.totalPending > 0 && (
-        <div
-          onClick={onViewSchedule}
-          className="group bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
-        >
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-1.5 rounded-lg text-accent-warning">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <h3 className="text-[10px] font-roboto font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">A Receber</h3>
-              </div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums">
-                {formatCurrency(stats.totalPending)}
-              </p>
-            </div>
-            <div className="text-slate-300 group-hover:text-brand-secondary transition-colors">
-              <ArrowRight className="w-5 h-5" />
-            </div>
-          </div>
-
-          <div className="relative z-10">
-            <div className="flex justify-between items-end mb-2 text-xs">
-              <span className="text-slate-500 dark:text-slate-400">Vencendo em breve</span>
-              <span className="font-bold text-brand-secondary tabular-nums">
-                {formatCurrency(receivableStats.next7Total)}
-              </span>
-            </div>
-
-            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand-secondary rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${pendingPercentage}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cash Flow Section */}
-      <div className="space-y-3">
-        <h2 className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Saldo Líquido (Disponível)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <Card className="flex items-center justify-between py-3.5 border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="bg-slate-50 dark:bg-slate-700 p-2 rounded-lg">
-                <Briefcase className="w-4 h-4 text-slate-400" />
-              </div>
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="h-80 relative overflow-hidden">
+            <div className="flex justify-between items-center mb-6">
               <div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-roboto font-bold uppercase">Empresa</p>
-                <p className={`text-lg font-bold tabular-nums ${stats.totalCompany < 0 ? 'text-accent-error' : 'text-slate-800 dark:text-white'}`}>
-                  {formatCurrency(stats.totalCompany)}
-                </p>
+                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Evolução do Faturamento</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Últimos 7 dias</p>
               </div>
+              <TrendingUp className="w-5 h-5 text-emerald-500" />
             </div>
+            {loading ? (
+              <div className="w-full h-full pb-10 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-slate-200 animate-spin" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                    dy={10}
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                  />
+                  <Area type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </Card>
 
-          <div className="grid grid-cols-2 gap-3 md:contents">
-            <Card className="flex flex-col py-3.5 border-slate-100">
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-roboto font-bold uppercase mb-1">Motorista</p>
-              <p className={`text-lg font-bold tabular-nums ${stats.totalDriver < 0 ? 'text-accent-error' : 'text-slate-800 dark:text-white'}`}>
-                {formatCurrency(stats.totalDriver)}
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-none p-6 text-white overflow-hidden relative group">
+              <div className="absolute -bottom-4 -right-4 bg-white/5 w-24 h-24 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <Clock className="w-8 h-8 text-brand/50 mb-4" />
+              <h3 className="text-lg font-black uppercase tracking-tight mb-1">Agenda de Recebíveis</h3>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-6 leading-relaxed">Controle o fluxo de caixa futuro e não perca nenhum vencimento.</p>
+              <button
+                onClick={onViewSchedule}
+                className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+              >
+                Gerenciar Agenda <ArrowRight className="w-4 h-4" />
+              </button>
             </Card>
-            <Card className="flex flex-col py-3.5 border-slate-100">
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-roboto font-bold uppercase mb-1">Reserva</p>
-              <p className={`text-lg font-bold tabular-nums ${stats.totalReserve < 0 ? 'text-accent-error' : 'text-slate-800 dark:text-white'}`}>
-                {formatCurrency(stats.totalReserve)}
-              </p>
+
+            <Card className="bg-gradient-to-br from-indigo-900 to-blue-900 border-none p-6 text-white overflow-hidden relative group">
+              <div className="absolute -top-4 -left-4 bg-white/5 w-24 h-24 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <Briefcase className="w-8 h-8 text-blue-400/50 mb-4" />
+              <h3 className="text-lg font-black uppercase tracking-tight mb-1">Base de Clientes</h3>
+              <p className="text-blue-200/50 text-[10px] font-bold uppercase tracking-widest mb-6 leading-relaxed">Mantenha os contatos e dados de faturamento sempre à mão.</p>
+              <button
+                onClick={onViewClients}
+                className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+              >
+                Ver Clientes <ArrowRight className="w-4 h-4" />
+              </button>
             </Card>
           </div>
         </div>
-      </div>
 
-      {/* Activity List */}
-      <div className="space-y-3">
-        <h2 className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Atividade Recente</h2>
-        <div className="space-y-2.5">
-          {recentActivity.map((item) => (
-            <div key={item.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-50 dark:border-slate-700 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className={`w-1 h-8 rounded-full ${item.type === 'INCOME' || item.type === 'EXTRA' ? 'bg-accent-success' : 'bg-accent-error'}`}></div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white leading-tight">{(item as any).client || (item as any).description}</h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-[10px] text-slate-400 font-medium">{formatDate(item.date)}</p>
-                    {item.type === 'EXTRA' && (
-                      <span className="text-[8px] font-bold bg-green-100 text-green-600 px-1 rounded uppercase tracking-tighter">Entrada Extra</span>
-                    )}
+        <div className="space-y-6">
+          <Card className="p-6 bg-slate-50 dark:bg-slate-900/50 border-dashed">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Entradas Extras</h3>
+              <Plus
+                className="w-4 h-4 text-slate-400 cursor-pointer hover:text-brand"
+                onClick={() => setShowExtraIncomeModal(true)}
+              />
+            </div>
+            <div className="space-y-3">
+              {extraIncomes.slice(0, 3).map(ei => (
+                <div key={ei.id} className="flex justify-between items-center group">
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300">{ei.description}</p>
+                    <p className="text-[8px] font-bold text-slate-400 uppercase">{formatDate(ei.date)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-black text-emerald-500">+{formatCurrency(ei.value)}</p>
+                    <button
+                      onClick={() => onDeleteExtraIncome(ei.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-300 hover:text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
-              </div>
-              <span className={`font-bold tabular-nums text-sm ${item.type === 'INCOME' || item.type === 'EXTRA' ? 'text-accent-success' : 'text-accent-error'}`}>
-                {item.type === 'INCOME' || item.type === 'EXTRA' ? '+' : '-'}{formatCurrency((item as any).totalValue || (item as any).value)}
-              </span>
+              ))}
+              {extraIncomes.length === 0 && (
+                <p className="text-[10px] text-slate-400 font-bold uppercase text-center py-4">Nenhuma entrada extra</p>
+              )}
             </div>
-          ))}
+          </Card>
         </div>
       </div>
 
-      {/* Floating Button and Menu */}
-      <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end space-y-3">
-        {isMenuOpen && (
-          <>
-            <button
-              onClick={() => { setIsMenuOpen(false); setShowExtraIncomeModal(true); }}
-              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-accent-success py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
-            >
-              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Injetar Saldo</span>
-              <TrendingUp className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => { setIsMenuOpen(false); onOpenCalculator(); }}
-              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-brand-secondary py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
-            >
-              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Calculadora</span>
-              <Calculator className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => {
-                if (!isActive) {
-                  alert('A Agenda é uma funcionalidade Pro!');
-                  onUpgrade();
-                  return;
-                }
-                setIsMenuOpen(false);
-                onViewAgenda();
-              }}
-              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-brand-secondary py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
-            >
-              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Agenda {!isActive && '🔒'}</span>
-              <Calendar className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => { setIsMenuOpen(false); onAddExpense(); }}
-              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-accent-error py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
-            >
-              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Lançar Saída</span>
-              <Minus className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => { setIsMenuOpen(false); onAddFreight(); }}
-              className="flex items-center gap-3 bg-brand text-white py-2.5 px-5 rounded-2xl shadow-xl animate-slideUp"
-            >
-              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Lançar Entrada</span>
-              <Plus className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => { setIsMenuOpen(false); onViewClients(); }}
-              className="flex items-center gap-3 bg-white dark:bg-slate-800 text-brand-secondary py-2.5 px-5 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-slideUp"
-            >
-              <span className="font-roboto font-bold text-xs uppercase tracking-wider">Gestão de Clientes</span>
-              <Users className="w-5 h-5" />
-            </button>
-          </>
-        )}
+      {showExtraIncomeModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <Card className="w-full max-w-sm space-y-4 animate-slideUp">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Nova Entrada Extra</h2>
+              <button onClick={() => setShowExtraIncomeModal(false)} className="text-slate-400"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Descrição</label>
+                <input
+                  type="text" value={eiDesc} onChange={e => setEiDesc(e.target.value)}
+                  placeholder="Ex: Reembolso de Pedágio"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl outline-none focus:ring-2 ring-brand/20 font-bold text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Valor (R$)</label>
+                <input
+                  type="number" value={eiValue} onChange={e => setEiValue(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl outline-none focus:ring-2 ring-brand/20 font-bold text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Destino do Saldo</label>
+                <select
+                  value={eiSource} onChange={e => setEiSource(e.target.value as any)}
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl outline-none focus:ring-2 ring-brand/20 font-bold text-sm"
+                >
+                  <option value="COMPANY">Saldo Empresa</option>
+                  <option value="DRIVER">Saldo Motorista</option>
+                  <option value="RESERVE">Saldo Reserva</option>
+                </select>
+              </div>
+              <Button fullWidth onClick={async () => {
+                if (!eiDesc || !eiValue) return;
+                await onAddExtraIncome({
+                  description: eiDesc,
+                  value: parseFloat(eiValue),
+                  source: eiSource,
+                  date: new Date().toISOString().split('T')[0]
+                });
+                setShowExtraIncomeModal(false);
+                setEiDesc('');
+                setEiValue('');
+              }}>
+                Confirmar Entrada
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Floating Action Button (FAB) */}
+      <div className="fixed bottom-24 right-6 z-[60] flex flex-col items-end gap-3">
+        <AnimatePresence>
+          {isMenuOpen && (
+            <div className="flex flex-col items-end gap-3 mb-2">
+              <motion.button
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                onClick={() => { onAddFreight(); setIsMenuOpen(false); }}
+                className="flex items-center gap-3 px-4 py-2.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
+              >
+                Novo Frete <TrendingUp className="w-4 h-4" />
+              </motion.button>
+
+              <motion.button
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                onClick={() => { onAddExpense(); setIsMenuOpen(false); }}
+                className="flex items-center gap-3 px-4 py-2.5 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
+              >
+                Lançar Despesa <Minus className="w-4 h-4" />
+              </motion.button>
+
+              <motion.button
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                onClick={() => { setShowExtraIncomeModal(true); setIsMenuOpen(false); }}
+                className="flex items-center gap-3 px-4 py-2.5 bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-800/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
+              >
+                Entrada Extra <Plus className="w-4 h-4" />
+              </motion.button>
+
+              <motion.button
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                onClick={() => { onOpenCalculator(); setIsMenuOpen(false); }}
+                className="flex items-center gap-3 px-4 py-2.5 bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
+              >
+                Simular Lucro <Calculator className="w-4 h-4" />
+              </motion.button>
+            </div>
+          )}
+        </AnimatePresence>
 
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`w-14 h-14 bg-brand hover:bg-brand-hover text-white rounded-2xl shadow-xl shadow-brand/20 transition-all flex items-center justify-center ${isMenuOpen ? 'rotate-45' : ''}`}
+          className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl shadow-brand/30 transition-all duration-300 ${isMenuOpen ? 'bg-slate-800 rotate-45 scale-90' : 'bg-brand rotate-0 hover:scale-110'}`}
         >
-          {isMenuOpen ? <X className="w-7 h-7" /> : <Plus className="w-7 h-7" />}
+          <Plus className="w-7 h-7" />
         </button>
       </div>
 
-      {/* Accounts Payable Alert Modal */}
-      {upcomingBills.length > 0 && showBillAlert && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative animate-slideUp">
-            <button onClick={() => setShowBillAlert(false)} className="absolute top-4 right-4 text-slate-400">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Contas a Pagar</h3>
-                <p className="text-xs text-slate-500">Você tem contas vencendo em breve.</p>
-              </div>
-            </div>
-
-            <div className="space-y-2 mb-6 max-h-48 overflow-y-auto">
-              {upcomingBills.map(bill => (
-                <div key={bill.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{bill.description}</span>
-                    <span className="text-[10px] text-slate-400">Vencimento: {formatDate(bill.due_date)}</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-800 dark:text-white tabular-nums">{formatCurrency(bill.value)}</span>
-                </div>
-              ))}
-            </div>
-
-            <Button onClick={() => { setShowBillAlert(false); onViewSchedule(); }} fullWidth>
-              VER CONTAS
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Extra Income Modal */}
-      {showExtraIncomeModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slideUp relative">
-            <button
-              onClick={() => setShowExtraIncomeModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            <div className="mb-6 text-center">
-              <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center text-accent-success mb-3 mx-auto">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Injetar Saldo</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Adicione saldo manualmente sem descontos de serviço.</p>
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              if (!eiDesc || !eiValue) return;
-              await onAddExtraIncome({
-                description: eiDesc,
-                value: parseFloat(eiValue),
-                source: eiSource,
-                date: new Date().toISOString().split('T')[0]
-              });
-              setShowExtraIncomeModal(false);
-              setEiDesc('');
-              setEiValue('');
-            }} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descrição</label>
-                <input
-                  type="text"
-                  required
-                  value={eiDesc}
-                  onChange={(e) => setEiDesc(e.target.value)}
-                  className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-medium text-slate-800 dark:text-white"
-                  placeholder="Ex: Aporte de Capital"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Valor (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={eiValue}
-                  onChange={(e) => setEiValue(e.target.value)}
-                  className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-medium text-slate-800 dark:text-white"
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Conta de Destino</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'COMPANY', label: 'Empresa' },
-                    { id: 'DRIVER', label: 'Mot.' },
-                    { id: 'RESERVE', label: 'Res.' }
-                  ].map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setEiSource(s.id as any)}
-                      className={`py-2 text-[10px] font-bold uppercase rounded-xl border transition-all ${eiSource === s.id
-                        ? 'bg-brand text-white border-brand'
-                        : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700 hover:bg-slate-50'}`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <Button type="submit" fullWidth className="bg-brand hover:bg-brand-hover text-white shadow-lg shadow-brand/20 h-14 text-sm uppercase tracking-widest font-black rounded-2xl">
-                  INJETAR AGORA
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Backdrop for FAB */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMenuOpen(false)}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[50]"
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

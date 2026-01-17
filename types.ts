@@ -155,10 +155,13 @@ export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' 
 export interface DashboardStats {
   monthTotal: number;
   weekTotal: number;
-  totalCompany: number;
-  totalDriver: number;
-  totalReserve: number;
-  totalPending: number;
+  companyMonth: number;
+  driverMonth: number;
+  reserveMonth: number;
+  receivedMonth: number;
+  expenseMonth: number;
+  extraMonth: number;
+  netProfit: number;
 }
 
 export interface AccountPayable {
