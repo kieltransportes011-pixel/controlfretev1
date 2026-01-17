@@ -150,7 +150,7 @@ export interface Client {
   created_at: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS' | 'FREIGHT_INTEGRATION' | 'CLIENTS';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'DOCUMENTS';
 
 export interface DashboardStats {
   monthTotal: number;
@@ -230,5 +230,46 @@ export interface ExtraIncome {
   description: string;
   value: number;
   source: ExpenseSource;
+  created_at: string;
+}
+
+export interface Vehicle {
+  id: string;
+  user_id: string;
+  plate: string;
+  brand?: string;
+  model: string;
+  year?: number;
+  current_km: number;
+  created_at: string;
+}
+
+export type MaintenanceCategory = 'OIL' | 'TIRES' | 'BRAKES' | 'ENGINE' | 'REVISION' | 'OTHER';
+
+export interface MaintenanceLog {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  date: string;
+  description: string;
+  category: MaintenanceCategory;
+  km_at_service?: number;
+  next_revision_km?: number;
+  next_revision_date?: string;
+  cost: number;
+  created_at: string;
+}
+
+export type DocumentType = 'CNH' | 'ANTT' | 'CRLV' | 'EXAMINATION' | 'INSURANCE' | 'OTHER';
+
+export interface Document {
+  id: string;
+  user_id: string;
+  vehicle_id?: string;
+  type: DocumentType;
+  doc_number?: string;
+  expiry_date?: string;
+  image_url?: string;
+  notified: boolean;
   created_at: string;
 }

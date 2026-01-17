@@ -3,7 +3,7 @@ import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome } f
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
-import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield, Gift, Users } from 'lucide-react';
+import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield, Gift, Users, Wrench, FileStack, ShieldCheck } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -26,11 +26,14 @@ interface DashboardProps {
   onRequestUpgrade?: () => void;
   onViewReferrals?: () => void;
   onViewClients: () => void;
+  onViewFleet: () => void;
+  onViewMaintenance: () => void;
+  onViewDocuments: () => void;
   onAddExtraIncome: (ei: Omit<ExtraIncome, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
   onDeleteExtraIncome: (id: string) => Promise<void>;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onAddExtraIncome, onDeleteExtraIncome }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -366,6 +369,55 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Asset Management Section - PRO Only */}
+      {isActive && (
+        <div className="space-y-3">
+          <h2 className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
+            <ShieldCheck className="w-3 h-3" /> Gestão de Ativos (Frota)
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card
+              onClick={onViewFleet}
+              className="group border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-brand-secondary transition-all cursor-pointer flex items-center gap-4"
+            >
+              <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-brand group-hover:bg-brand-secondary group-hover:text-white transition-all">
+                <Truck className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white">Minha Frota</h4>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Caminhões e Dados</p>
+              </div>
+            </Card>
+
+            <Card
+              onClick={onViewMaintenance}
+              className="group border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-orange-400 transition-all cursor-pointer flex items-center gap-4"
+            >
+              <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                <Wrench className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white">Manutenção</h4>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Logs e Alertas de KM</p>
+              </div>
+            </Card>
+
+            <Card
+              onClick={onViewDocuments}
+              className="group border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-blue-400 transition-all cursor-pointer flex items-center gap-4"
+            >
+              <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                <FileStack className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white">Documentos</h4>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Nuvem de Arquivos</p>
+              </div>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Analytics Section */}
