@@ -30,6 +30,11 @@ interface UserProfile {
     account_status: 'active' | 'suspended' | 'banned';
     created_at: string;
     role: string;
+    admin_notes?: string;
+    // Computed telemetry (joined)
+    total_freights?: number;
+    total_revenue?: number;
+    last_activity?: string;
 }
 
 type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE';
@@ -102,6 +107,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [revenueStats, setRevenueStats] = useState<any>(null);
     const [revenuePeriod, setRevenuePeriod] = useState<7 | 30>(30);
     const [revenueLoading, setRevenueLoading] = useState(false);
+    const [modalTab, setModalTab] = useState<'DADOS' | 'FINANCEIRO' | 'SUPORTE' | 'SEGURANCA'>('DADOS');
 
     useEffect(() => {
         fetchAdminData();
@@ -138,6 +144,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             if (userError) throw userError;
 
+            // Fetch Telemetry (via RPC)
+            const { data: telemetry, error: telemetryError } = await supabase
+                .rpc('get_admin_user_stats');
+
+            if (telemetryError) {
+                console.warn("Telemetry Fetch Error (Non-critical):", telemetryError);
+            }
+
+            // Map telemetry to users
+            const enrichedUsers = (profiles || []).map(u => {
+                const stats = telemetry?.find((t: any) => t.user_id === u.id);
+                return {
+                    ...u,
+                    total_freights: stats?.total_freights || 0,
+                    total_revenue: stats?.total_revenue || 0,
+                    last_activity: stats?.last_activity
+                };
+            });
+
             // Fetch Tickets
             const { data: supportTickets, error: ticketError } = await supabase
                 .from('support_tickets')
@@ -170,7 +195,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             if (commError) throw commError;
 
-            setUsers(profiles || []);
+            setUsers(enrichedUsers);
             setTickets(supportTickets || []);
             setLogs(adminLogs || []);
             setNotices(platformNotices || []);
@@ -337,8 +362,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             let changes = [];
             if (updatedData.plano && updatedData.plano !== editingUser.plano) changes.push(`Plano: ${editingUser.plano} -> ${updatedData.plano}`);
             if (updatedData.account_status && updatedData.account_status !== editingUser.account_status) changes.push(`Status: ${editingUser.account_status} -> ${updatedData.account_status}`);
-
-
+            if (updatedData.admin_notes !== undefined && updatedData.admin_notes !== editingUser.admin_notes) changes.push(`Notas Internas: Atualizadas`);
 
             await logAction('UPDATE_USER', 'user', editingUser.id, `Atualizou usuário ${editingUser.email}. ${changes.join(', ')}`);
 
@@ -362,10 +386,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         }
     };
 
-    const filteredUsers = users.filter(u =>
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const globalStats = React.useMemo(() => {
+        const totalRev = users.reduce((acc, u) => acc + (u.total_revenue || 0), 0);
+        const totalFrt = users.reduce((acc, u) => acc + (u.total_freights || 0), 0);
+        return {
+            totalRevenue: totalRev,
+            totalFreights: totalFrt,
+            avgFreights: users.length > 0 ? (totalFrt / users.length).toFixed(1) : 0,
+            activeRate: users.length > 0 ? ((users.filter(u => u.last_activity).length / users.length) * 100).toFixed(0) : 0
+        };
+    }, [users]);
+
+    const filteredUsers = users.filter(u => {
+        const matchesSearch =
+            u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Advanced Segment Logic
+        if (searchTerm === 'SEG_PRO') return u.plano === 'pro';
+        if (searchTerm === 'SEG_HIGH_VOL') return u.plano === 'free' && (u.total_freights || 0) > 10;
+        if (searchTerm === 'SEG_INACTIVE') {
+            if (!u.last_activity) return true;
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            return new Date(u.last_activity) < thirtyDaysAgo;
+        }
+
+        return matchesSearch;
+    });
 
     // --- Ticket Logic ---
     const handleUpdateTicket = async () => {
@@ -624,73 +671,131 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                     {/* --- USERS TAB --- */}
                     {activeTab === 'USERS' && (
-                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                    <Users className="w-5 h-5 text-slate-500" />
-                                    Base de Usuários
-                                </h2>
-                                <div className="relative w-full md:w-96">
-                                    <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar por nome, email ou ID..."
-                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        autoFocus
-                                    />
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            {/* Platform Snapshot */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Volume Plataforma</p>
+                                    <p className="text-xl font-black text-white">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(globalStats.totalRevenue)}
+                                    </p>
+                                </div>
+                                <div className="bg-white dark:bg-[#0B1221] p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total de Operações</p>
+                                    <p className="text-xl font-black text-slate-900 dark:text-white">{globalStats.totalFreights} <span className="text-xs font-bold text-slate-500">fretes</span></p>
+                                </div>
+                                <div className="bg-white dark:bg-[#0B1221] p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Média p/ Usuário</p>
+                                    <p className="text-xl font-black text-slate-900 dark:text-white">{globalStats.avgFreights} <span className="text-xs font-bold text-slate-500">un.</span></p>
+                                </div>
+                                <div className="bg-white dark:bg-[#0B1221] p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Taxa de Atividade</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xl font-black text-slate-900 dark:text-white">{globalStats.activeRate}%</p>
+                                        <div className="h-1.5 w-12 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                            <div className="h-full bg-emerald-500" style={{ width: `${globalStats.activeRate}%` }} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto flex-1">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
-                                        <tr>
-                                            <th className="px-6 py-4">Usuário / Email</th>
-                                            <th className="px-6 py-4 text-center">Plano</th>
-                                            <th className="px-6 py-4 text-center">Status Conta</th>
-                                            <th className="px-6 py-4 text-right">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {filteredUsers.map((user) => (
-                                            <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{user.name || 'Sem nome'}</div>
-                                                    <div className="text-xs text-slate-500">{user.email}</div>
-                                                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.id}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.plano === 'pro'
-                                                        ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                                                        : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
-                                                        }`}>
-                                                        {user.plano || 'FREE'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.account_status === 'banned' ? 'bg-red-500/10 text-red-600' :
-                                                        user.account_status === 'suspended' ? 'bg-orange-500/10 text-orange-600' :
-                                                            'bg-emerald-500/10 text-emerald-600'
-                                                        }`}>
-                                                        {user.account_status === 'active' ? 'Ativo' :
-                                                            user.account_status === 'suspended' ? 'Suspenso' :
-                                                                user.account_status === 'banned' ? 'Banido' : 'Ativo'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => setEditingUser(user)}
-                                                        className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                </td>
+                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                        <Users className="w-5 h-5 text-slate-500" />
+                                        Base de Usuários
+                                    </h2>
+                                    <div className="relative w-full md:w-96">
+                                        <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por nome, email ou ID..."
+                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <select
+                                            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                // Handle filtering logic in the filter constant below
+                                                setSearchTerm(val); // Temporary, we'll refine filtering logic
+                                            }}
+                                        >
+                                            <option value="">Todos os Segmentos</option>
+                                            <option value="SEG_PRO">Assinantes PRO</option>
+                                            <option value="SEG_HIGH_VOL">Free (Alto Volume)</option>
+                                            <option value="SEG_INACTIVE">Inativo +30 dias</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto flex-1">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                            <tr>
+                                                <th className="px-6 py-4">Usuário / Email</th>
+                                                <th className="px-6 py-4 text-center">Atividade / Uso</th>
+                                                <th className="px-6 py-4 text-center">Plano</th>
+                                                <th className="px-6 py-4 text-center">Status Conta</th>
+                                                <th className="px-6 py-4 text-right">Ações</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {filteredUsers.map((user) => (
+                                                <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-semibold text-slate-900 dark:text-slate-100">{user.name || 'Sem nome'}</div>
+                                                        <div className="text-xs text-slate-500">{user.email}</div>
+                                                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.id}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-center">
+                                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                                {user.total_freights} fretes
+                                                            </div>
+                                                            <div className="text-[10px] text-emerald-600 font-bold">
+                                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(user.total_revenue || 0)}
+                                                            </div>
+                                                            <div className="text-[9px] text-slate-400 mt-1 uppercase font-bold">
+                                                                Último: {user.last_activity ? new Date(user.last_activity).toLocaleDateString() : 'Nunca'}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.plano === 'pro'
+                                                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                                                            : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                                                            }`}>
+                                                            {user.plano || 'FREE'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.account_status === 'banned' ? 'bg-red-500/10 text-red-600' :
+                                                            user.account_status === 'suspended' ? 'bg-orange-500/10 text-orange-600' :
+                                                                'bg-emerald-500/10 text-emerald-600'
+                                                            }`}>
+                                                            {user.account_status === 'active' ? 'Ativo' :
+                                                                user.account_status === 'suspended' ? 'Suspenso' :
+                                                                    user.account_status === 'banned' ? 'Banido' : 'Ativo'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button
+                                                            onClick={() => setEditingUser(user)}
+                                                            className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1354,104 +1459,202 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 </button>
                             </div>
 
-                            <div className="p-6 space-y-6">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Usuário</label>
-                                    <div className="text-slate-900 dark:text-slate-100 font-medium">{editingUser.name || 'Sem Nome'}</div>
-                                    <div className="text-sm text-slate-500">{editingUser.email}</div>
-                                </div>
+                            <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+                                {['DADOS', 'FINANCEIRO', 'SUPORTE', 'SEGURANCA'].map((tab: any) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setModalTab(tab)}
+                                        className={`px-4 py-3 text-[10px] font-black tracking-widest uppercase transition-all border-b-2 ${modalTab === tab
+                                            ? 'border-orange-500 text-orange-600 bg-white dark:bg-slate-900'
+                                            : 'border-transparent text-slate-400 hover:text-slate-600'
+                                            }`}
+                                    >
+                                        {tab === 'SEGURANCA' ? 'SEGURANÇA' : tab}
+                                    </button>
+                                ))}
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Plano de Acesso</label>
-                                        <select
-                                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                            value={editingUser.plano}
-                                            onChange={(e) => setEditingUser({ ...editingUser, plano: e.target.value as 'free' | 'pro', is_premium: e.target.value === 'pro' })}
-                                        >
-                                            <option value="free">Free</option>
-                                            <option value="pro">Pro (Manual)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Status da Conta</label>
-                                        <select
-                                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                            value={editingUser.account_status || 'active'}
-                                            onChange={(e) => setEditingUser({ ...editingUser, account_status: e.target.value as any })}
-                                        >
-                                            <option value="active">Ativa</option>
-                                            <option value="suspended">Suspensa</option>
-                                            <option value="banned">Banida</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <div className="p-6 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                                {modalTab === 'DADOS' && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-300">
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Perfil do Usuário</label>
+                                            <div className="text-slate-900 dark:text-slate-100 font-medium">{editingUser.name || 'Sem Nome'}</div>
+                                            <div className="text-sm text-slate-500">{editingUser.email}</div>
+                                            <div className="text-[10px] text-slate-400 font-mono mt-1">ID: {editingUser.id}</div>
+                                        </div>
 
-                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-slate-500 mb-6">
-                                    <p className="flex items-center gap-2 mb-2 font-bold text-orange-600">
-                                        <Lock className="w-3 h-3" />
-                                        Ações Sensíveis
-                                    </p>
-                                    <p>Alterações manuais de plano não geram cobrança. Para banir, selecione "Banida" no status.</p>
-                                </div>
-
-                                <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-                                    <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2 text-sm">
-                                        <Shield className="w-4 h-4 text-purple-600" />
-                                        Recuperação de Conta Assistida
-                                    </h4>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <button
-                                            onClick={() => handleRecoveryAction('send_password_reset')}
-                                            disabled={recoveryLoading}
-                                            className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
-                                        >
-                                            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors shrink-0">
-                                                <Lock className="w-4 h-4" />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Plano de Acesso</label>
+                                                <select
+                                                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                    value={editingUser.plano}
+                                                    onChange={(e) => setEditingUser({ ...editingUser, plano: e.target.value as 'free' | 'pro', is_premium: e.target.value === 'pro' })}
+                                                >
+                                                    <option value="free">Free</option>
+                                                    <option value="pro">Pro (Manual)</option>
+                                                </select>
                                             </div>
                                             <div>
-                                                <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Reset de Senha</span>
-                                                <span className="block text-xs text-slate-500">Enviar email de redefinição</span>
+                                                <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Status da Conta</label>
+                                                <select
+                                                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                    value={editingUser.account_status || 'active'}
+                                                    onChange={(e) => setEditingUser({ ...editingUser, account_status: e.target.value as any })}
+                                                >
+                                                    <option value="active">Ativa</option>
+                                                    <option value="suspended">Suspensa</option>
+                                                    <option value="banned">Banida</option>
+                                                </select>
                                             </div>
-                                        </button>
+                                        </div>
 
-                                        <button
-                                            onClick={() => handleRecoveryAction('force_logout')}
-                                            disabled={recoveryLoading}
-                                            className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
-                                        >
-                                            <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-full text-orange-600 group-hover:bg-orange-200 transition-colors shrink-0">
-                                                <Ban className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Forçar Logout</span>
-                                                <span className="block text-xs text-slate-500">Encerrar todas as sessões</span>
-                                            </div>
-                                        </button>
-                                    </div>
-
-                                    <div className="mt-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/30">
-                                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Correção de Email</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="email"
-                                                placeholder="Novo email do usuário"
-                                                className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"
-                                                value={newEmail}
-                                                onChange={(e) => setNewEmail(e.target.value)}
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Notas Internas (Apenas Admin)</label>
+                                            <textarea
+                                                className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                                                rows={4}
+                                                placeholder="Observações internas sobre o usuário, comportamentos ou negociações..."
+                                                value={editingUser.admin_notes || ''}
+                                                onChange={(e) => setEditingUser({ ...editingUser, admin_notes: e.target.value })}
                                             />
-                                            <button
-                                                onClick={() => handleRecoveryAction('update_user_email', { email: newEmail })}
-                                                disabled={!newEmail || recoveryLoading}
-                                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold disabled:opacity-50"
-                                            >
-                                                Alterar
-                                            </button>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
+                                {modalTab === 'FINANCEIRO' && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-300">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Volume Processado</p>
+                                                <p className="text-xl font-black text-emerald-700 dark:text-emerald-400">
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(editingUser.total_revenue || 0)}
+                                                </p>
+                                            </div>
+                                            <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total de Fretes</p>
+                                                <p className="text-xl font-black text-blue-700 dark:text-blue-400">{editingUser.total_freights}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                <DollarSign className="w-3 h-3" />
+                                                Comissões de Afiliado
+                                            </h4>
+                                            {commissions.filter(c => c.referrer_id === editingUser.id).length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {commissions.filter(c => c.referrer_id === editingUser.id).map(c => (
+                                                        <div key={c.id} className="flex justify-between items-center text-xs p-2 bg-white dark:bg-slate-900 rounded-lg shadow-sm">
+                                                            <span className="text-slate-500">{new Date(c.created_at).toLocaleDateString()}</span>
+                                                            <span className="font-bold text-slate-800 dark:text-white">R$ {c.amount}</span>
+                                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${c.status === 'paid' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-orange-500/10 text-orange-600'
+                                                                }`}>{c.status}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-slate-400 text-center py-4 italic">Nenhuma comissão registrada para este usuário.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {modalTab === 'SUPORTE' && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-300">
+                                        <h4 className="text-xs font-black text-slate-500 uppercase font-mono tracking-widest mb-4 flex items-center gap-2">
+                                            <MessageCircle className="w-4 h-4" />
+                                            Histórico de Chamados ({tickets.filter(t => t.user_id === editingUser.id).length})
+                                        </h4>
+                                        <div className="space-y-3">
+                                            {tickets.filter(t => t.user_id === editingUser.id).map(ticket => (
+                                                <div
+                                                    key={ticket.id}
+                                                    onClick={() => {
+                                                        setEditingTicket(ticket);
+                                                        setEditingUser(null);
+                                                    }}
+                                                    className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
+                                                >
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-xs font-bold text-slate-800 dark:text-white group-hover:text-orange-500 transition-colors">{ticket.title}</span>
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${ticket.status === 'open' ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'
+                                                            }`}>{ticket.status}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase">
+                                                        <span>{ticket.category}</span>
+                                                        <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {tickets.filter(t => t.user_id === editingUser.id).length === 0 && (
+                                                <div className="text-center py-12">
+                                                    <MessageCircle className="w-8 h-8 text-slate-200 dark:text-slate-800 mx-auto mb-2" />
+                                                    <p className="text-xs text-slate-400 italic">Este usuário nunca abriu um chamado.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {modalTab === 'SEGURANCA' && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-300">
+                                        <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/10">
+                                            <p className="text-xs font-bold text-red-600 flex items-center gap-2 mb-2">
+                                                <AlertTriangle className="w-4 h-4" />
+                                                Zona Crítica de Acesso
+                                            </p>
+                                            <p className="text-[10px] text-red-500 mb-4 opacity-80">Estas ações afetam diretamente a autorização do usuário e devem ser usadas apenas em casos de suporte crítico ou violação de termos.</p>
+
+                                            <div className="space-y-3">
+                                                <button
+                                                    onClick={() => handleRecoveryAction('send_password_reset')}
+                                                    disabled={recoveryLoading}
+                                                    className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                                                >
+                                                    <Lock className="w-4 h-4 text-blue-500" />
+                                                    <div>
+                                                        <span className="block text-xs font-bold text-slate-700 dark:text-slate-200">Reset de Senha Forçado</span>
+                                                        <span className="block text-[10px] text-slate-500">Envia link de redefinição para o email cadastrado</span>
+                                                    </div>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleRecoveryAction('force_logout')}
+                                                    disabled={recoveryLoading}
+                                                    className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                                                >
+                                                    <Ban className="w-4 h-4 text-orange-500" />
+                                                    <div>
+                                                        <span className="block text-xs font-bold text-slate-700 dark:text-slate-200">Revogar Sessões (Logout)</span>
+                                                        <span className="block text-[10px] text-slate-500">Desconecta o usuário de todos os dispositivos imediatamente</span>
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/50">
+                                            <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Correção de Email Principal</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="email"
+                                                    placeholder="Novo endereço@email.com"
+                                                    className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-orange-500"
+                                                    value={newEmail}
+                                                    onChange={(e) => setNewEmail(e.target.value)}
+                                                />
+                                                <button
+                                                    onClick={() => handleRecoveryAction('update_user_email', { email: newEmail })}
+                                                    disabled={!newEmail || recoveryLoading}
+                                                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[10px] font-black uppercase disabled:opacity-50"
+                                                >
+                                                    Alterar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
@@ -1465,7 +1668,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     onClick={() => handleUpdateUser({
                                         plano: editingUser.plano,
                                         is_premium: editingUser.plano === 'pro',
-                                        account_status: editingUser.account_status
+                                        account_status: editingUser.account_status,
+                                        admin_notes: editingUser.admin_notes
                                     })}
                                     disabled={isSavingUser}
                                     className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
