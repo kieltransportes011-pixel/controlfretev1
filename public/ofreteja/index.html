@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O FreteJá - Dashboard de Empresas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+
+<body>
+    <div class="app-shell">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                O Frete<span>Já</span>
+            </div>
+
+            <nav class="nav-group">
+                <span class="nav-label">Plataforma</span>
+                <button onclick="switchTab('new')" class="nav-item active">
+                    <span class="icon">📦</span> Nova Solicitação
+                </button>
+                <button onclick="switchTab('history')" class="nav-item">
+                    <span class="icon">📋</span> Meu Histórico
+                </button>
+                <button onclick="switchTab('settings')" class="nav-item">
+                    <span class="icon">⚙️</span> Configurações
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div id="userInfo" class="hidden">
+                    <p id="userEmail" style="font-size: 11px; opacity: 0.6; margin-bottom: 8px;"></p>
+                    <button onclick="handleLogout()" class="nav-item" style="color: var(--accent-rose);">
+                        <span class="icon">🚪</span> Sair
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="main-workspace">
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 id="pageTitle" style="font-size: 18px; font-weight: 800; color: var(--secondary);">Nova
+                        Solicitação</h1>
+                </div>
+                <div class="header-right">
+                    <div id="authStatusIndicator" style="display: flex; align-items: center; gap: 8px;">
+                        <span
+                            style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald);"></span>
+                        <span
+                            style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Sistema
+                            Ativo</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-scroller">
+                <!-- Auth View (Overlay style) -->
+                <div id="authView" class="card" style="max-width: 450px; margin: 60px auto;">
+                    <div class="tabs"
+                        style="display: flex; gap: 4px; background: #E5E7EB; padding: 4px; border-radius: 12px; margin-bottom: 24px;">
+                        <button onclick="switchAuthTab('login')" id="loginTab" class="active"
+                            style="flex: 1; padding: 10px; border: none; background: none; color: var(--text-muted); font-weight: 600; cursor: pointer; border-radius: 9px;">Login</button>
+                        <button onclick="switchAuthTab('signup')" id="signupTab"
+                            style="flex: 1; padding: 10px; border: none; background: none; color: var(--text-muted); font-weight: 600; cursor: pointer; border-radius: 9px;">Cadastrar</button>
+                    </div>
+
+                    <form id="authForm">
+                        <div id="signupFields" class="hidden">
+                            <div class="form-input-group">
+                                <label>Nome da Empresa</label>
+                                <input type="text" id="company_name" placeholder="Ex: Logística S.A.">
+                            </div>
+                            <div class="form-input-group">
+                                <label>WhatsApp / Tel</label>
+                                <input type="text" id="company_phone" placeholder="(00) 00000-0000">
+                            </div>
+                        </div>
+                        <div class="form-input-group">
+                            <label>E-mail Corporativo</label>
+                            <input type="email" id="email" required placeholder="seu@email.com">
+                        </div>
+                        <div class="form-input-group">
+                            <label>Senha</label>
+                            <input type="password" id="password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" id="authBtn"
+                            style="width: 100%; background: var(--primary); color: white; border: none; border-radius: 12px; padding: 16px; font-weight: 700; cursor: pointer;">Entrar
+                            no Portal</button>
+                    </form>
+                </div>
+
+                <!-- Dashboard View -->
+                <div id="dashboardView" class="hidden">
+                    <div class="workspace-grid">
+                        <!-- Form Area -->
+                        <div class="main-column">
+                            <div class="card animate-up">
+                                <form id="freightForm">
+                                    <!-- Step 1: Vehicle -->
+                                    <div class="form-step">
+                                        <div class="step-header">
+                                            <span class="step-num">1</span>
+                                            <span class="step-title">Categoria de Veículo</span>
+                                        </div>
+                                        <div class="category-grid" id="categoryGrid">
+                                            <!-- Injected via JS -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Step 2: Route -->
+                                    <div class="form-step">
+                                        <div class="step-header">
+                                            <span class="step-num">2</span>
+                                            <span class="step-title">Informações de Rota</span>
+                                        </div>
+
+                                        <div
+                                            style="background: var(--bg-main); padding: 24px; border-radius: 16px; margin-bottom: 24px;">
+                                            <label>Origem da Coleta</label>
+                                            <div
+                                                style="display: grid; grid-template-columns: 140px 1fr; gap: 12px; margin-bottom: 12px;">
+                                                <input type="text" name="origin_cep" placeholder="CEP" required>
+                                                <input type="text" name="origin_address"
+                                                    placeholder="Rua, Avenida, Praça..." required>
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px;">
+                                                <input type="text" name="origin_number" placeholder="Nº" required>
+                                                <input type="text" name="origin_complement"
+                                                    placeholder="Apto, Sala, Referência...">
+                                            </div>
+                                        </div>
+
+                                        <div id="stopsContainer"></div>
+
+                                        <button type="button" onclick="addStop()"
+                                            style="width: 100%; padding: 12px; border: 2px dashed var(--border); border-radius: 12px; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; margin-bottom: 24px; transition: all 0.2s;">
+                                            + ADICIONAR PARADA INTERMEDIÁRIA
+                                        </button>
+
+                                        <div style="background: var(--bg-main); padding: 24px; border-radius: 16px;">
+                                            <label>Destino Final</label>
+                                            <div
+                                                style="display: grid; grid-template-columns: 140px 1fr; gap: 12px; margin-bottom: 12px;">
+                                                <input type="text" name="delivery_cep" placeholder="CEP" required>
+                                                <input type="text" name="delivery_address"
+                                                    placeholder="Rua, Avenida, Praça..." required>
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px;">
+                                                <input type="text" name="delivery_number" placeholder="Nº" required>
+                                                <input type="text" name="delivery_complement"
+                                                    placeholder="Apto, Sala, Referência...">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Step 3: Details -->
+                                    <div class="form-step">
+                                        <div class="step-header">
+                                            <span class="step-num">3</span>
+                                            <span class="step-title">Detalhes da Carga</span>
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                            <div class="form-input-group">
+                                                <label>Peso Total (kg)</label>
+                                                <input type="number" id="load_weight" name="weight" placeholder="Ex: 50"
+                                                    required>
+                                            </div>
+                                            <div class="form-input-group">
+                                                <label>Data da Coleta</label>
+                                                <input type="date" id="collection_date" name="date" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-input-group">
+                                            <label>Contato no Local (Tel/WhatsApp)</label>
+                                            <input type="text" name="contact_phone" placeholder="(00) 00000-0000"
+                                                required>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" id="calcBtn" onclick="calculateEstimate()"
+                                        style="width: 100%; background: var(--secondary); color: white; border: none; border-radius: 12px; padding: 18px; font-weight: 800; cursor: pointer; transition: all 0.2s;">
+                                        CALCULAR VALOR ESTIMADO
+                                    </button>
+                                    <button type="submit" id="submitBtn" class="hidden"
+                                        style="width: 100%; background: var(--primary); color: white; border: none; border-radius: 12px; padding: 18px; font-weight: 800; cursor: pointer;">
+                                        SOLICITAR AGHORA
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar Context Area -->
+                        <div class="side-column">
+                            <div class="side-context">
+                                <div id="map"
+                                    style="height: 300px; width: 100%; border-radius: 20px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 24px;">
+                                </div>
+
+                                <div id="estimateResult" class="hidden summary-card animate-up">
+                                    <p
+                                        style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                                        Valor Estimado</p>
+                                    <div id="estimatedValueDisplay" class="estimate-value">R$ 0,00</div>
+                                    <p
+                                        style="font-size: 10px; color: var(--text-muted); line-height: 1.4; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
+                                        * Este é um valor referencial. O custo final será confirmado pelo
+                                        <strong>ControlFrete</strong> após análise técnica.
+                                    </p>
+                                </div>
+
+                                <div class="summary-card">
+                                    <h3 style="font-size: 14px; font-weight: 800; margin-bottom: 16px;">Próximas Passos
+                                    </h3>
+                                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                                        <div style="display: flex; gap: 12px; font-size: 12px;">
+                                            <span style="color: var(--primary);">01</span>
+                                            <p color: var(--text-muted)>Você solicita o frete pelo portal</p>
+                                        </div>
+                                        <div style="display: flex; gap: 12px; font-size: 12px;">
+                                            <span style="color: var(--primary);">02</span>
+                                            <p color: var(--text-muted)>O ControlFrete analisa a carga e rota</p>
+                                        </div>
+                                        <div style="display: flex; gap: 12px; font-size: 12px;">
+                                            <span style="color: var(--primary);">03</span>
+                                            <p color: var(--text-muted)>Motoristas qualificados são acionados</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Tab (Hidden by default) -->
+                    <div id="historyView" class="hidden">
+                        <div class="card animate-up">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+                                <div>
+                                    <h2>Minhas Solicitações</h2>
+                                    <p class="subtitle" style="margin-bottom: 0;">Acompanhe o status e histórico de
+                                        todos os seus pedidos.</p>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn-secondary"
+                                        style="width: auto; padding: 8px 16px; font-size: 12px;">🔄 Atualizar</button>
+                                </div>
+                            </div>
+                            <div id="myRequestsContainer" class="requests-list"
+                                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Success Message -->
+                <div id="successMessage" class="hidden"
+                    style="text-align: center; max-width: 500px; margin: 80px auto;">
+                    <div
+                        style="width: 80px; height: 80px; background: var(--accent-emerald); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 24px; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);">
+                        ✓</div>
+                    <h2 style="font-size: 24px; font-weight: 900; color: var(--secondary); margin-bottom: 12px;">
+                        Solicitação Enviada!</h2>
+                    <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 32px;">Sua carga já está em
+                        análise pelo time do <strong>ControlFrete</strong>. Você será notificado assim que o status
+                        mudar.</p>
+                    <button onclick="location.reload()" class="btn-primary"
+                        style="background: var(--secondary); padding: 16px 32px; display: inline-block; width: auto;">Fazer
+                        Nova Solicitação</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
