@@ -59,6 +59,8 @@ export default function App() {
     description: ''
   });
   const [showFreightNotice, setShowFreightNotice] = useState(false);
+  const [initialAuthView, setInitialAuthView] = useState<'LOGIN' | 'UPDATE_PASSWORD'>('LOGIN');
+  const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false);
 
 
   const handleOpenUpgrade = (reason: 'LIMIT' | 'FEATURE' | 'GENERAL' = 'GENERAL') => {
@@ -95,15 +97,28 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Handle standard password recovery link
+      if (event === 'PASSWORD_RECOVERY') {
+        setInitialAuthView('UPDATE_PASSWORD');
+        setShowLanding(false);
+        // Change URL to /reset-password for a cleaner UX
+        window.history.replaceState(null, '', '/reset-password');
+      }
+
       if (session?.user) {
-        // Optionally refresh profile
         fetchUserProfile(session.user.id);
       } else {
         setCurrentUser(null);
         setInitializing(false);
       }
     });
+
+    // Check if we are on /reset-password manually (on refresh)
+    if (window.location.pathname === '/reset-password') {
+      setInitialAuthView('UPDATE_PASSWORD');
+      setShowLanding(false);
+    }
 
     return () => subscription.unsubscribe();
   }, []);
@@ -459,7 +474,68 @@ Obs: ${of.description || 'Sem observações'}`;
     if (showLanding) {
       return <LandingPage onLogin={() => setShowLanding(false)} />;
     }
-    return <Auth onLogin={setCurrentUser} onBack={() => setShowLanding(true)} />;
+    return (
+      <Auth
+        onLogin={setCurrentUser}
+        onBack={() => {
+          setShowLanding(true);
+          setInitialAuthView('LOGIN');
+          window.history.replaceState(null, '', '/');
+        }}
+        initialView={initialAuthView}
+      />
+    );
+  }
+
+  // --- Visual Barrier for Unconfirmed New Users ---
+  // Mandatory confirmation only for users registered AFTER Jan 16, 2026
+  const CUTOFF_DATE = new Date('2026-01-16T00:00:00Z').getTime();
+  const userCreatedAt = currentUser ? new Date(currentUser.createdAt).getTime() : 0;
+
+  // Checking auth metadata for confirmation status
+  // Note: currentUser.email_confirmed_at is not standard in our User type, 
+  // we check via supabase session or metadata if needed, but let's assume we fetch it or check it here.
+  // Pro-tip: Supabase user object has email_confirmed_at.
+
+  const isNewUser = userCreatedAt > CUTOFF_DATE;
+  // We'll check the session directly for confidence
+  const [isEmailConfirmed, setIsEmailConfirmed] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user && !user.email_confirmed_at && isNewUser) {
+        setIsEmailConfirmed(false);
+      } else {
+        setIsEmailConfirmed(true);
+      }
+    });
+  }, [currentUser, isNewUser]);
+
+  if (!isEmailConfirmed && isNewUser && view !== 'PAYMENT') {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center z-[9999]">
+        <div className="max-w-md bg-white rounded-3xl p-10 shadow-2xl animate-scaleUp">
+          <div className="bg-amber-100 text-amber-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShieldAlert size={40} />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-4 uppercase tracking-tight">Confirme seu E-mail</h2>
+          <p className="text-slate-600 mb-8 leading-relaxed">
+            Para garantir a segurança da sua conta, você precisa confirmar seu endereço de e-mail antes de acessar o sistema.
+          </p>
+          <div className="space-y-4">
+            <Button fullWidth onClick={() => window.location.reload()}>
+              JÁ CONFIRMEI, ATUALIZAR
+            </Button>
+            <button
+              onClick={handleLogout}
+              className="text-slate-400 hover:text-red-500 text-xs font-bold uppercase tracking-widest transition-colors"
+            >
+              Sair da conta
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Blocking Paywall removed to comply with "No forced redirect" rule.
