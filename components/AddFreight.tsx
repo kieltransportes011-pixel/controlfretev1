@@ -5,7 +5,7 @@ import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
 import { CalendarPicker } from './CalendarPicker';
-import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
 
 interface AddFreightProps {
   settings: AppSettings;
@@ -28,6 +28,13 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCanc
   const [companyPercent, setCompanyPercent] = useState(initialData?.companyPercent || settings.defaultCompanyPercent);
   const [driverPercent, setDriverPercent] = useState(initialData?.driverPercent || settings.defaultDriverPercent);
   const [reservePercent, setReservePercent] = useState(initialData?.reservePercent || settings.defaultReservePercent);
+
+  // Advanced Details for Receipt
+  const [origin, setOrigin] = useState(initialData?.origin || '');
+  const [destination, setDestination] = useState(initialData?.destination || '');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'PIX');
+  const [clientDoc, setClientDoc] = useState(initialData?.clientDoc || '');
 
   // Calculation Results
   const [calculated, setCalculated] = useState({
@@ -93,7 +100,12 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCanc
       status,
       receivedValue: received,
       pendingValue: pending,
-      dueDate: pending > 0 ? dueDate : undefined
+      dueDate: pending > 0 ? dueDate : undefined,
+      origin,
+      destination,
+      description,
+      paymentMethod,
+      clientDoc
     };
 
     setIsSuccess(true);
@@ -240,6 +252,78 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, onSave, onCanc
                 </div>
               </div>
             )}
+          </Card>
+        </div>
+
+        {/* Advanced Details for Receipt */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Detalhes para o Recibo <span className="text-[10px] font-normal lowercase">(Opcional)</span>
+          </h3>
+          <Card className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Origem</label>
+                <input
+                  type="text"
+                  value={origin}
+                  onChange={(e) => setOrigin(e.target.value)}
+                  placeholder="Cidade / Endereço de Coleta"
+                  className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Destino</label>
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="Cidade / Endereço de Entrega"
+                  className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Descrição da Carga / Serviço</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ex: Transporte de móveis residenciais, frete de 50 sacos de cimento, etc."
+                rows={2}
+                className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Forma de Pagamento</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                >
+                  <option value="PIX">Pix</option>
+                  <option value="DINHEIRO">Dinheiro</option>
+                  <option value="CARTÃO DE CRÉDITO">Cartão de Crédito</option>
+                  <option value="CARTÃO DE DÉBITO">Cartão de Débito</option>
+                  <option value="TRANSFERÊNCIA">Transferência</option>
+                  <option value="BOLETO">Boleto</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">CPF/CNPJ do Cliente</label>
+                <input
+                  type="text"
+                  value={clientDoc}
+                  onChange={(e) => setClientDoc(e.target.value)}
+                  placeholder="000.000.000-00"
+                  className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                />
+              </div>
+            </div>
           </Card>
         </div>
 

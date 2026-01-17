@@ -20,6 +20,13 @@ export interface Freight {
   receivedValue: number; // Amount actually received (Cash flow)
   pendingValue: number;  // Amount to receive (Receivable)
   dueDate?: string;      // Date to receive the pending amount
+
+  // Advanced Receipt Details
+  origin?: string;
+  destination?: string;
+  description?: string;
+  paymentMethod?: string;
+  clientDoc?: string;
 }
 
 export interface OFretejaFreight {

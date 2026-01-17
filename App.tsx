@@ -271,7 +271,12 @@ export default function App() {
         totalValue: f.total_value,
         receivedValue: f.received_value,
         pendingValue: f.pending_value,
-        dueDate: f.due_date
+        dueDate: f.due_date,
+        origin: f.origin,
+        destination: f.destination,
+        description: f.description,
+        paymentMethod: f.payment_method,
+        clientDoc: f.client_doc
       } as Freight)));
     }
 
@@ -401,7 +406,10 @@ Obs: ${of.description || 'Sem observações'}`;
         status: 'PENDING',
         received_value: 0,
         pending_value: total,
-        description: detailedDesc
+        description: detailedDesc,
+        origin: `${of.origin_address}, ${of.origin_number}`,
+        destination: `${of.delivery_address}, ${of.delivery_number}`,
+        payment_method: 'OUTRO'
       }]);
 
       if (insertError) throw insertError;
@@ -671,6 +679,11 @@ Obs: ${of.description || 'Sem observações'}`;
                   received_value: f.receivedValue,
                   pending_value: f.pendingValue,
                   due_date: f.dueDate,
+                  origin: f.origin,
+                  destination: f.destination,
+                  description: f.description,
+                  payment_method: f.paymentMethod,
+                  client_doc: f.clientDoc
                 }).eq('id', f.id);
                 if (error) throw error;
               } else {
@@ -686,7 +699,12 @@ Obs: ${of.description || 'Sem observações'}`;
                   status: f.status,
                   received_value: f.receivedValue,
                   pending_value: f.pendingValue,
-                  due_date: f.dueDate
+                  due_date: f.dueDate,
+                  origin: f.origin,
+                  destination: f.destination,
+                  description: f.description,
+                  payment_method: f.paymentMethod,
+                  client_doc: f.clientDoc
                 }]);
                 if (error) throw error;
               }
