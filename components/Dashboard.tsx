@@ -5,6 +5,10 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { TrendingUp, Truck, Wallet, Briefcase, Plus, Calendar, Minus, X, Clock, Target, ArrowRight, Calculator, Sparkles, AlertTriangle, Zap, Shield, Gift, Users } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, LineChart, Line
+} from 'recharts';
 
 interface DashboardProps {
   user: User;
@@ -166,6 +170,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
       .slice(0, 5);
   }, [freights, expenses, extraIncomes]);
+
+  const chartData = useMemo(() => {
+    const last30Days = Array.from({ length: 15 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (14 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    return last30Days.map(date => {
+      const dayIncomes = freights
+        .filter(f => f.date === date)
+        .reduce((sum, f) => sum + f.totalValue, 0);
+
+      const dayExpenses = expenses
+        .filter(e => e.date === date)
+        .reduce((sum, e) => sum + e.value, 0);
+
+      return {
+        name: formatDate(date).split('/')[0] + '/' + formatDate(date).split('/')[1],
+        entrada: dayIncomes,
+        saida: dayExpenses,
+      };
+    });
+  }, [freights, expenses]);
+
+  const distributionData = [
+    { name: 'Empresa', value: Math.max(0, stats.totalCompany), color: '#3B82F6' },
+    { name: 'Motorista', value: Math.max(0, stats.totalDriver), color: '#10B981' },
+    { name: 'Reserva', value: Math.max(0, stats.totalReserve), color: '#F59E0B' },
+  ];
 
   const pendingPercentage = stats.totalPending > 0
     ? Math.min(100, Math.round((receivableStats.next7Total / stats.totalPending) * 100))
@@ -333,6 +367,135 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           </div>
         </Card>
       )}
+
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Chart */}
+        <Card className="lg:col-span-2 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden p-6">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">Fluxo de Caixa</h3>
+              <p className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Últimos 15 dias</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-brand" />
+                <span className="text-[10px] font-black uppercase text-slate-400">Entradas</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-accent-error" />
+                <span className="text-[10px] font-black uppercase text-slate-400">Saídas</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[240px] w-full -ml-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorEntrada" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorSaida" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.3} />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 9, fontWeight: 700, fill: '#94A3B8' }}
+                  dy={10}
+                />
+                <YAxis hide />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '16px',
+                    border: 'none',
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                    fontSize: '11px',
+                    fontWeight: 800
+                  }}
+                  itemStyle={{ padding: '2px 0' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="entrada"
+                  stroke="#3B82F6"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorEntrada)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="saida"
+                  stroke="#EF4444"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  fillOpacity={1}
+                  fill="url(#colorSaida)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Distribution Chart */}
+        <Card className="border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 flex flex-col items-center justify-center">
+          <div className="w-full text-left mb-4">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">Divisão de Saldo</h3>
+            <p className="text-[10px] font-roboto font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Porcentagem Real</p>
+          </div>
+
+          <div className="h-[180px] w-full relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={distributionData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={75}
+                  paddingAngle={8}
+                  dataKey="value"
+                >
+                  {distributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} cornerRadius={4} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Center Label */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
+              <span className="text-lg font-black text-slate-800 dark:text-white">
+                {formatCurrency(stats.totalCompany + stats.totalDriver + stats.totalReserve)}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 w-full gap-2 mt-4">
+            {distributionData.map((item, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">{item.name}</span>
+                </div>
+                <span className="text-[11px] font-black text-slate-800 dark:text-white tabular-nums">
+                  {((item.value / (stats.totalCompany + stats.totalDriver + stats.totalReserve || 1)) * 100).toFixed(0)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
 
       {/* Receivables Widget */}
       {stats.totalPending > 0 && (
