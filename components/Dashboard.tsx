@@ -666,9 +666,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
 
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`w - 14 h - 14 rounded - full flex items - center justify - center text - white shadow - xl shadow - brand / 30 transition - all duration - 300 ${isMenuOpen ? 'bg-slate-800 rotate-45 scale-90' : 'bg-brand rotate-0 hover:scale-110'} `}
+          className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl shadow-brand/30 transition-all duration-300 ${isMenuOpen ? 'bg-slate-800 rotate-45 scale-90' : 'bg-brand rotate-0 hover:scale-110'}`}
         >
-          <Plus className="w-7 h-7" />
+          <Plus size={28} color="white" strokeWidth={3} />
         </button>
       </div>
 
