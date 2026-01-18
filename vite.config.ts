@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['logo-control-frete.png'],
+        includeAssets: ['pwa-icon-512.png', 'pwa-icon-192.png'],
         manifest: {
           name: 'Control Frete',
           short_name: 'ControlFrete',
@@ -24,17 +24,17 @@ export default defineConfig(({ mode }) => {
           background_color: '#F4F6F8',
           icons: [
             {
-              src: 'logo-control-frete.png',
+              src: 'pwa-icon-192.png',
               sizes: '192x192',
               type: 'image/png'
             },
             {
-              src: 'logo-control-frete.png',
+              src: 'pwa-icon-512.png',
               sizes: '512x512',
               type: 'image/png'
             },
             {
-              src: 'logo-control-frete.png',
+              src: 'pwa-icon-512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable'
