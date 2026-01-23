@@ -33,20 +33,27 @@ serve(async (req) => {
             throw new Error('Missing Authorization Header');
         }
 
+        // Create Client
         const supabase = createClient(
             supabaseUrl,
             supabaseAnonKey,
             { global: { headers: { Authorization: authHeader } } }
         );
 
+        // Get User
         const {
             data: { user },
             error: userError
         } = await supabase.auth.getUser();
 
-        if (userError || !user) {
-            console.error("Auth Error:", userError);
-            throw new Error('User not found or unauthorized');
+        if (userError) {
+            console.error("Supabase Auth Error:", JSON.stringify(userError));
+            throw new Error('Supabase Auth Failed: ' + userError.message);
+        }
+
+        if (!user) {
+            console.error("User is null after auth.getUser()");
+            throw new Error('User not found');
         }
 
         const reqData = await req.json().catch(() => ({}));
