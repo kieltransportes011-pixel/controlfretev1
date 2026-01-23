@@ -205,27 +205,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
     setLoading(true);
 
     try {
-      // 2. Auth Creation
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password
-      });
+      // 1.5 Resolve Referral Code (Before Signup)
+      let finalReferrerId = null;
+      const params = new URLSearchParams(window.location.search);
+      const refCode = params.get('ref');
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        const userId = authData.user.id;
-
-        // Se o Supabase exigir confirmação, identities ou session dirão.
-        // Se session for null, provavelmente enviou o email.
-        const needsConfirmation = !authData.session;
-
-        // 3. Resolve Referral Code if present
-        let finalReferrerId = null;
-        const params = new URLSearchParams(window.location.search);
-        const refCode = params.get('ref');
-
-        if (refCode) {
+      if (refCode) {
+        try {
           // Check if it's a UUID (Legacy) or a Short Code (New)
           const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(refCode);
 
@@ -243,35 +229,35 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               finalReferrerId = refProfile.id;
             }
           }
-
-          // Anti-self-referral check
-          if (finalReferrerId === userId) {
-            finalReferrerId = null;
-          }
+        } catch (e) {
+          console.warn("Could not resolve referral", e);
         }
+      }
 
-        // 4. Profile Creation (Manual & Explicit)
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: formData.email,
+      // 2. Auth Creation
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
             name: formData.name,
             cpf: formData.cpf,
-            plano: 'FREE', // Enforce logic
-            referrer_id: finalReferrerId
-          });
-
-        if (profileError) {
-          // If it's a "duplicate" error, handle gracefully.
-          if (profileError.code === '23505') {
-            throw new Error('Já existe um usuário com estes dados.');
+            referrer_id: finalReferrerId || undefined
           }
-          throw profileError;
         }
+      });
 
-        // 4. Settings Creation (Optional but good)
-        await supabase.from('settings').insert({ user_id: userId });
+      if (authError) throw authError;
+
+      if (authData.user) {
+        const userId = authData.user.id;
+
+        // Se o Supabase exigir confirmação, identities ou session dirão.
+        // Se session for null, provavelmente enviou o email.
+        const needsConfirmation = !authData.session;
+
+        // Profile and Settings are handled by 'handle_new_user' trigger on auth.users insert.
+        // No need to manually insert here.
 
         // 5. Success
         const newUser: User = {
