@@ -285,7 +285,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-[var(--industrial-border)]">
                     <StatBlock value="+5k" label="Motoristas" icon={Users} />
                     <StatBlock value="99.9%" label="Uptime" icon={Cpu} />
-                    <StatBlock value="R$ 12M" label="Processados" icon={Database} />
+                    <StatBlock value="+15k" label="Viagens" icon={CheckCircle} />
                     <StatBlock value="24/7" label="Segurança" icon={Shield} />
                 </div>
             </div>
