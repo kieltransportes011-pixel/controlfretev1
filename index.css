@@ -8,11 +8,23 @@
   font-weight: 400;
   --bg-main: #f8fafc;
   --bg-card: #ffffff;
+
+  /* Industrial Theme */
+  --industrial-black: #050505;
+  --industrial-surface: #0f0f0f;
+  --industrial-border: #262626;
+  --precision-accent: #3b82f6;
+  /* Default Blue */
 }
 
 .dark {
   --bg-main: #020617;
   --bg-card: #0f172a;
+
+  /* Dark Mode Overrides if needed, but Industrial is dark by default usually */
+  --industrial-black: #000000;
+  --industrial-surface: #0a0a0a;
+  --industrial-border: #333333;
 }
 
 body {

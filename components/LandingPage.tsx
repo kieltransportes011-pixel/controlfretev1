@@ -1,568 +1,413 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Truck,
-    TrendingUp,
-    Target,
-    Calendar,
     Shield,
-    Smartphone,
-    CheckCircle,
+    Users,
     ArrowRight,
-    Layout,
+    CheckCircle,
     Lock,
-    FileText,
-    BarChart,
-    AlertCircle,
-    Eye,
     Menu,
     X,
-    Star,
-    Zap,
-    Users,
-    ChevronDown,
-    MapPin,
-    Wallet,
-    Sparkles,
-    Clock
+    Clock,
+    Crosshair,
+    Cpu,
+    Database,
+    Activity,
+    DollarSign,
+    Zap
 } from 'lucide-react';
-import { Button } from './Button';
-import { PricingCard } from './PricingCard';
 
 interface LandingPageProps {
     onLogin: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
-    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-    const [spotsRemaining, setSpotsRemaining] = React.useState(13);
+// ---- DESIGN UTILS ----
 
-    // Simula a escassez diminuindo uma vaga eventualmente
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            setSpotsRemaining(prev => prev > 7 ? prev - 1 : prev);
-        }, 30000);
+const CornerMarker = ({ className = "" }) => (
+    <div className={`absolute w-3 h-3 border-2 border-[var(--precision-accent)] ${className}`} />
+);
+
+const PhoneMockup = ({ src, alt, className = "" }: { src: string, alt: string, className?: string }) => (
+    <div className={`relative mx-auto w-[280px] sm:w-[320px] bg-[#050505] rounded-[2.5rem] border-[8px] border-[#1a1a1a] shadow-2xl overflow-hidden ring-1 ring-white/10 ${className}`}>
+        <img src={src} alt={alt} className="w-full h-auto object-cover block" />
+        {/* Reflection */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none rounded-[2rem]" />
+    </div>
+);
+
+// ---- COMPONENTS ----
+
+const Navbar = ({ onLogin, isMenuOpen, setIsMenuOpen, scrollToSection }: any) => (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505]/80 backdrop-blur-md border-b border-[var(--industrial-border)]">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[var(--precision-accent)] flex items-center justify-center">
+                    <Truck className="text-white w-5 h-5" strokeWidth={2.5} />
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-white font-black leading-none tracking-tighter text-lg">CONTROL</span>
+                    <span className="text-[var(--precision-accent)] text-[10px] uppercase tracking-[0.3em] font-bold leading-none">System V1</span>
+                </div>
+            </div>
+
+            {/* Desktop Nav */}
+            <div className="hidden md:flex items-center gap-10">
+                {['Recursos', 'Planos', 'Tecnologia'].map((item) => (
+                    <button
+                        key={item}
+                        onClick={() => scrollToSection(item.toLowerCase())}
+                        className="text-gray-400 hover:text-white uppercase text-[10px] font-bold tracking-[0.2em] transition-colors"
+                    >
+                        {item}
+                    </button>
+                ))}
+
+                <div className="h-4 w-px bg-[var(--industrial-border)]"></div>
+
+                <button
+                    onClick={onLogin}
+                    className="bg-white text-black hover:bg-[var(--precision-accent)] hover:text-white px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                >
+                    Acessar Console
+                </button>
+            </div>
+
+            {/* Mobile Toggle */}
+            <button className="md:hidden text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                {isMenuOpen ? <X /> : <Menu />}
+            </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+            {isMenuOpen && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="md:hidden bg-[#050505] border-b border-[var(--industrial-border)]"
+                >
+                    <div className="p-6 flex flex-col gap-4">
+                        <button onClick={onLogin} className="w-full bg-[var(--precision-accent)] text-white py-4 text-xs font-black uppercase tracking-widest">
+                            Inicializar Sistema
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    </nav>
+);
+
+const Hero = ({ onLogin, onScrollToPlans }: any) => {
+    return (
+        <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#050505] pt-28 pb-20">
+            {/* Grid Background */}
+            <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#111_1px,transparent_1px),linear-gradient(to_bottom,#111_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+
+            <div className="relative z-10 max-w-7xl mx-auto px-4 w-full grid lg:grid-cols-2 gap-12 items-center">
+
+                <div className="flex flex-col items-center lg:items-start text-center lg:text-left order-2 lg:order-1">
+                    {/* Tech Badge */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="mb-8 flex items-center gap-3 border border-[var(--industrial-border)] bg-[#0a0a0a] px-4 py-2"
+                    >
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-mono">
+                            System Operational • V1.1
+                        </span>
+                    </motion.div>
+
+                    {/* Massive Typography */}
+                    <div className="relative">
+                        <motion.h1
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                            className="text-5xl sm:text-6xl md:text-8xl font-black text-white leading-[0.9] tracking-tighter"
+                        >
+                            CONTROL
+                            <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-800">
+                                FRETE
+                            </span>
+                        </motion.h1>
+                    </div>
+
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                        className="mt-8 text-gray-400 md:text-xl max-w-xl font-light leading-relaxed"
+                    >
+                        Ferramenta de precisão para gestão logística. <br className="hidden md:block" />
+                        Elimine a ineficiência. Maximize o lucro.
+                    </motion.p>
+
+                    {/* Industrial Buttons */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.7 }}
+                        className="mt-10 flex flex-col sm:flex-row gap-6 w-full sm:w-auto"
+                    >
+                        <button
+                            onClick={onLogin}
+                            className="group relative px-8 py-4 bg-[var(--precision-accent)] text-white overflow-hidden"
+                        >
+                            <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
+                            <div className="flex items-center gap-4 relative z-10">
+                                <span className="text-xs font-black uppercase tracking-[0.2em]">Iniciar Sistema</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={onScrollToPlans}
+                            className="px-8 py-4 bg-transparent border border-gray-700 text-gray-300 hover:border-white hover:text-white transition-colors"
+                        >
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">Ver Planos</span>
+                        </button>
+                    </motion.div>
+                </div>
+
+                {/* Hero Image - Phone Mockup */}
+                <div className="order-1 lg:order-2 flex justify-center perspective-1000">
+                    <motion.div
+                        initial={{ opacity: 0, rotateY: 15, x: 50 }}
+                        animate={{ opacity: 1, rotateY: -5, x: 0 }}
+                        transition={{ duration: 1, delay: 0.4 }}
+                        className="relative"
+                    >
+                        <PhoneMockup src="/assets/landing/dashboard.jpg" alt="Dashboard Principal" className="shadow-[0_0_80px_-20px_var(--precision-accent)]" />
+
+                        {/* Floating elements */}
+                        <motion.div
+                            initial={{ opacity: 0, x: -50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 1 }}
+                            className="absolute -bottom-10 -left-12 bg-[#0a0a0a] border border-[var(--industrial-border)] p-4 pr-8 hidden md:block"
+                        >
+                            <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Resultado Mensal</div>
+                            <div className="text-2xl font-black text-white">+ R$ 10.7k</div>
+                            <CornerMarker className="bottom-0 left-0 border-b-2 border-l-2" />
+                        </motion.div>
+                    </motion.div>
+                </div>
+            </div>
+
+            {/* Scroll Indicator */}
+            <motion.div
+                animate={{ y: [0, 10, 0] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50"
+            >
+                <span className="text-[9px] uppercase tracking-[0.3em] text-white rotate-90 origin-left translate-x-3 mb-4">
+                    Scroll
+                </span>
+                <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-white to-transparent" />
+            </motion.div>
+        </section>
+    );
+};
+
+const StatBlock = ({ value, label, icon: Icon }: any) => (
+    <div className="relative group p-8 bg-[#0a0a0a] border border-[var(--industrial-border)] hover:border-gray-600 transition-colors">
+        <CornerMarker className="top-0 left-0 border-t-2 border-l-2 w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <CornerMarker className="bottom-0 right-0 border-b-2 border-r-2 w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+        <div className="flex items-start justify-between mb-4">
+            <Icon className="w-6 h-6 text-gray-600 group-hover:text-[var(--precision-accent)] transition-colors" />
+            <Activity className="w-4 h-4 text-green-900 group-hover:text-green-500 animate-pulse" />
+        </div>
+
+        <div className="text-3xl font-black text-white mb-2 tracking-tighter">{value}</div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500">{label}</div>
+    </div>
+);
+
+const FeatureRow = ({ title, desc, icon: Icon, imageSrc, reversed = false }: any) => (
+    <div className={`flex flex-col md:flex-row gap-16 items-center py-20 ${reversed ? 'md:flex-row-reverse' : ''}`}>
+        <div className="w-full md:w-1/2 flex justify-center">
+            <div className="relative">
+                <div className="absolute inset-0 bg-[var(--precision-accent)]/20 blur-[60px] rounded-full" />
+                {imageSrc ? (
+                    <PhoneMockup src={imageSrc} alt={title} className="rotate-3 md:rotate-6 hover:rotate-0 transition-all duration-500" />
+                ) : (
+                    <div className="relative aspect-video bg-[#0a0a0a] border border-[var(--industrial-border)] p-2 w-[320px]">
+                        <div className="w-full h-full bg-[#111] flex items-center justify-center text-gray-700">No Image</div>
+                    </div>
+                )}
+            </div>
+        </div>
+        <div className="w-full md:w-1/2 max-w-lg">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 border border-gray-800 flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-[var(--precision-accent)]" />
+                </div>
+                <div className="h-px w-12 bg-gray-800" />
+            </div>
+            <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-4">{title}</h3>
+            <p className="text-gray-400 leading-relaxed text-lg">{desc}</p>
+        </div>
+    </div>
+);
+
+export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [spotsRemaining, setSpotsRemaining] = useState(13);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setSpotsRemaining(prev => prev > 7 ? prev - 1 : prev), 30000);
         return () => clearTimeout(timer);
     }, []);
 
-    const scrollToSection = (id: string) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-            setIsMenuOpen(false);
-        }
-    };
-
-    const FeatureCard = ({ icon: Icon, title, description, color }: { icon: any, title: string, description: string, color: string }) => (
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-            <div className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center mb-6`}>
-                <Icon className="w-7 h-7" />
-            </div>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3 uppercase tracking-tight">{title}</h3>
-            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{description}</p>
-        </div>
-    );
-
-    const SectionImage = ({ src, alt, caption }: { src: string, alt: string, caption?: string }) => (
-        <div className="relative group">
-            <div className="absolute -inset-4 bg-gradient-to-r from-brand/20 to-brand-secondary/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative rounded-[2.5rem] border-[10px] border-slate-900 overflow-hidden shadow-2xl bg-white">
-                <img src={src} alt={alt} className="w-full h-auto" />
-            </div>
-            {caption && (
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 whitespace-nowrap animate-bounce-slow">
-                    <p className="text-xs font-black text-brand uppercase tracking-widest">{caption}</p>
-                </div>
-            )}
-        </div>
-    );
+    const scrollToPlans = () => document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth' });
 
     return (
-        <div className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden font-sans selection:bg-brand selection:text-white">
-            {/* Promo Banner */}
-            <div className="bg-red-600 text-white px-4 py-2 text-center text-[10px] sm:text-xs font-black uppercase tracking-widest relative z-[60] animate-pulse">
-                <div className="flex items-center justify-center gap-2">
-                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>Oferta Relâmpago: Plano Anual por apenas R$ 34,99 (Restam {spotsRemaining} vagas)</span>
+        <div className="bg-[#050505] min-h-screen text-gray-300 font-sans selection:bg-[var(--precision-accent)] selection:text-white">
+
+            <Navbar
+                onLogin={onLogin}
+                isMenuOpen={isMenuOpen}
+                setIsMenuOpen={setIsMenuOpen}
+                scrollToSection={(id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
+            />
+
+            <Hero onLogin={onLogin} onScrollToPlans={scrollToPlans} />
+
+            {/* Stats Band */}
+            <div className="border-y border-[var(--industrial-border)] bg-[#080808]">
+                <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-[var(--industrial-border)]">
+                    <StatBlock value="+5k" label="Motoristas" icon={Users} />
+                    <StatBlock value="99.9%" label="Uptime" icon={Cpu} />
+                    <StatBlock value="R$ 12M" label="Processados" icon={Database} />
+                    <StatBlock value="24/7" label="Segurança" icon={Shield} />
                 </div>
             </div>
 
-            {/* Navbar */}
-            <nav className="fixed top-8 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-20">
-                        <div className="flex items-center gap-2">
-                            <img src="/logo-official.png" alt="Control Frete" className="h-10 w-auto object-contain" />
-                            <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter hidden sm:block">CONTROL <span className="text-brand">FRETE</span></span>
-                        </div>
-
-                        <div className="hidden md:flex items-center gap-8">
-                            <button onClick={() => scrollToSection('features')} className="text-sm font-bold text-slate-500 hover:text-brand transition-colors uppercase tracking-widest">Recursos</button>
-                            <button onClick={() => scrollToSection('plans')} className="text-sm font-bold text-slate-500 hover:text-brand transition-colors uppercase tracking-widest">Planos</button>
-                            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
-                            <button
-                                onClick={onLogin}
-                                className="bg-slate-900 dark:bg-brand text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:scale-105 transition-transform shadow-xl shadow-brand/20"
-                            >
-                                Entrar no App
-                            </button>
-                        </div>
-
-                        <button className="md:hidden p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-slate-900 dark:text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Mobile Menu */}
-                {isMenuOpen && (
-                    <div className="md:hidden bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 animate-slideDown p-6 space-y-4">
-                        <button onClick={() => scrollToSection('features')} className="block w-full text-left py-4 text-slate-900 dark:text-white font-black uppercase tracking-widest border-b border-slate-50">Recursos</button>
-                        <button onClick={() => scrollToSection('plans')} className="block w-full text-left py-4 text-slate-900 dark:text-white font-black uppercase tracking-widest border-b border-slate-50">Planos</button>
-                        <Button fullWidth onClick={onLogin} className="py-5 text-sm uppercase font-black tracking-widest">
-                            Acessar Minha Conta
-                        </Button>
-                    </div>
-                )}
-            </nav>
-
-            {/* 1. Hero Section */}
-            <section className="pt-40 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
-                <div className="grid lg:grid-cols-2 gap-16 items-center">
-                    <div className="text-center lg:text-left">
-                        <div className="inline-flex items-center gap-2 bg-brand/5 text-brand px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] mb-8 animate-fadeIn border border-brand/10">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>O App Nº1 do Caminhoneiro</span>
-                        </div>
-
-                        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-tight mb-8 leading-[1] animate-slideUp">
-                            Tome o Controle do Seu <span className="text-brand">Caminhão.</span>
-                        </h1>
-
-                        <p className="text-xl text-slate-500 dark:text-slate-400 mb-10 leading-relaxed animate-slideUp delay-100 max-w-xl mx-auto lg:mx-0">
-                            Pare de perder dinheiro com anotações manuais. O Control Frete organiza seus lucros, gastos e metas em um app profissional e fácil de usar.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5 animate-slideUp delay-200">
-                            <button
-                                onClick={onLogin}
-                                className="w-full sm:w-auto px-10 py-5 bg-brand text-white rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-brand/40 hover:scale-105 transition-all flex items-center justify-center gap-3"
-                            >
-                                Começar Agora Grátis
-                                <ArrowRight className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => scrollToSection('plans')}
-                                className="w-full sm:w-auto px-10 py-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-[2rem] font-black text-sm uppercase tracking-widest border-2 border-slate-100 dark:border-slate-800 hover:border-brand transition-colors"
-                            >
-                                Ver Planos
-                            </button>
-                        </div>
-
-                        {/* Social Proof */}
-                        <div className="mt-12 flex items-center justify-center lg:justify-start gap-4 opacity-60">
-                            <div className="flex -space-x-3">
-                                {[1, 2, 3, 4].map(i => (
-                                    <div key={i} className="w-10 h-10 rounded-full border-4 border-white dark:border-slate-950 bg-slate-200 dark:bg-slate-800" />
-                                ))}
-                            </div>
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">+5.000 Motoristas no Controle</p>
-                        </div>
+            {/* Features (Broken Grid) */}
+            <section id="recursos" className="py-32 px-4 relative overflow-hidden">
+                <div className="max-w-7xl mx-auto">
+                    <div className="mb-20 text-center md:text-left">
+                        <span className="text-[var(--precision-accent)] font-mono text-xs uppercase tracking-widest block mb-4">// System Modules</span>
+                        <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter">
+                            Tecnologia de <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-500 to-white">Ponta a Ponta</span>
+                        </h2>
                     </div>
 
-                    {/* Hero Image - Dashboard */}
-                    <div className="animate-slideUp delay-300">
-                        <SectionImage
-                            src="/assets/landing/dashboard.jpg"
-                            alt="Dashboard do App"
-                            caption="Gestão Completa em Tempo Real"
-                        />
-                    </div>
-                </div>
+                    <FeatureRow
+                        title="Gestão Financeira de Precisão"
+                        desc="Controle total sobre entradas e saídas. Visualize suas pendências de fretes e contas a pagar em um painel unificado e intuitivo."
+                        icon={DollarSign}
+                        imageSrc="/assets/landing/finances.jpg"
+                    />
 
-                {/* Background Decor */}
-                <div className="absolute top-1/2 -right-64 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[120px] -z-10" />
-                <div className="absolute bottom-0 -left-64 w-[500px] h-[500px] bg-brand-secondary/5 rounded-full blur-[120px] -z-10" />
-            </section>
+                    <FeatureRow
+                        reversed
+                        title="Extrato Detalhado"
+                        desc="Mantenha um histórico completo de todas as suas viagens. Saiba exatamente qual foi o lucro líquido de cada frete descontando despesas e comissões."
+                        icon={Clock}
+                        imageSrc="/assets/landing/history.jpg"
+                    />
 
-            {/* 2. Stats Section */}
-            <section className="py-12 border-y border-slate-50 dark:border-slate-900 overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 flex flex-wrap justify-between gap-8 md:gap-12 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-700">
-                    <div className="flex items-center gap-3 font-black text-xl text-slate-900 dark:text-white">
-                        <Truck className="w-6 h-6 text-brand" />
-                        TRANSPORTES
-                    </div>
-                    <div className="flex items-center gap-3 font-black text-xl text-slate-900 dark:text-white">
-                        <Shield className="w-6 h-6 text-brand" />
-                        SEGURANÇA
-                    </div>
-                    <div className="flex items-center gap-3 font-black text-xl text-slate-900 dark:text-white">
-                        <TrendingUp className="w-6 h-6 text-brand" />
-                        LUCRO REAL
-                    </div>
-                    <div className="flex items-center gap-3 font-black text-xl text-slate-900 dark:text-white">
-                        <Users className="w-6 h-6 text-brand" />
-                        COMUNIDADE
-                    </div>
+                    <FeatureRow
+                        title="Sistema de Indicação"
+                        desc="Transforme sua rede de contatos em renda extra. Compartilhe seu link exclusivo e ganhe comissão recorrente por cada motorista indicado."
+                        icon={Zap}
+                        imageSrc="/assets/landing/referrals.jpg"
+                    />
+
+                    <FeatureRow
+                        reversed
+                        title="Login Seguro"
+                        desc="Seus dados são criptografados com padrões militares. Acesso rápido, seguro e disponível 24 horas por dia em qualquer dispositivo."
+                        icon={Lock}
+                        imageSrc="/assets/landing/login.jpg"
+                    />
                 </div>
             </section>
 
-            {/* 3. Features Grid */}
-            <section id="features" className="py-32 bg-slate-50/50 dark:bg-slate-900/20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-3xl mx-auto mb-20">
-                        <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">O que você ganha com o <span className="text-brand">Control Frete?</span></h2>
-                        <p className="text-lg text-slate-500 dark:text-slate-400">Desenvolvido especificamente para a realidade de quem vive na estrada, unindo profissionalismo e simplicidade.</p>
+            {/* Plans Section (Industrial Tables) */}
+            <section id="planos" className="py-32 bg-[#080808] border-t border-[var(--industrial-border)]">
+                <div className="max-w-7xl mx-auto px-4">
+                    <div className="text-center mb-20">
+                        <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">Acesso ao Sistema</h2>
+                        <p className="text-gray-500 max-w-xl mx-auto font-light">Selecione o nível de acesso adequado para sua operação.</p>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8">
-                        <FeatureCard
-                            icon={Wallet}
-                            title="Financeiro"
-                            description="Controle de entradas, saídas e lucro líquido real sem mistério."
-                            color="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                        />
-                        <FeatureCard
-                            icon={MapPin}
-                            title="Rotas e Agenda"
-                            description="Organize suas viagens futuras e não perca nenhum compromisso."
-                            color="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                        />
-                        <FeatureCard
-                            icon={FileText}
-                            title="Recibos Pro"
-                            description="Emita recibos bonitos e envie direto pelo WhatsApp para seus clientes."
-                            color="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
-                        />
-                    </div>
-                </div>
-            </section>
-
-            {/* 4. Deep Dive Feature: Finances */}
-            <section className="py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-                <div className="grid lg:grid-cols-2 gap-20 items-center">
-                    <div className="order-2 lg:order-1">
-                        <SectionImage
-                            src="/assets/landing/financas.jpg"
-                            alt="Gestão de Finanças"
-                            caption="Controle de Contas a Pagar e Receber"
-                        />
-                    </div>
-                    <div className="order-1 lg:order-2">
-                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-8 tracking-tight uppercase leading-none">Suas Finanças no <span className="text-brand">Verde.</span></h2>
-                        <div className="space-y-8">
-                            {[
-                                { title: "Contas Pendentes", desc: "Nunca mais esqueça de cobrar um cliente ou pagar um fornecedor." },
-                                { title: "Visão Semanal e Mensal", desc: "Saiba quanto você faturou na semana e compare com suas metas." },
-                                { title: "Saídas Detalhadas", desc: "Registre diesel, manutenção e alimentação de forma simples." }
-                            ].map((item, i) => (
-                                <div key={i} className="flex gap-4">
-                                    <div className="mt-1 bg-brand/10 p-1.5 h-fit rounded-lg text-brand">
-                                        <CheckCircle className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-black text-slate-900 dark:text-white uppercase text-sm mb-1 tracking-wider">{item.title}</h4>
-                                        <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{item.desc}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* 5. Deep Dive Feature: History */}
-            <section className="py-32 bg-slate-900 text-white relative overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-20 items-center">
-                        <div>
-                            <h2 className="text-4xl font-black mb-8 tracking-tight uppercase leading-none">Todo seu <span className="text-brand-secondary">Histórico</span> Organizado.</h2>
-                            <p className="text-slate-400 text-lg mb-10 leading-relaxed">
-                                Esqueça as planilhas complicadas. No Control Frete, cada viagem fica salva com data, valor e divisão de lucros (Empresa, Motorista, Reserva).
-                            </p>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="p-6 bg-white/5 rounded-3xl border border-white/10">
-                                    <div className="text-3xl font-black text-brand-secondary mb-1 tabular-nums">100%</div>
-                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">De Acesso aos Dados</p>
-                                </div>
-                                <div className="p-6 bg-white/5 rounded-3xl border border-white/10">
-                                    <div className="text-3xl font-black text-brand-secondary mb-1 tabular-nums">ZERO</div>
-                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Papelada Perdida</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="relative">
-                            <SectionImage src="/assets/landing/historico.jpg" alt="Histórico de Fretes" />
-                        </div>
-                    </div>
-                </div>
-                {/* Decor */}
-                <div className="absolute top-0 right-0 w-96 h-96 bg-brand/10 rounded-full blur-[100px]" />
-            </section>
-
-            {/* 6. Referral System Section */}
-            <section className="py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-                <div className="grid lg:grid-cols-2 gap-20 items-center">
-                    <div>
-                        <SectionImage src="/assets/landing/afiliados.jpg" alt="Sistema de Afiliados" caption="Ganhe com cada indicação" />
-                    </div>
-                    <div>
-                        <div className="inline-flex items-center gap-2 bg-accent-success/10 text-accent-success px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
-                            <Zap className="w-3.5 h-3.5" />
-                            <span>Bônus Exclusivo PRO</span>
-                        </div>
-                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight leading-none">Indique Amigos e <span className="text-accent-success">Fature Mais.</span></h2>
-                        <p className="text-lg text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-                            Compartilhe seu link exclusivo com outros caminhoneiros. Quando eles virarem PRO, você ganha <span className="font-black text-slate-900 dark:text-white">20% de comissão</span> em todas as mensalidades deles.
-                        </p>
-                        <Button onClick={onLogin} className="bg-slate-900 hover:bg-black text-white px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl">
-                            Quero Ser Afiliado
-                        </Button>
-                    </div>
-                </div>
-            </section>
-
-            {/* 7. Security Section */}
-            <section className="py-32 bg-slate-50/50 dark:bg-slate-900/50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left">
-                    <div className="grid lg:grid-cols-2 gap-20 items-center">
-                        <div>
-                            <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-8 tracking-tight uppercase leading-none">Dados Protegidos por <span className="text-brand">Criptografia.</span></h2>
-                            <p className="text-lg text-slate-500 dark:text-slate-400 mb-10 leading-relaxed">
-                                Utilizamos tecnologia de ponta para garantir que seu login seja 100% seguro e seus dados financeiros fiquem guardados a sete chaves.
-                            </p>
-                            <div className="flex flex-col sm:flex-row gap-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center text-brand">
-                                        <Lock size={24} />
-                                    </div>
-                                    <div className="text-left">
-                                        <h4 className="font-black text-slate-900 dark:text-white text-xs uppercase tracking-widest leading-none mb-1">Backup Automático</h4>
-                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Nuvem Segura 24/7</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center text-brand">
-                                        <Shield size={24} />
-                                    </div>
-                                    <div className="text-left">
-                                        <h4 className="font-black text-slate-900 dark:text-white text-xs uppercase tracking-widest leading-none mb-1">Privacidade Total</h4>
-                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">LGPD Compliance</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="max-w-md mx-auto lg:ml-auto">
-                            <SectionImage src="/assets/landing/login.jpg" alt="Login Seguro" />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* 8. Pricing Section */}
-            <section id="plans" className="py-32 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <div className="text-center max-w-2xl mx-auto mb-20">
-                        <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">O Plano que Cabe no Seu <span className="text-brand">Caminhão.</span></h2>
-                        <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Comece grátis, domine sua operação e faça o upgrade quando estiver pronto para escalar.</p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-                        {/* FREE Plan */}
-                        <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col group hover:border-slate-200 transition-all">
-                            <div className="mb-10">
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Plano FREE</h3>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-4xl font-black text-slate-900 dark:text-white">R$ 0</span>
-                                    <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">/ para sempre</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6 mb-12 flex-1">
-                                {[
-                                    "Até 5 registros de fretes/mês",
-                                    "Relatórios dos últimos 7 dias",
-                                    "Calculadora de Fretes",
-                                    "Acesso via Mobile e Desktop",
-                                    "Gestão de Clientes básica"
-                                ].map((feature, i) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-full text-slate-400">
-                                            <CheckCircle className="w-4 h-4" />
-                                        </div>
-                                        <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">{feature}</span>
-                                    </div>
+                        <div className="p-8 border border-[var(--industrial-border)] hover:border-white transition-colors flex flex-col bg-[#050505]">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6">Nível Básico</div>
+                            <div className="text-4xl font-black text-white mb-2">R$ 9<span className="text-xl">,90</span></div>
+                            <div className="text-gray-500 text-sm mb-8">Cobrado mensalmente</div>
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {['Fretes Ilimitados', 'Relatórios básicos', 'Calculadora'].map(i => (
+                                    <li key={i} className="flex items-center gap-3 text-sm text-gray-400">
+                                        <div className="w-1 h-1 bg-gray-500" /> {i}
+                                    </li>
                                 ))}
-                            </div>
-
-                            <button
-                                onClick={onLogin}
-                                className="w-full py-5 text-slate-900 dark:text-white font-black text-xs uppercase tracking-[0.2em] border-2 border-slate-100 dark:border-slate-800 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                            >
-                                Começar Agora
+                            </ul>
+                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors">
+                                Assinar Mensal
                             </button>
                         </div>
 
-                        {/* PRO Plan */}
-                        <div className="bg-slate-950 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col text-white transform lg:-translate-y-6 scale-105 border-4 border-brand">
-                            <div className="absolute top-0 right-0 bg-brand text-white text-[10px] font-black uppercase tracking-[0.2em] px-8 py-3 rounded-bl-3xl">
-                                RECOMENDADO
+                        <div className="p-8 border-2 border-[var(--precision-accent)] bg-[#050505] relative transform md:-translate-y-4 shadow-[0_0_50px_-20px_var(--precision-accent)]">
+                            <div className="absolute top-0 right-0 bg-[var(--precision-accent)] text-white text-[10px] font-bold uppercase px-3 py-1">
+                                Oferta Limitada
                             </div>
-
-                            <div className="mb-10">
-                                <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Plano PRO</h3>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-5xl font-black text-white tracking-tighter">R$ 59,99</span>
-                                    <span className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">/ anual</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6 mb-12 flex-1">
-                                {[
-                                    "Registros de Fretes ILIMITADOS",
-                                    "Histórico COMPLETO sem limites",
-                                    "Agenda Inteligente do Motorista",
-                                    "Controle de Metas de Faturamento",
-                                    "Emissão de Recibos Profissionais",
-                                    "Sistema de Afiliados (Gere Renda)",
-                                    "Suporte VIP via WhatsApp"
-                                ].map((feature, i) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <div className="bg-brand p-1 rounded-full text-white">
-                                            <CheckCircle className="w-4 h-4" />
-                                        </div>
-                                        <span className="text-slate-200 text-sm font-bold">{feature}</span>
-                                    </div>
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-[var(--precision-accent)] mb-6">Anual Pro</div>
+                            <div className="text-5xl font-black text-white mb-2">R$ 34<span className="text-2xl">,99</span></div>
+                            <div className="text-gray-500 text-sm mb-8">Valor promocional (R$ 2,90/mês)</div>
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {['Economia de 70%', 'Prioridade no Suporte', 'Módulo Financeiro', 'Sem anúncios', 'Mentoria em Grupo'].map(i => (
+                                    <li key={i} className="flex items-center gap-3 text-sm text-white">
+                                        <CheckCircle className="w-4 h-4 text-[var(--precision-accent)]" /> {i}
+                                    </li>
                                 ))}
-                            </div>
-
-                            <button
-                                onClick={onLogin}
-                                className="w-full py-6 bg-brand text-white font-black text-sm uppercase tracking-[0.25em] rounded-[1.5rem] hover:scale-105 transition-all shadow-xl shadow-brand/40"
-                            >
-                                Ativar Plano PRO
+                            </ul>
+                            <button onClick={onLogin} className="w-full py-4 bg-[var(--precision-accent)] text-white font-bold uppercase text-xs tracking-widest hover:bg-blue-600 transition-colors">
+                                Garantir Oferta
                             </button>
-                            <p className="mt-6 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest">Cancele quando quiser · Sem fidelidade</p>
+                            <p className="mt-4 text-center text-[10px] text-gray-500 uppercase tracking-widest">Restam {spotsRemaining} vagas</p>
+                        </div>
+
+                        <div className="p-8 border border-[var(--industrial-border)] hover:border-white transition-colors flex flex-col bg-[#050505]">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6">Nível Enterprise</div>
+                            <div className="text-4xl font-black text-white mb-2">R$ 249</div>
+                            <div className="text-gray-500 text-sm mb-8">Pagamento único (Vitalício)</div>
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {['Acesso para sempre', 'Mentorias Individuais', 'Selo Fundador', 'Funcionalidades Alpha'].map(i => (
+                                    <li key={i} className="flex items-center gap-3 text-sm text-gray-400">
+                                        <div className="w-1 h-1 bg-gray-500" /> {i}
+                                    </li>
+                                ))}
+                            </ul>
+                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors">
+                                Comprar Vitalício
+                            </button>
                         </div>
                     </div>
                 </div>
-            </section>
-
-            {/* 8. Pricing Section */}
-            <section id="plans" className="py-32 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <div className="text-center max-w-2xl mx-auto mb-20">
-                        <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">O Plano que Cabe no Seu <span className="text-brand">Caminhão.</span></h2>
-                        <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Escolha a melhor opção para profissionalizar sua gestão hoje mesmo.</p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
-                        {/* Plano Mensal */}
-                        <PricingCard
-                            title="Mensal"
-                            price="R$ 9,90"
-                            period="mês"
-                            description="Para quem quer flexibilidade total. Cancele quando quiser."
-                            features={[
-                                "Fretes ILIMITADOS",
-                                "Histórico Completo",
-                                "Recibos Profissionais",
-                                "Suporte via WhatsApp",
-                                "Sem fidelidade"
-                            ]}
-                            onSelect={onLogin}
-                            oldPrice="R$ 19,90"
-                        />
-
-                        {/* Plano Anual - PROMO */}
-                        <PricingCard
-                            title="Anual Pro"
-                            price="R$ 34,99"
-                            period="ano"
-                            description="A melhor oferta da nossa história. Equivale a apenas R$ 2,90/mês."
-                            features={[
-                                "Tudo do Plano Mensal",
-                                "Prioridade no Suporte",
-                                "Bônus: Gestão de Pneus",
-                                "Emissão de CIOT (Em breve)",
-                                "Acesso a Comunidade VIP",
-                                "Economia de 70%"
-                            ]}
-                            highlight={true}
-                            tag="OFERTA LIMITADA"
-                            oldPrice="R$ 59,99"
-                            scarceCount={spotsRemaining}
-                            onSelect={onLogin}
-                        />
-
-                        {/* Plano Vitalício */}
-                        <PricingCard
-                            title="Vitalício"
-                            price="R$ 249,90"
-                            period="único"
-                            description="Pague uma única vez e nunca mais se preocupe com mensalidades."
-                            features={[
-                                "Acesso Vitalício ao App",
-                                "Todas as atualizações futuras",
-                                "Suporte VIP Exclusivo",
-                                "Mentorias em Grupo Mensais",
-                                "Selo de Membro Fundador"
-                            ]}
-                            tag="VIP"
-                            onSelect={onLogin}
-                        />
-                    </div>
-
-                    <div className="mt-12 text-center">
-                        <button onClick={onLogin} className="text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest hover:text-brand transition-colors">
-                            Quero começar com o plano Gratuito (Limitado)
-                        </button>
-                    </div>
-                </div>
-            </section>
-            <section className="py-40 bg-brand relative overflow-hidden text-center text-white px-4">
-                <div className="max-w-3xl mx-auto relative z-10">
-                    <h2 className="text-5xl sm:text-6xl font-black mb-8 uppercase tracking-tighter leading-none">
-                        Diga adeus à bagunça financeira.
-                    </h2>
-                    <p className="text-lg text-white/80 mb-12 font-medium max-w-xl mx-auto leading-relaxed">
-                        Faça como milhares de motoristas que já profissionalizaram seu trabalho com o Control Frete.
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row justify-center gap-6">
-                        <button
-                            onClick={onLogin}
-                            className="bg-white text-brand px-12 py-6 rounded-[2.5rem] font-black text-sm uppercase tracking-widest shadow-2xl hover:scale-105 transition-all"
-                        >
-                            Criar Minha Conta Grátis
-                        </button>
-                    </div>
-                </div>
-
-                {/* Decor */}
-                <Truck className="absolute -bottom-20 -left-20 w-80 h-80 text-white/5 -rotate-12" />
-                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px]" />
             </section>
 
             {/* Footer */}
-            <footer className="bg-white dark:bg-slate-950 py-20 border-t border-slate-50 dark:border-slate-900">
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <div className="flex flex-col items-center gap-8">
-                        <img src="/logo-official.png" alt="Control Frete" className="h-12 w-auto" />
-
-                        <div className="flex gap-8">
-                            <button onClick={() => scrollToSection('features')} className="text-[10px] font-black uppercase text-slate-400 hover:text-brand tracking-widest">Recursos</button>
-                            <button onClick={() => scrollToSection('plans')} className="text-[10px] font-black uppercase text-slate-400 hover:text-brand tracking-widest">Planos</button>
-                            <button onClick={() => onLogin()} className="text-[10px] font-black uppercase text-slate-400 hover:text-brand tracking-widest">Login</button>
-                        </div>
-
-                        <div className="h-px w-20 bg-slate-100 dark:bg-slate-900" />
-
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                            © {new Date().getFullYear()} Control Frete · Feito com <Star className="inline w-3 h-3 text-brand fill-brand" /> para a Estrada
-                        </p>
-                    </div>
+            <footer className="border-t border-[var(--industrial-border)] py-12 bg-[#050505] text-center">
+                <div className="flex items-center justify-center gap-2 mb-6 opacity-50">
+                    <Truck className="w-4 h-4" />
+                    <span className="text-xs font-black tracking-[0.2em] uppercase">Control Frete Systems</span>
                 </div>
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest">
+                    © {new Date().getFullYear()} Todos os direitos reservados.
+                </p>
             </footer>
+
         </div>
     );
 };
