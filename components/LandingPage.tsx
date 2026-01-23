@@ -22,9 +22,11 @@ import {
     ChevronDown,
     MapPin,
     Wallet,
-    Sparkles
+    Sparkles,
+    Clock
 } from 'lucide-react';
 import { Button } from './Button';
+import { PricingCard } from './PricingCard';
 
 interface LandingPageProps {
     onLogin: () => void;
@@ -32,6 +34,15 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+    const [spotsRemaining, setSpotsRemaining] = React.useState(13);
+
+    // Simula a escassez diminuindo uma vaga eventualmente
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            setSpotsRemaining(prev => prev > 7 ? prev - 1 : prev);
+        }, 30000);
+        return () => clearTimeout(timer);
+    }, []);
 
     const scrollToSection = (id: string) => {
         const element = document.getElementById(id);
@@ -67,8 +78,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
     return (
         <div className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden font-sans selection:bg-brand selection:text-white">
+            {/* Promo Banner */}
+            <div className="bg-red-600 text-white px-4 py-2 text-center text-[10px] sm:text-xs font-black uppercase tracking-widest relative z-[60] animate-pulse">
+                <div className="flex items-center justify-center gap-2">
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span>Oferta Relâmpago: Plano Anual por apenas R$ 34,99 (Restam {spotsRemaining} vagas)</span>
+                </div>
+            </div>
+
             {/* Navbar */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/50">
+            <nav className="fixed top-8 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20">
                         <div className="flex items-center gap-2">
@@ -428,7 +447,78 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 </div>
             </section>
 
-            {/* 9. Final CTA */}
+            {/* 8. Pricing Section */}
+            <section id="plans" className="py-32 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center max-w-2xl mx-auto mb-20">
+                        <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">O Plano que Cabe no Seu <span className="text-brand">Caminhão.</span></h2>
+                        <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Escolha a melhor opção para profissionalizar sua gestão hoje mesmo.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
+                        {/* Plano Mensal */}
+                        <PricingCard
+                            title="Mensal"
+                            price="R$ 9,90"
+                            period="mês"
+                            description="Para quem quer flexibilidade total. Cancele quando quiser."
+                            features={[
+                                "Fretes ILIMITADOS",
+                                "Histórico Completo",
+                                "Recibos Profissionais",
+                                "Suporte via WhatsApp",
+                                "Sem fidelidade"
+                            ]}
+                            onSelect={onLogin}
+                            oldPrice="R$ 19,90"
+                        />
+
+                        {/* Plano Anual - PROMO */}
+                        <PricingCard
+                            title="Anual Pro"
+                            price="R$ 34,99"
+                            period="ano"
+                            description="A melhor oferta da nossa história. Equivale a apenas R$ 2,90/mês."
+                            features={[
+                                "Tudo do Plano Mensal",
+                                "Prioridade no Suporte",
+                                "Bônus: Gestão de Pneus",
+                                "Emissão de CIOT (Em breve)",
+                                "Acesso a Comunidade VIP",
+                                "Economia de 70%"
+                            ]}
+                            highlight={true}
+                            tag="OFERTA LIMITADA"
+                            oldPrice="R$ 59,99"
+                            scarceCount={spotsRemaining}
+                            onSelect={onLogin}
+                        />
+
+                        {/* Plano Vitalício */}
+                        <PricingCard
+                            title="Vitalício"
+                            price="R$ 249,90"
+                            period="único"
+                            description="Pague uma única vez e nunca mais se preocupe com mensalidades."
+                            features={[
+                                "Acesso Vitalício ao App",
+                                "Todas as atualizações futuras",
+                                "Suporte VIP Exclusivo",
+                                "Mentorias em Grupo Mensais",
+                                "Selo de Membro Fundador"
+                            ]}
+                            tag="VIP"
+                            onSelect={onLogin}
+                        />
+                    </div>
+
+                    <div className="mt-12 text-center">
+                        <button onClick={onLogin} className="text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest hover:text-brand transition-colors">
+                            Quero começar com o plano Gratuito (Limitado)
+                        </button>
+                    </div>
+                </div>
+            </section>
             <section className="py-40 bg-brand relative overflow-hidden text-center text-white px-4">
                 <div className="max-w-3xl mx-auto relative z-10">
                     <h2 className="text-5xl sm:text-6xl font-black mb-8 uppercase tracking-tighter leading-none">
