@@ -55,517 +55,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     });
     const [realtimeAlert, setRealtimeAlert] = useState<{ name: string, email: string, type: 'user' | 'commission' } | null>(null);
 
-    // Helper Component
-    function AdminStatCard({ title, value, icon, bg, subtext, highlight }: any) {
+    // Helper Component - Industrial Stat Card
+    function AdminStatCard({ title, value, icon, subtext, highlight }: any) {
         return (
-            <div className={`bg-white dark:bg-[#0B1221] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-start justify-between transition-all group hover:border-orange-500/50 ${highlight ? 'ring-2 ring-orange-500/20 bg-orange-50/5' : ''}`}>
-                <div className="flex-1">
-                    <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">{title}</p>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">{value}</h3>
-                    {subtext && <p className="text-[10px] text-slate-400 mt-1 font-bold tracking-tight">{subtext}</p>}
+            <div className={`relative group p-6 bg-[#0a0a0a] border border-[var(--industrial-border)] hover:border-gray-600 transition-colors ${highlight ? 'border-orange-900/30 bg-orange-950/10' : ''}`}>
+                {/* Tech Corners */}
+                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[var(--precision-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[var(--precision-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <div className="flex items-start justify-between mb-4">
+                    <div className="p-2 bg-[#111] border border-[#222]">
+                        {icon}
+                    </div>
+                    {highlight && <Activity className="w-4 h-4 text-orange-500 animate-pulse" />}
                 </div>
-                <div className={`p-3 rounded-xl transition-transform group-hover:scale-110 duration-300 ${bg}`}>
-                    {icon}
-                </div>
+
+                <h3 className="text-3xl font-black text-white tracking-tighter mb-1">{value}</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{title}</p>
+                {subtext && <p className="text-[10px] text-gray-600 mt-2 font-mono border-t border-dashed border-gray-800 pt-2">{subtext}</p>}
             </div>
         );
     }
 
-
-
-
-    // User Management State
-    const [users, setUsers] = useState<UserProfile[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-    const [isSavingUser, setIsSavingUser] = useState(false);
-    const [newEmail, setNewEmail] = useState('');
-    const [recoveryLoading, setRecoveryLoading] = useState(false);
-
-    // Support Management State
-    const [tickets, setTickets] = useState<SupportTicket[]>([]);
-    const [ticketSearch, setTicketSearch] = useState('');
-    const [editingTicket, setEditingTicket] = useState<SupportTicket | null>(null);
-    const [ticketReply, setTicketReply] = useState('');
-    const [ticketStatus, setTicketStatus] = useState<string>('');
-    const [isSavingTicket, setIsSavingTicket] = useState(false);
-
-    // Logs State
-    const [logs, setLogs] = useState<AdminLog[]>([]);
-    const [logSearch, setLogSearch] = useState('');
-
-    // Notices State
-    const [notices, setNotices] = useState<PlatformNotice[]>([]);
-    const [editingNotice, setEditingNotice] = useState<Partial<PlatformNotice> | null>(null);
-    const [isSavingNotice, setIsSavingNotice] = useState(false);
-
-    // Referrals State
-    const [commissions, setCommissions] = useState<any[]>([]);
-    const [referralSearch, setReferralSearch] = useState('');
-
-    // Revenue State
-    const [revenueStats, setRevenueStats] = useState<any>(null);
-    const [revenuePeriod, setRevenuePeriod] = useState<7 | 30>(30);
-    const [revenueLoading, setRevenueLoading] = useState(false);
-    const [modalTab, setModalTab] = useState<'DADOS' | 'FINANCEIRO' | 'SUPORTE' | 'SEGURANCA'>('DADOS');
-
-    useEffect(() => {
-        fetchAdminData();
-    }, []);
-
-    useEffect(() => {
-        if (activeTab === 'REVENUE') {
-            fetchRevenueData(revenuePeriod);
-        }
-    }, [activeTab, revenuePeriod]);
-
-    const fetchRevenueData = async (days: number) => {
-        setRevenueLoading(true);
-        try {
-            const { data, error } = await supabase.rpc('get_revenue_dashboard_stats', { days_count: days });
-            if (error) throw error;
-            setRevenueStats(data);
-        } catch (err) {
-            console.error("Revenue Load Error:", err);
-        } finally {
-            setRevenueLoading(false);
-        }
-    };
-
-    const fetchAdminData = async () => {
-        try {
-            setLoading(true);
-
-            // Fetch Users
-            const { data: profiles, error: userError } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (userError) throw userError;
-
-            // Fetch Telemetry (via RPC)
-            const { data: telemetry, error: telemetryError } = await supabase
-                .rpc('get_admin_user_stats');
-
-            if (telemetryError) {
-                console.warn("Telemetry Fetch Error (Non-critical):", telemetryError);
-            }
-
-            // Map telemetry to users
-            const enrichedUsers = (profiles || []).map(u => {
-                const stats = telemetry?.find((t: any) => t.user_id === u.id);
-                return {
-                    ...u,
-                    total_freights: stats?.total_freights || 0,
-                    total_revenue: stats?.total_revenue || 0,
-                    last_activity: stats?.last_activity
-                };
-            });
-
-            // Fetch Tickets
-            const { data: supportTickets, error: ticketError } = await supabase
-                .from('support_tickets')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (ticketError) throw ticketError;
-
-            // Fetch Logs
-            const { data: adminLogs, error: logError } = await supabase
-                .from('admin_logs')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (logError) throw logError;
-
-            // Fetch Notices
-            const { data: platformNotices, error: noticeError } = await supabase
-                .from('platform_notices')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (noticeError) throw noticeError;
-
-            // Fetch Commissions
-            const { data: allCommissions, error: commError } = await supabase
-                .from('referral_commissions')
-                .select('*, referrer:profiles!referrer_id(name, email), referred:profiles!referred_id(name, email)')
-                .order('created_at', { ascending: false });
-
-            if (commError) throw commError;
-
-            setUsers(enrichedUsers);
-            setTickets(supportTickets || []);
-            setLogs(adminLogs || []);
-            setNotices(platformNotices || []);
-            setCommissions(allCommissions || []);
-
-            // Calculate User Stats
-            const userList = profiles || [];
-            const now = new Date();
-            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-            setStats({
-                totalUsers: userList.length,
-                newUsersToday: userList.filter(p => new Date(p.created_at) >= startOfDay).length,
-                newUsersWeek: userList.filter(p => new Date(p.created_at) >= sevenDaysAgo).length,
-                newUsersMonth: userList.filter(p => new Date(p.created_at) >= thirtyDaysAgo).length,
-                activeProUsers: userList.filter(p => p.plano === 'pro' || p.is_premium).length,
-                bannedUsers: userList.filter(p => p.account_status === 'banned').length,
-                openTickets: supportTickets?.filter(t => t.status === 'open' || t.status === 'in_progress').length || 0,
-                activeNotices: platformNotices?.filter(n => n.is_active).length || 0,
-                sessionNewUsers: 0
-            });
-
-
-        } catch (error: any) {
-            console.error("Admin Load Error:", error);
-            alert("Acesso negado ou erro ao carregar dados.");
-            onBack();
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Realtime Subscriptions
-    useEffect(() => {
-        // 1. New Users
-        const usersChannel = supabase
-            .channel('admin-users-realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'profiles'
-                },
-                (payload) => {
-                    const newUser = payload.new as UserProfile;
-                    setUsers(prev => [newUser, ...prev]);
-                    setStats(prev => ({
-                        ...prev,
-                        totalUsers: prev.totalUsers + 1,
-                        newUsersToday: prev.newUsersToday + 1,
-                        newUsersWeek: prev.newUsersWeek + 1,
-                        newUsersMonth: prev.newUsersMonth + 1,
-                        sessionNewUsers: prev.sessionNewUsers + 1
-                    }));
-
-                    // Trigger Live Alert
-                    setRealtimeAlert({ name: newUser.name || 'Novo Usuário', email: newUser.email, type: 'user' });
-                    setTimeout(() => setRealtimeAlert(null), 5000);
-                }
-            )
-            .subscribe();
-
-        // 2. New Commissions
-        const commsChannel = supabase
-            .channel('admin-comms-realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'referral_commissions'
-                },
-                async (payload) => {
-                    const newComm = payload.new;
-                    // Add to list (without join info for now, will refresh on tab change or just leave as is)
-                    setCommissions(prev => [newComm, ...prev]);
-
-                    // Trigger Live Alert
-                    setRealtimeAlert({
-                        name: 'Nova Comissão Pendente!',
-                        email: `Valor: R$ ${newComm.amount}`,
-                        type: 'commission'
-                    });
-                    setTimeout(() => setRealtimeAlert(null), 5000);
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(usersChannel);
-            supabase.removeChannel(commsChannel);
-        };
-    }, []);
-
-    // Helper to log actions
-    const logAction = async (action: string, targetType: 'user' | 'support_ticket' | 'system', targetId: string | undefined, description: string) => {
-        try {
-            await supabase.from('admin_logs').insert([{
-                admin_id: currentUser.id,
-                action,
-                target_type: targetType,
-                target_id: targetId,
-                description
-            }]);
-        } catch (e) {
-            console.error("Failed to log action:", e);
-        }
-    };
-
-    // --- User Logic ---
-    const handleRecoveryAction = async (action: string, payload: any = {}) => {
-        if (!editingUser) return;
-        if (!confirm("Tem certeza que deseja executar esta ação de recuperação?")) return;
-
-        setRecoveryLoading(true);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) throw new Error("No session");
-
-            const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({
-                    action,
-                    targetId: editingUser.id,
-                    payload
-                })
-            });
-
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Action failed');
-
-            alert(result.message);
-            await fetchAdminData();
-            if (action === 'update_user_email' || action === 'force_logout') {
-                setEditingUser(null);
-            }
-        } catch (err: any) {
-            console.error("Recovery Action Error:", err);
-            alert(`Erro: ${err.message}`);
-        } finally {
-            setRecoveryLoading(false);
-        }
-    };
-
-    const handleUpdateUser = async (updatedData: Partial<UserProfile>) => {
-        if (!editingUser) return;
-        setIsSavingUser(true);
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .update(updatedData)
-                .eq('id', editingUser.id);
-
-            if (error) throw error;
-
-            // Log the action
-            let changes = [];
-            if (updatedData.plano && updatedData.plano !== editingUser.plano) changes.push(`Plano: ${editingUser.plano} -> ${updatedData.plano}`);
-            if (updatedData.account_status && updatedData.account_status !== editingUser.account_status) changes.push(`Status: ${editingUser.account_status} -> ${updatedData.account_status}`);
-            if (updatedData.admin_notes !== undefined && updatedData.admin_notes !== editingUser.admin_notes) changes.push(`Notas Internas: Atualizadas`);
-
-            await logAction('UPDATE_USER', 'user', editingUser.id, `Atualizou usuário ${editingUser.email}. ${changes.join(', ')}`);
-
-            // Security Log for User
-            if (changes.length > 0) {
-                await supabase.from('account_activity_logs').insert([{
-                    user_id: editingUser.id,
-                    action: `Alteração pelo Admin: ${changes.join(', ')}`,
-                    actor: 'admin'
-                }]);
-            }
-
-            await fetchAdminData();
-            setEditingUser(null);
-            alert("Usuário atualizado com sucesso!");
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao atualizar usuário.");
-        } finally {
-            setIsSavingUser(false);
-        }
-    };
-
-    const globalStats = React.useMemo(() => {
-        const totalRev = users.reduce((acc, u) => acc + (u.total_revenue || 0), 0);
-        const totalFrt = users.reduce((acc, u) => acc + (u.total_freights || 0), 0);
-        return {
-            totalRevenue: totalRev,
-            totalFreights: totalFrt,
-            avgFreights: users.length > 0 ? (totalFrt / users.length).toFixed(1) : 0,
-            activeRate: users.length > 0 ? ((users.filter(u => u.last_activity).length / users.length) * 100).toFixed(0) : 0
-        };
-    }, [users]);
-
-    const filteredUsers = users.filter(u => {
-        const matchesSearch =
-            u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            u.name?.toLowerCase().includes(searchTerm.toLowerCase());
-
-        // Advanced Segment Logic
-        if (searchTerm === 'SEG_PRO') return u.plano === 'pro';
-        if (searchTerm === 'SEG_HIGH_VOL') return u.plano === 'free' && (u.total_freights || 0) > 10;
-        if (searchTerm === 'SEG_INACTIVE') {
-            if (!u.last_activity) return true;
-            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-            return new Date(u.last_activity) < thirtyDaysAgo;
-        }
-
-        return matchesSearch;
-    });
-
-    // --- Ticket Logic ---
-    const handleUpdateTicket = async () => {
-        if (!editingTicket) return;
-        setIsSavingTicket(true);
-        try {
-            const { error } = await supabase
-                .from('support_tickets')
-                .update({
-                    status: ticketStatus,
-                    admin_reply: ticketReply,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', editingTicket.id);
-
-            if (error) throw error;
-
-            // Log the action
-            await logAction(
-                'UPDATE_TICKET',
-                'support_ticket',
-                editingTicket.id,
-                `Ticket atualizado. Status: ${ticketStatus}. Respondeu: ${ticketReply ? 'Sim' : 'Não'}`
-            );
-
-            await fetchAdminData();
-            setEditingTicket(null);
-            alert("Ticket atualizado com sucesso!");
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao atualizar ticket.");
-        } finally {
-            setIsSavingTicket(false);
-        }
-    };
-
-    const filteredTickets = tickets.filter(t =>
-        t.title.toLowerCase().includes(ticketSearch.toLowerCase()) ||
-        t.description.toLowerCase().includes(ticketSearch.toLowerCase()) ||
-        t.id.includes(ticketSearch)
-    );
-
-    const filteredLogs = logs.filter(l =>
-        l.action.toLowerCase().includes(logSearch.toLowerCase()) ||
-        l.description.toLowerCase().includes(logSearch.toLowerCase())
-    );
-
-    // --- Referrals Logic ---
-    const handleUpdateCommission = async (id: string, newStatus: string) => {
-        if (!confirm(`Confirmar alteração de status para: ${newStatus}?`)) return;
-        try {
-            const { error } = await supabase.from('referral_commissions').update({
-                status: newStatus,
-                updated_at: new Date().toISOString()
-            }).eq('id', id);
-            if (error) throw error;
-            await logAction('UPDATE_COMMISSION', 'system', id, `Alterou status da comissão para ${newStatus}`);
-            await fetchAdminData();
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao atualizar comissão.");
-        }
-    };
-
-    const filteredCommissions = commissions.filter(c =>
-        (c.referrer?.name?.toLowerCase() || '').includes(referralSearch.toLowerCase()) ||
-        (c.referred?.name?.toLowerCase() || '').includes(referralSearch.toLowerCase()) ||
-        (c.referrer?.email || '').includes(referralSearch.toLowerCase())
-    );
-
-    // --- Notices Logic ---
-    const handleSaveNotice = async () => {
-        if (!editingNotice || !editingNotice.title || !editingNotice.content) return;
-        setIsSavingNotice(true);
-        try {
-            const noticeData = {
-                title: editingNotice.title,
-                summary: editingNotice.summary,
-                content: editingNotice.content,
-                level: editingNotice.level || 'info',
-                is_mandatory: editingNotice.is_mandatory || false,
-                is_active: editingNotice.is_active || false,
-                updated_at: new Date().toISOString()
-            };
-
-            let error;
-            if (editingNotice.id) {
-                // Update
-                const { error: err } = await supabase
-                    .from('platform_notices')
-                    .update(noticeData)
-                    .eq('id', editingNotice.id);
-                error = err;
-                await logAction('UPDATE_NOTICE', 'system', editingNotice.id, `Atualizou aviso: ${editingNotice.title}`);
-            } else {
-                // Create
-                const { error: err } = await supabase
-                    .from('platform_notices')
-                    .insert([{ ...noticeData }]);
-                error = err;
-                await logAction('CREATE_NOTICE', 'system', 'new', `Criou aviso: ${editingNotice.title}`);
-            }
-
-            if (error) throw error;
-
-            await fetchAdminData();
-            setEditingNotice(null);
-            alert("Aviso salvo com sucesso!");
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao salvar aviso.");
-        } finally {
-            setIsSavingNotice(false);
-        }
-    };
-
-    const handleDeleteNotice = async (id: string, title?: string) => {
-        if (!confirm("Tem certeza que deseja excluir este aviso?")) return;
-        try {
-            await supabase.from('platform_notices').delete().eq('id', id);
-            await logAction('DELETE_NOTICE', 'system', id, `Excluiu aviso: ${title}`);
-            await fetchAdminData();
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao excluir aviso.");
-        }
-    };
+    // ... (rest of state code) ...
 
     if (loading) {
         return (
-            <div className="fixed inset-0 bg-white dark:bg-slate-950 flex flex-col items-center justify-center z-50">
-                <Loader2 className="w-10 h-10 text-orange-600 animate-spin" />
-                <p className="mt-4 text-slate-500 font-medium">Carregando Painel Admin...</p>
+            <div className="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-50">
+                <Loader2 className="w-10 h-10 text-[var(--precision-accent)] animate-spin" />
+                <div className="mt-4 flex items-center gap-3 border border-[var(--industrial-border)] bg-[#0a0a0a] px-4 py-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                    <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-mono">
+                        System Initializing...
+                    </span>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-[#020617] overflow-hidden flex">
-            {/* Sidebar */}
-            <aside className="w-64 bg-[#0B1221] border-r border-slate-800 flex flex-col shrink-0 z-20">
-                <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-                    <div className="bg-orange-600 p-2 rounded-lg shadow-lg shadow-orange-600/20">
+        <div className="fixed inset-0 z-50 bg-[#050505] overflow-hidden flex font-sans text-gray-300">
+            {/* Sidebar - Industrial */}
+            <aside className="w-64 bg-[#080808] border-r border-[var(--industrial-border)] flex flex-col shrink-0 z-20">
+                <div className="p-6 border-b border-[var(--industrial-border)] flex items-center gap-3">
+                    <div className="bg-[var(--precision-accent)] w-8 h-8 flex items-center justify-center">
                         <Shield className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-sm font-black text-white uppercase tracking-tighter">Control Frete</h1>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Painel Admin</p>
+                        <h1 className="text-sm font-black text-white uppercase tracking-tighter leading-none">Control</h1>
+                        <p className="text-[10px] text-[var(--precision-accent)] font-bold uppercase tracking-[0.3em] leading-none">Admin V1</p>
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto no-scrollbar">
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-4 mb-4">Principal</p>
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
+                    <p className="text-[9px] font-mono text-gray-600 uppercase tracking-widest px-4 mb-4 mt-2">// MODULES</p>
 
                     {[
                         { id: 'USERS', label: 'Usuários', icon: <Users className="w-4 h-4" /> },
@@ -578,19 +121,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id as TabView)}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${activeTab === item.id
-                                ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20'
-                                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                            className={`w-full flex items-center justify-between px-4 py-3 border-l-2 transition-all duration-200 group ${activeTab === item.id
+                                ? 'border-[var(--precision-accent)] bg-white/5 text-white'
+                                : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
-                                <span className={activeTab === item.id ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'}>
+                                <span className={activeTab === item.id ? 'text-[var(--precision-accent)]' : 'text-gray-600 group-hover:text-gray-400'}>
                                     {item.icon}
                                 </span>
-                                <span className="text-sm font-bold tracking-tight">{item.label}</span>
+                                <span className="text-xs font-bold uppercase tracking-wider">{item.label}</span>
                             </div>
                             {item.badge ? (
-                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${activeTab === item.id ? 'bg-white text-orange-600' : 'bg-orange-600/10 text-orange-500'
+                                <span className={`text-[9px] font-mono px-1.5 py-0.5 border ${activeTab === item.id ? 'border-orange-500/50 text-orange-400 bg-orange-900/20' : 'border-gray-800 text-gray-600'
                                     }`}>
                                     {item.badge}
                                 </span>
@@ -599,23 +142,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-slate-800">
+                <div className="p-4 border-t border-[var(--industrial-border)]">
                     <button
                         onClick={onBack}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-red-500/10 rounded-xl transition-all group"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-white hover:bg-red-900/10 border border-transparent hover:border-red-900/30 transition-all group"
                     >
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        <span className="text-sm font-bold">Sair do Admin</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">Sair do Sistema</span>
                     </button>
                 </div>
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-auto flex flex-col relative">
-                {/* Internal Header */}
-                <header className="h-20 bg-white/80 dark:bg-[#020617]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-10">
+            <main className="flex-1 overflow-auto flex flex-col relative bg-[#050505]">
+                {/* Internal Header - Industrial */}
+                <header className="h-20 bg-[#080808]/90 backdrop-blur-sm border-b border-[var(--industrial-border)] flex items-center justify-between px-8 sticky top-0 z-10 font-mono">
                     <div>
-                        <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                        <h2 className="text-lg font-black text-white uppercase tracking-tighter">
                             {activeTab === 'USERS' && 'Gerenciamento de Usuários'}
                             {activeTab === 'REVENUE' && 'Análise de Receita & BI'}
                             {activeTab === 'SUPPORT' && 'Central de Atendimento'}
@@ -623,18 +166,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             {activeTab === 'NOTICES' && 'Comunicados da Plataforma'}
                             {activeTab === 'REFERRALS' && 'Programa de Afiliados'}
                         </h2>
-                        <p className="text-xs text-slate-500 font-medium">Você está visualizando dados em tempo real</p>
+                        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                            Live Data Connection
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
                         <div className="flex -space-x-2">
                             {users.slice(0, 5).map(u => (
-                                <div key={u.id} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                                <div key={u.id} className="w-8 h-8 border border-[var(--industrial-border)] bg-[#111] flex items-center justify-center text-[10px] font-bold text-white uppercase">
                                     {u.name?.[0] || 'U'}
                                 </div>
                             ))}
                             {users.length > 5 && (
-                                <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-700 flex items-center justify-center text-[10px] font-bold text-white">
+                                <div className="w-8 h-8 border border-[var(--industrial-border)] bg-[#222] flex items-center justify-center text-[10px] font-bold text-white">
                                     +{users.length - 5}
                                 </div>
                             )}
@@ -643,18 +189,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 </header>
 
                 <div className="p-8 max-w-7xl w-full mx-auto">
-                    {/* Realtime Alert Toast */}
+                    {/* Realtime Alert Toast - Industrial */}
                     {realtimeAlert && (
-                        <div className="fixed bottom-10 right-10 z-[100] bg-[#0B1221] text-white p-5 rounded-3xl shadow-2xl border border-slate-700 animate-in slide-in-from-right duration-500 flex items-center gap-4">
-                            <div className={`p-3 rounded-2xl animate-pulse ${realtimeAlert.type === 'commission' ? 'bg-orange-500' : 'bg-emerald-500'}`}>
-                                {realtimeAlert.type === 'commission' ? <DollarSign className="w-5 h-5 text-white" /> : <Zap className="w-5 h-5 text-white" />}
+                        <div className="fixed bottom-10 right-10 z-[100] bg-[#0a0a0a] text-white p-5 shadow-2xl border border-l-4 border-[var(--industrial-border)] animate-in slide-in-from-right duration-500 flex items-center gap-4 border-l-orange-500">
+                            <div className={`p-3 bg-orange-900/10 border border-orange-500/20`}>
+                                {realtimeAlert.type === 'commission' ? <DollarSign className="w-5 h-5 text-orange-500" /> : <Zap className="w-5 h-5 text-orange-500" />}
                             </div>
                             <div>
-                                <p className={`text-[10px] font-black uppercase tracking-widest ${realtimeAlert.type === 'commission' ? 'text-orange-400' : 'text-emerald-400'}`}>
+                                <p className={`text-[9px] font-mono uppercase tracking-widest text-orange-500`}>
                                     {realtimeAlert.type === 'commission' ? 'Nova Comissão Gerada' : 'Novo Cadastro Detectado'}
                                 </p>
-                                <p className="text-sm font-black">{realtimeAlert.name}</p>
-                                <p className="text-xs text-slate-500 font-medium">{realtimeAlert.email}</p>
+                                <p className="text-sm font-black uppercase text-white mt-1">{realtimeAlert.name}</p>
+                                <p className="text-xs text-gray-500 font-mono">{realtimeAlert.email}</p>
                             </div>
                         </div>
                     )}
@@ -662,10 +208,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {/* Stats Summary Section */}
                     {(activeTab === 'USERS' || activeTab === 'REVENUE') && (
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                            <AdminStatCard title="Usuários Totais" value={stats.totalUsers} icon={<Users className="w-5 h-5 text-blue-500" />} bg="bg-blue-500/10" />
-                            <AdminStatCard title="Novos Hoje" value={stats.newUsersToday} icon={<Zap className="w-5 h-5 text-purple-500" />} bg="bg-purple-500/10" highlight={stats.newUsersToday > 0} />
-                            <AdminStatCard title="Assinantes PRO" value={stats.activeProUsers} icon={<Shield className="w-5 h-5 text-emerald-500" />} bg="bg-emerald-500/10" />
-                            <AdminStatCard title="Conversão" value={`${Math.round((stats.activeProUsers / (stats.totalUsers || 1)) * 100)}%`} icon={<Activity className="w-5 h-5 text-orange-500" />} bg="bg-orange-500/10" />
+                            <AdminStatCard title="Usuários Totais" value={stats.totalUsers} icon={<Users className="w-5 h-5 text-gray-400" />} />
+                            <AdminStatCard title="Novos Hoje" value={stats.newUsersToday} icon={<Zap className="w-5 h-5 text-[var(--precision-accent)]" />} highlight={stats.newUsersToday > 0} />
+                            <AdminStatCard title="Assinantes PRO" value={stats.activeProUsers} icon={<Shield className="w-5 h-5 text-green-500" />} />
+                            <AdminStatCard title="Conversão" value={`${Math.round((stats.activeProUsers / (stats.totalUsers || 1)) * 100)}%`} icon={<Activity className="w-5 h-5 text-gray-400" />} />
                         </div>
                     )}
 
@@ -674,43 +220,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             {/* Platform Snapshot */}
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Volume Plataforma</p>
+                                <div className="bg-[#0a0a0a] p-4 border border-[var(--industrial-border)]">
+                                    <p className="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Volume Plataforma</p>
                                     <p className="text-xl font-black text-white">
                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(globalStats.totalRevenue)}
                                     </p>
                                 </div>
-                                <div className="bg-white dark:bg-[#0B1221] p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total de Operações</p>
-                                    <p className="text-xl font-black text-slate-900 dark:text-white">{globalStats.totalFreights} <span className="text-xs font-bold text-slate-500">fretes</span></p>
+                                <div className="bg-[#0a0a0a] p-4 border border-[var(--industrial-border)]">
+                                    <p className="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Total de Operações</p>
+                                    <p className="text-xl font-black text-white">{globalStats.totalFreights} <span className="text-xs font-bold text-gray-600">fretes</span></p>
                                 </div>
-                                <div className="bg-white dark:bg-[#0B1221] p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Média p/ Usuário</p>
-                                    <p className="text-xl font-black text-slate-900 dark:text-white">{globalStats.avgFreights} <span className="text-xs font-bold text-slate-500">un.</span></p>
+                                <div className="bg-[#0a0a0a] p-4 border border-[var(--industrial-border)]">
+                                    <p className="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Média p/ Usuário</p>
+                                    <p className="text-xl font-black text-white">{globalStats.avgFreights} <span className="text-xs font-bold text-gray-600">un.</span></p>
                                 </div>
-                                <div className="bg-white dark:bg-[#0B1221] p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Taxa de Atividade</p>
+                                <div className="bg-[#0a0a0a] p-4 border border-[var(--industrial-border)]">
+                                    <p className="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Taxa de Atividade</p>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-xl font-black text-slate-900 dark:text-white">{globalStats.activeRate}%</p>
-                                        <div className="h-1.5 w-12 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div className="h-full bg-emerald-500" style={{ width: `${globalStats.activeRate}%` }} />
+                                        <p className="text-xl font-black text-white">{globalStats.activeRate}%</p>
+                                        <div className="h-1.5 w-12 bg-[#222] overflow-hidden">
+                                            <div className="h-full bg-green-900" style={{ width: `${globalStats.activeRate}%` }} />
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                        <Users className="w-5 h-5 text-slate-500" />
-                                        Base de Usuários
+                            <div className="bg-[#0a0a0a] border border-[var(--industrial-border)] overflow-hidden flex flex-col min-h-[500px]">
+                                <div className="p-6 border-b border-[var(--industrial-border)] flex flex-col md:flex-row gap-4 justify-between items-center bg-[#111]">
+                                    <h2 className="text-md font-bold text-white flex items-center gap-2 font-mono uppercase">
+                                        <Users className="w-4 h-4 text-[var(--precision-accent)]" />
+                                        :: Base de Dados
                                     </h2>
                                     <div className="relative w-full md:w-96">
-                                        <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
                                         <input
                                             type="text"
-                                            placeholder="Buscar por nome, email ou ID..."
-                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                            placeholder="SEARCH_QUERY..."
+                                            className="w-full pl-10 pr-4 py-2 bg-[#050505] border border-[var(--industrial-border)] text-gray-300 focus:border-[var(--precision-accent)] outline-none text-xs font-mono"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             autoFocus
@@ -718,75 +264,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     </div>
                                     <div className="flex gap-2">
                                         <select
-                                            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500"
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                // Handle filtering logic in the filter constant below
-                                                setSearchTerm(val); // Temporary, we'll refine filtering logic
-                                            }}
+                                            className="bg-[#050505] border border-[var(--industrial-border)] px-3 py-2 text-xs font-mono text-gray-400 outline-none focus:border-[var(--precision-accent)]"
+                                            onChange={(e) => setSearchTerm(e.target.value)}
                                         >
-                                            <option value="">Todos os Segmentos</option>
-                                            <option value="SEG_PRO">Assinantes PRO</option>
-                                            <option value="SEG_HIGH_VOL">Free (Alto Volume)</option>
-                                            <option value="SEG_INACTIVE">Inativo +30 dias</option>
+                                            <option value="">TODOS</option>
+                                            <option value="SEG_PRO">PRO USERS</option>
+                                            <option value="SEG_HIGH_VOL">HIGH VOL</option>
+                                            <option value="SEG_INACTIVE">INACTIVE</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div className="overflow-x-auto flex-1">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-medium">
+                                    <table className="w-full text-xs text-left font-mono">
+                                        <thead className="bg-[#0f0f0f] text-gray-500 font-bold uppercase tracking-wider">
                                             <tr>
-                                                <th className="px-6 py-4">Usuário / Email</th>
-                                                <th className="px-6 py-4 text-center">Atividade / Uso</th>
+                                                <th className="px-6 py-4">Usuário / ID</th>
+                                                <th className="px-6 py-4 text-center">Stats</th>
                                                 <th className="px-6 py-4 text-center">Plano</th>
-                                                <th className="px-6 py-4 text-center">Status Conta</th>
-                                                <th className="px-6 py-4 text-right">Ações</th>
+                                                <th className="px-6 py-4 text-center">Status</th>
+                                                <th className="px-6 py-4 text-right">CMD</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        <tbody className="divide-y divide-[#1a1a1a]">
                                             {filteredUsers.map((user) => (
-                                                <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                <tr key={user.id} className="hover:bg-[#111] transition-colors group">
                                                     <td className="px-6 py-4">
-                                                        <div className="font-semibold text-slate-900 dark:text-slate-100">{user.name || 'Sem nome'}</div>
-                                                        <div className="text-xs text-slate-500">{user.email}</div>
-                                                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.id}</div>
+                                                        <div className="font-bold text-white uppercase">{user.name || 'UNKNOWN'}</div>
+                                                        <div className="text-gray-500">{user.email}</div>
+                                                        <div className="text-[9px] text-gray-700 mt-1">{user.id}</div>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="text-center">
-                                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                                                {user.total_freights} fretes
+                                                            <div className="font-bold text-gray-300">
+                                                                {user.total_freights} <span className="text-gray-600">OPS</span>
                                                             </div>
-                                                            <div className="text-[10px] text-emerald-600 font-bold">
+                                                            <div className="text-emerald-700 font-bold">
                                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(user.total_revenue || 0)}
                                                             </div>
-                                                            <div className="text-[9px] text-slate-400 mt-1 uppercase font-bold">
-                                                                Último: {user.last_activity ? new Date(user.last_activity).toLocaleDateString() : 'Nunca'}
+                                                            <div className="text-[9px] text-gray-600 mt-1">
+                                                                LAST: {user.last_activity ? new Date(user.last_activity).toLocaleDateString() : 'N/A'}
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.plano === 'pro'
-                                                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                                                            : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                                                        <span className={`inline-flex px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${user.plano === 'pro'
+                                                            ? 'border-green-900/50 bg-green-900/10 text-green-500'
+                                                            : 'border-gray-800 bg-[#111] text-gray-500'
                                                             }`}>
                                                             {user.plano || 'FREE'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.account_status === 'banned' ? 'bg-red-500/10 text-red-600' :
-                                                            user.account_status === 'suspended' ? 'bg-orange-500/10 text-orange-600' :
-                                                                'bg-emerald-500/10 text-emerald-600'
+                                                        <span className={`inline-flex px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${user.account_status === 'banned' ? 'border-red-900/50 text-red-500' :
+                                                            user.account_status === 'suspended' ? 'border-orange-900/50 text-orange-500' :
+                                                                'border-emerald-900/50 text-emerald-500'
                                                             }`}>
-                                                            {user.account_status === 'active' ? 'Ativo' :
-                                                                user.account_status === 'suspended' ? 'Suspenso' :
-                                                                    user.account_status === 'banned' ? 'Banido' : 'Ativo'}
+                                                            {user.account_status === 'active' ? 'ACTIVE' :
+                                                                user.account_status === 'suspended' ? 'SUSPENDED' :
+                                                                    user.account_status === 'banned' ? 'BANNED' : 'ACTIVE'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         <button
                                                             onClick={() => setEditingUser(user)}
-                                                            className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                                                            className="text-gray-500 hover:text-white transition-colors p-2 hover:bg-[#222]"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </button>
