@@ -213,7 +213,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           </button>
           {!user.isPremium && (
             <button onClick={onUpgrade} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:scale-105 transition-all">
-              <Sparkles className="w-4 h-4" /> Virar Pro
+              <Sparkles className="w-4 h-4" /> Virar PRO (R$ 34,99)
             </button>
           )}
         </div>
@@ -250,7 +250,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             </div>
           </div>
           <button onClick={onUpgrade} className="bg-white text-brand px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
-            Assinar Agora
+            Assinar com Desconto (R$ 34,99)
           </button>
         </div>
       )}
@@ -274,7 +274,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
                 onClick={onUpgrade}
                 className="px-8 py-3 bg-brand text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-brand/20 hover:scale-105 transition-all flex items-center gap-2"
               >
-                Começar Agora <ArrowRight className="w-4 h-4" />
+                Aproveitar Oferta <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>

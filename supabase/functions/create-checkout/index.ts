@@ -51,8 +51,9 @@ serve(async (req) => {
 
         const reqData = await req.json().catch(() => ({}));
         const payerEmail = reqData.email || user.email;
+        const planType = reqData.plan || 'annual_promo'; // Default to promo for now
 
-        console.log(`Creating Preference for User: ${user.id} (${payerEmail})`);
+        console.log(`Creating Preference for User: ${user.id} (${payerEmail}) - Plan: ${planType}`);
 
         const client = new MercadoPagoConfig({
             accessToken: MP_ACCESS_TOKEN,
@@ -64,17 +65,46 @@ serve(async (req) => {
         const notification_url = `${supabaseUrl}/functions/v1/mercado-pago-webhook`;
         const origin = req.headers.get('origin') || 'http://localhost:5173';
 
+        let item = {
+            id: 'pro_annual',
+            title: 'Assinatura Anual Control Frete Pro',
+            description: 'Acesso completo - 1 Ano',
+            quantity: 1,
+            currency_id: 'BRL',
+            unit_price: 59.99
+        };
+
+        if (planType === 'monthly') {
+            item = {
+                id: 'pro_monthly',
+                title: 'Assinatura Mensal Control Frete Pro',
+                description: 'Acesso completo - 1 Mês',
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: 9.90
+            };
+        } else if (planType === 'annual_promo') {
+            item = {
+                id: 'pro_annual_promo',
+                title: 'Assinatura Anual Promo (Oferta Limitada)',
+                description: 'Acesso completo - 1 Ano',
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: 34.99
+            };
+        } else if (planType === 'lifetime') {
+            item = {
+                id: 'pro_lifetime',
+                title: 'Acesso Vitalício Control Frete Pro',
+                description: 'Pagamento Único - Acesso Eterno',
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: 249.90
+            };
+        }
+
         const body = {
-            items: [
-                {
-                    id: 'pro_annual',
-                    title: 'Assinatura Anual Control Frete Pro',
-                    description: 'Acesso completo - 1 Ano',
-                    quantity: 1,
-                    currency_id: 'BRL',
-                    unit_price: 59.99
-                }
-            ],
+            items: [item],
             // Payer removed to allow Guest Checkout / Full manual entry
             // This prevents "invalid email" errors if the fallback is rejected
             back_urls: {

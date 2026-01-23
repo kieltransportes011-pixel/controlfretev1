@@ -54,7 +54,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
                     </div>
 
                     <Button onClick={onUpgrade} fullWidth className="h-14 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand/20">
-                        Quero ser PRO
+                        Quero ser PRO (Promoção R$ 34,99)
                     </Button>
 
                     <button

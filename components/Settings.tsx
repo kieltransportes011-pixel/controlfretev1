@@ -421,7 +421,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
                 className="w-full bg-brand text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 transition-all active:scale-95 shadow-lg shadow-brand/20"
               >
                 <>
-                  Assinar Plano Pro
+                  Assinar Plano Pro (Oferta R$ 34,99/ano)
                   <ArrowRight className="w-4 h-4" />
                 </>
               </button>
@@ -435,7 +435,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
                 className="w-full bg-white text-brand border border-brand/20 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
               >
                 <>
-                  Assinar Plano Pro
+                  Assinar Plano Pro (Oferta R$ 34,99/ano)
                   <ArrowRight className="w-4 h-4" />
                 </>
               </button>

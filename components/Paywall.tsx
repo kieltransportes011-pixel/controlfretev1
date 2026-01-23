@@ -3,7 +3,7 @@ import { User } from '../types';
 import { Card } from './Card';
 import { Shield, Crown } from 'lucide-react';
 import { supabase } from '../supabase';
-import { PlanComparison } from './PlanComparison';
+import { PricingCard } from './PricingCard';
 
 interface PaywallProps {
   user: User;
@@ -14,11 +14,11 @@ interface PaywallProps {
 export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
   const [loading, setLoading] = useState(false);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (planType: string = 'annual_promo') => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { email: user.email }
+        body: { email: user.email, plan: planType }
       });
 
       if (error) throw error;
@@ -36,7 +36,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-      <Card className="max-w-4xl w-full bg-slate-50 dark:bg-slate-950 border-none relative overflow-visible shadow-2xl p-0">
+      <Card className="max-w-6xl w-full bg-slate-50 dark:bg-slate-950 border-none relative overflow-visible shadow-2xl p-0">
         {onCancel && (
           <button
             onClick={onCancel}
@@ -54,17 +54,66 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
             Escolha seu Plano
           </h1>
           <p className="text-slate-500 font-medium max-w-lg mx-auto">
-            Desbloqueie todo o potencial do Control Frete com pagamentos seguros via <strong>Mercado Pago</strong>.
+            Desbloqueie todo o potencial do Control Frete. <strong>Oferta por tempo limitado.</strong>
           </p>
         </div>
 
         <div className="p-4 md:p-8">
-          <PlanComparison onUpgrade={handleCheckout} isLoading={loading} />
+          <div className="grid md:grid-cols-3 gap-6 items-center">
+            {/* Mensal */}
+            <PricingCard
+              title="Mensal"
+              price="R$ 9,90"
+              period="mês"
+              description="Flexibilidade total para testar."
+              features={[
+                "Fretes ILIMITADOS",
+                "Histórico Completo",
+                "Recibos Profissionais",
+                "Sem fidelidade"
+              ]}
+              onSelect={() => handleCheckout('monthly')}
+              oldPrice="R$ 19,90"
+            />
+
+            {/* Anual Promo */}
+            <PricingCard
+              title="Anual Pro"
+              price="R$ 34,99"
+              period="ano"
+              description="Melhor custo-benefício. Apenas R$ 2,90/mês."
+              features={[
+                "Tudo do Plano Mensal",
+                "Prioridade no Suporte",
+                "Bônus Exclusivos",
+                "Economia de 70%"
+              ]}
+              highlight={true}
+              tag="OFERTA RELÂMPAGO"
+              oldPrice="R$ 59,99"
+              onSelect={() => handleCheckout('annual_promo')}
+            />
+
+            {/* Vitalício */}
+            <PricingCard
+              title="Vitalício"
+              price="R$ 249,90"
+              period="único"
+              description="Pague uma vez, use para sempre."
+              features={[
+                "Acesso Vitalício",
+                "Sem mensalidades",
+                "Suporte VIP",
+                "Selo de Membro Fundador"
+              ]}
+              tag="VIP"
+              onSelect={() => handleCheckout('lifetime')}
+            />
+          </div>
 
           <div className="mt-8 flex flex-col items-center">
             <p className="text-xs text-slate-400 mb-2 font-medium">Aceitamos:</p>
             <div className="flex gap-3 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all">
-              {/* Simple Icon Placeholders/Text for payment methods */}
               <span className="bg-white border text-brand font-bold px-2 py-1 rounded text-xs select-none shadow-sm">PIX</span>
               <span className="bg-white border text-blue-800 font-bold px-2 py-1 rounded text-xs select-none shadow-sm">Cartão de Crédito</span>
               <span className="bg-white border text-slate-600 font-bold px-2 py-1 rounded text-xs select-none shadow-sm">Boleto</span>
