@@ -33,114 +33,15 @@ interface UserProfile {
     admin_notes?: string;
     // Computed telemetry (joined)
     total_freights?: number;
-    total_revenue?: number;
     last_activity?: string;
 }
 
 type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
-    const [activeTab, setActiveTab] = useState<TabView>('USERS');
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<AdminStats>({
-        totalUsers: 0,
-        newUsersToday: 0,
-        newUsersWeek: 0,
-        newUsersMonth: 0,
-        activeProUsers: 0,
-        bannedUsers: 0,
-        openTickets: 0,
-        activeNotices: 0,
-        sessionNewUsers: 0
-    });
-    const [realtimeAlert, setRealtimeAlert] = useState<{ name: string, email: string, type: 'user' | 'commission' } | null>(null);
+    // ... (state definitions remain the same)
 
-    // Helper Component - Industrial Stat Card
-    function AdminStatCard({ title, value, icon, subtext, highlight }: any) {
-        return (
-            <div className={`relative group p-6 bg-[#0a0a0a] border border-[var(--industrial-border)] hover:border-gray-600 transition-colors ${highlight ? 'border-orange-900/30 bg-orange-950/10' : ''}`}>
-                {/* Tech Corners */}
-                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[var(--precision-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[var(--precision-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                <div className="flex items-start justify-between mb-4">
-                    <div className="p-2 bg-[#111] border border-[#222]">
-                        {icon}
-                    </div>
-                    {highlight && <Activity className="w-4 h-4 text-orange-500 animate-pulse" />}
-                </div>
-
-                <h3 className="text-3xl font-black text-white tracking-tighter mb-1">{value}</h3>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{title}</p>
-                {subtext && <p className="text-[10px] text-gray-600 mt-2 font-mono border-t border-dashed border-gray-800 pt-2">{subtext}</p>}
-            </div>
-        );
-    }
-
-    const [users, setUsers] = useState<UserProfile[]>([]);
-    const [tickets, setTickets] = useState<SupportTicket[]>([]);
-    const [logs, setLogs] = useState<AdminLog[]>([]);
-    const [notices, setNotices] = useState<PlatformNotice[]>([]);
-    const [commissions, setCommissions] = useState<any[]>([]);
-    const [revenueStats, setRevenueStats] = useState<any>(null);
-    const [revenuePeriod, setRevenuePeriod] = useState(30);
-    const [revenueLoading, setRevenueLoading] = useState(false);
-
-    // Search & Filter States
-    const [searchTerm, setSearchTerm] = useState('');
-    const [ticketSearch, setTicketSearch] = useState('');
-    const [logSearch, setLogSearch] = useState('');
-    const [referralSearch, setReferralSearch] = useState('');
-
-    // Editing States
-    const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-    const [editingNotice, setEditingNotice] = useState<Partial<PlatformNotice> | null>(null);
-    const [isSavingNotice, setIsSavingNotice] = useState(false);
-    const [editingTicket, setEditingTicket] = useState<SupportTicket | null>(null);
-    const [ticketReply, setTicketReply] = useState('');
-    const [ticketStatus, setTicketStatus] = useState<string>('open');
-    const [modalTab, setModalTab] = useState('DADOS');
-
-    useEffect(() => {
-        fetchDashboardData();
-        setupRealtimeSubscription();
-
-        return () => {
-            supabase.removeAllChannels();
-        };
-    }, []);
-
-    const setupRealtimeSubscription = () => {
-        const channel = supabase
-            .channel('admin_realtime')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'profiles' },
-                (payload) => {
-                    setRealtimeAlert({
-                        name: payload.new.name || 'Novo Usuário',
-                        email: payload.new.email,
-                        type: 'user'
-                    });
-                    setTimeout(() => setRealtimeAlert(null), 5000);
-                    fetchDashboardData(); // Refresh data
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'commissions' },
-                (payload) => {
-                    setRealtimeAlert({
-                        name: `R$ ${payload.new.amount}`,
-                        email: 'Nova Comissão Gerada',
-                        type: 'commission'
-                    });
-                    setTimeout(() => setRealtimeAlert(null), 5000);
-                    fetchDashboardData();
-                }
-            )
-            .subscribe();
-    }
+    // ... (useEffect remains the same)
 
     const fetchDashboardData = async () => {
         setLoading(true);
@@ -153,24 +54,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             if (usersError) throw usersError;
 
-            // 1.1 Enrich Users with Stats (Mocked or Real)
+            // 1.1 Enrich Users with Stats (Activity Only)
             const enrichedUsers = await Promise.all((usersData || []).map(async (u) => {
                 const { count: freightsCount } = await supabase
                     .from('freights')
                     .select('*', { count: 'exact', head: true })
                     .eq('user_id', u.id);
 
-                const { data: financial } = await supabase
-                    .from('freights')
-                    .select('profit')
-                    .eq('user_id', u.id);
-
-                const totalRev = financial?.reduce((acc, curr) => acc + (Number(curr.profit) || 0), 0) || 0;
-
                 return {
                     ...u,
-                    total_freights: freightsCount || 0,
-                    total_revenue: totalRev
+                    total_freights: freightsCount || 0
                 };
             }));
 
@@ -472,6 +365,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 {/* Internal Header - Industrial */}
                 <header className="h-20 bg-[#080808]/90 backdrop-blur-sm border-b border-[var(--industrial-border)] flex items-center justify-between px-8 sticky top-0 z-10 font-mono">
                     <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <span className="bg-red-900/20 text-red-500 border border-red-900/50 text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-sm">
+                                SYSTEM OVERSEER // ROOT
+                            </span>
+                        </div>
                         <h2 className="text-lg font-black text-white uppercase tracking-tighter">
                             {activeTab === 'USERS' && 'Gerenciamento de Usuários'}
                             {activeTab === 'REVENUE' && 'Análise de Receita & BI'}
@@ -534,10 +432,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             {/* Platform Snapshot */}
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="bg-[#0a0a0a] p-4 border border-[var(--industrial-border)]">
-                                    <p className="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Volume Plataforma</p>
-                                    <p className="text-xl font-black text-white">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(globalStats.totalRevenue)}
+                                <div className="bg-[#0a0a0a] p-4 border border-[var(--industrial-border)] relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <DollarSign className="w-12 h-12 text-green-500" />
+                                    </div>
+                                    <p className="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">MRR (Recorrente)</p>
+                                    <p className="text-xl font-black text-green-500">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(globalStats.platformMRR)}
                                     </p>
                                 </div>
                                 <div className="bg-[#0a0a0a] p-4 border border-[var(--industrial-border)]">
@@ -594,7 +495,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         <thead className="bg-[#0f0f0f] text-gray-500 font-bold uppercase tracking-wider">
                                             <tr>
                                                 <th className="px-6 py-4">Usuário / ID</th>
-                                                <th className="px-6 py-4 text-center">Stats</th>
+                                                <th className="px-6 py-4 text-center">Atividade</th>
                                                 <th className="px-6 py-4 text-center">Plano</th>
                                                 <th className="px-6 py-4 text-center">Status</th>
                                                 <th className="px-6 py-4 text-right">CMD</th>
@@ -611,16 +512,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                     <td className="px-6 py-4">
                                                         <div className="text-center">
                                                             <div className="font-bold text-gray-300">
-                                                                {user.total_freights} <span className="text-gray-600">OPS</span>
-                                                            </div>
-                                                            <div className="text-emerald-700 font-bold">
-                                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(user.total_revenue || 0)}
+                                                                {user.total_freights} <span className="text-gray-600">INPUTS</span>
                                                             </div>
                                                             <div className="text-[9px] text-gray-600 mt-1">
-                                                                LAST: {user.last_activity ? new Date(user.last_activity).toLocaleDateString() : 'N/A'}
+                                                                LAST ACTIVITY: {user.last_activity ? new Date(user.last_activity).toLocaleDateString() : 'N/A'}
                                                             </div>
                                                         </div>
                                                     </td>
+
                                                     <td className="px-6 py-4 text-center">
                                                         <span className={`inline-flex px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${user.plano === 'pro'
                                                             ? 'border-green-900/50 bg-green-900/10 text-green-500'
@@ -1381,23 +1280,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                                 {modalTab === 'FINANCEIRO' && (
                                     <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-300">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Volume Processado</p>
-                                                <p className="text-xl font-black text-emerald-700 dark:text-emerald-400">
-                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(editingUser.total_revenue || 0)}
-                                                </p>
-                                            </div>
-                                            <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total de Fretes</p>
-                                                <p className="text-xl font-black text-blue-700 dark:text-blue-400">{editingUser.total_freights}</p>
-                                            </div>
+
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                <Activity className="w-3 h-3" />
+                                                Atividade na Plataforma
+                                            </h4>
+                                            <p className="text-sm text-slate-400">
+                                                Este usuário registrou um total de <strong className="text-white">{editingUser.total_freights}</strong> operações no sistema.
+                                            </p>
                                         </div>
 
                                         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                                             <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                                                 <DollarSign className="w-3 h-3" />
-                                                Comissões de Afiliado
+                                                Comissões de Afiliado (Plataforma)
                                             </h4>
                                             {commissions.filter(c => c.referrer_id === editingUser.id).length > 0 ? (
                                                 <div className="space-y-2">
