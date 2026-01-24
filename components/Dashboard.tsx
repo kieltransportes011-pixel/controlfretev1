@@ -216,6 +216,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               <Sparkles className="w-4 h-4" /> Virar PRO (R$ 34,99)
             </button>
           )}
+          {user.role === 'admin' && (
+            <button
+              onClick={() => window.location.href = '/admin'}
+              className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest border border-slate-700 hover:border-red-500 hover:text-red-500 transition-all shadow-lg"
+            >
+              ADMIN PANEL
+            </button>
+          )}
         </div>
       </header>
 
