@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Control Frete</string>
+    <string name="title_activity_main">Control Frete</string>
+    <string name="package_name">com.controlfrete.app</string>
+    <string name="custom_url_scheme">com.controlfrete.app</string>
+</resources>
