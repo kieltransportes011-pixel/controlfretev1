@@ -297,6 +297,23 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Erro ao iniciar login com Google.');
+      setLoading(false);
+    }
+  };
+
   // --- RENDERS ---
 
   if (view === 'SUCCESS') {
@@ -341,46 +358,66 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
           )}
 
           {view === 'LOGIN' ? (
-            <form onSubmit={handleLogin} className="space-y-5">
-              <InputField
-                label="E-mail"
-                value={formData.email}
-                onChange={(v: string) => handleChange('email', v)}
-                icon={<Mail size={18} />}
-              />
-              <InputField
-                label="Senha"
-                value={formData.password}
-                onChange={(v: string) => handleChange('password', v)}
-                type="password"
-                icon={<Lock size={18} />}
-                isPass
-                passVisible={showPassword}
-                onTogglePass={() => setShowPassword(!showPassword)}
-              />
+            <div className="space-y-5">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors group"
+              >
+                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide group-hover:text-slate-900 dark:group-hover:text-white">
+                  Entrar com Google
+                </span>
+              </button>
 
-              <Button type="submit" fullWidth disabled={loading} className="py-4">
-                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENTRAR'}
-              </Button>
-
-              <div className="flex flex-col items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setView('FORGOT_PASSWORD')}
-                  className="text-slate-400 hover:text-brand text-[10px] font-bold uppercase tracking-wider transition-colors"
-                >
-                  Esqueceu sua senha?
-                </button>
-                <div className="w-full border-t border-slate-100 dark:border-slate-800 my-1"></div>
-                <button
-                  type="button"
-                  onClick={() => setView('REGISTER')}
-                  className="text-slate-500 hover:text-brand text-xs font-bold uppercase tracking-wider transition-colors"
-                >
-                  Não tem conta? Cadastre-se
-                </button>
+              <div className="relative flex items-center justify-center">
+                <div className="border-t border-slate-200 dark:border-slate-700 w-full absolute"></div>
+                <span className="bg-white dark:bg-slate-900 px-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest relative z-10">
+                  Ou continue com e-mail
+                </span>
               </div>
-            </form>
+
+              <form onSubmit={handleLogin} className="space-y-5">
+                <InputField
+                  label="E-mail"
+                  value={formData.email}
+                  onChange={(v: string) => handleChange('email', v)}
+                  icon={<Mail size={18} />}
+                />
+                <InputField
+                  label="Senha"
+                  value={formData.password}
+                  onChange={(v: string) => handleChange('password', v)}
+                  type="password"
+                  icon={<Lock size={18} />}
+                  isPass
+                  passVisible={showPassword}
+                  onTogglePass={() => setShowPassword(!showPassword)}
+                />
+
+                <Button type="submit" fullWidth disabled={loading} className="py-4">
+                  {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENTRAR'}
+                </Button>
+
+                <div className="flex flex-col items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setView('FORGOT_PASSWORD')}
+                    className="text-slate-400 hover:text-brand text-[10px] font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Esqueceu sua senha?
+                  </button>
+                  <div className="w-full border-t border-slate-100 dark:border-slate-800 my-1"></div>
+                  <button
+                    type="button"
+                    onClick={() => setView('REGISTER')}
+                    className="text-slate-500 hover:text-brand text-xs font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Não tem conta? Cadastre-se
+                  </button>
+                </div>
+              </form>
+            </div>
           ) : view === 'FORGOT_PASSWORD' ? (
             <form onSubmit={handleResetPassword} className="space-y-5">
               <button
