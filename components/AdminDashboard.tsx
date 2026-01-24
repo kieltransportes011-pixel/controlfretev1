@@ -77,7 +77,321 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         );
     }
 
-    // ... (rest of state code) ...
+    const [users, setUsers] = useState<UserProfile[]>([]);
+    const [tickets, setTickets] = useState<SupportTicket[]>([]);
+    const [logs, setLogs] = useState<AdminLog[]>([]);
+    const [notices, setNotices] = useState<PlatformNotice[]>([]);
+    const [commissions, setCommissions] = useState<any[]>([]);
+    const [revenueStats, setRevenueStats] = useState<any>(null);
+    const [revenuePeriod, setRevenuePeriod] = useState(30);
+    const [revenueLoading, setRevenueLoading] = useState(false);
+
+    // Search & Filter States
+    const [searchTerm, setSearchTerm] = useState('');
+    const [ticketSearch, setTicketSearch] = useState('');
+    const [logSearch, setLogSearch] = useState('');
+    const [referralSearch, setReferralSearch] = useState('');
+
+    // Editing States
+    const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+    const [editingNotice, setEditingNotice] = useState<Partial<PlatformNotice> | null>(null);
+    const [isSavingNotice, setIsSavingNotice] = useState(false);
+    const [editingTicket, setEditingTicket] = useState<SupportTicket | null>(null);
+    const [ticketReply, setTicketReply] = useState('');
+    const [ticketStatus, setTicketStatus] = useState<string>('open');
+    const [modalTab, setModalTab] = useState('DADOS');
+
+    useEffect(() => {
+        fetchDashboardData();
+        setupRealtimeSubscription();
+
+        return () => {
+            supabase.removeAllChannels();
+        };
+    }, []);
+
+    const setupRealtimeSubscription = () => {
+        const channel = supabase
+            .channel('admin_realtime')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'profiles' },
+                (payload) => {
+                    setRealtimeAlert({
+                        name: payload.new.name || 'Novo Usuário',
+                        email: payload.new.email,
+                        type: 'user'
+                    });
+                    setTimeout(() => setRealtimeAlert(null), 5000);
+                    fetchDashboardData(); // Refresh data
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'commissions' },
+                (payload) => {
+                    setRealtimeAlert({
+                        name: `R$ ${payload.new.amount}`,
+                        email: 'Nova Comissão Gerada',
+                        type: 'commission'
+                    });
+                    setTimeout(() => setRealtimeAlert(null), 5000);
+                    fetchDashboardData();
+                }
+            )
+            .subscribe();
+    }
+
+    const fetchDashboardData = async () => {
+        setLoading(true);
+        try {
+            // 1. Fetch Users
+            const { data: usersData, error: usersError } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (usersError) throw usersError;
+
+            // 1.1 Enrich Users with Stats (Mocked or Real)
+            const enrichedUsers = await Promise.all((usersData || []).map(async (u) => {
+                const { count: freightsCount } = await supabase
+                    .from('freights')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', u.id);
+
+                const { data: financial } = await supabase
+                    .from('freights')
+                    .select('profit')
+                    .eq('user_id', u.id);
+
+                const totalRev = financial?.reduce((acc, curr) => acc + (Number(curr.profit) || 0), 0) || 0;
+
+                return {
+                    ...u,
+                    total_freights: freightsCount || 0,
+                    total_revenue: totalRev
+                };
+            }));
+
+            setUsers(enrichedUsers);
+
+            // 2. Fetch Tickets
+            const { data: ticketsData } = await supabase
+                .from('support_tickets')
+                .select('*')
+                .order('created_at', { ascending: false });
+            setTickets(ticketsData || []);
+
+            // 3. Fetch Logs
+            const { data: logsData } = await supabase
+                .from('admin_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(100);
+            setLogs(logsData || []);
+
+            // 4. Fetch Notices
+            const { data: noticesData } = await supabase
+                .from('platform_notices')
+                .select('*')
+                .order('created_at', { ascending: false });
+            setNotices(noticesData || []);
+
+            // 5. Fetch Commissions
+            const { data: commsData } = await supabase
+                .from('commissions')
+                .select(`
+                    *,
+                    referrer:referrer_id(name, email),
+                    referred:referred_id(name, email)
+                `)
+                .order('created_at', { ascending: false });
+            setCommissions(commsData || []);
+
+            // 6. Calculate Stats
+            const now = new Date();
+            const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+            const startOfWeek = new Date(now.setDate(now.getDate() - 7)).toISOString();
+            const startOfMonth = new Date(now.setDate(now.getDate() - 30)).toISOString();
+
+            setStats({
+                totalUsers: usersData?.length || 0,
+                newUsersToday: usersData?.filter(u => u.created_at >= startOfDay).length || 0,
+                newUsersWeek: usersData?.filter(u => u.created_at >= startOfWeek).length || 0,
+                newUsersMonth: usersData?.filter(u => u.created_at >= startOfMonth).length || 0,
+                activeProUsers: usersData?.filter(u => u.plano === 'pro' && u.status_assinatura === 'active').length || 0,
+                bannedUsers: usersData?.filter(u => u.account_status === 'banned').length || 0,
+                openTickets: ticketsData?.filter(t => t.status === 'open').length || 0,
+                activeNotices: noticesData?.filter(n => n.is_active).length || 0,
+                sessionNewUsers: 0
+            });
+
+            // 7. Revenue Stats
+            const revenue = (commsData || []).reduce((acc: any, curr: any) => acc + Number(curr.amount), 0); // Mock logic for demo
+            setRevenueStats({
+                mrr: enrichedUsers.filter(u => u.plano === 'pro').length * 29.90, // Example MRR
+                active_pro: enrichedUsers.filter(u => u.plano === 'pro').length,
+                period_revenue: revenue,
+                period_new_subs: enrichedUsers.filter(u => u.plano === 'pro' && u.created_at >= startOfMonth).length,
+                period_cancellations: 0
+            });
+
+        } catch (error) {
+            console.error('Error fetching admin data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Actions
+    const handleSaveNotice = async () => {
+        if (!editingNotice || !editingNotice.title || !editingNotice.content) return;
+        setIsSavingNotice(true);
+        try {
+            if (editingNotice.id) {
+                await supabase.from('platform_notices').update({
+                    title: editingNotice.title,
+                    content: editingNotice.content,
+                    level: editingNotice.level,
+                    is_active: editingNotice.is_active,
+                    is_mandatory: editingNotice.is_mandatory,
+                    summary: editingNotice.summary
+                }).eq('id', editingNotice.id);
+            } else {
+                await supabase.from('platform_notices').insert([{
+                    title: editingNotice.title,
+                    content: editingNotice.content,
+                    level: editingNotice.level || 'info',
+                    is_active: editingNotice.is_active || true,
+                    is_mandatory: editingNotice.is_mandatory || false,
+                    summary: editingNotice.summary,
+                    created_by: currentUser.id
+                }]);
+            }
+            fetchDashboardData();
+            setEditingNotice(null);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSavingNotice(false);
+        }
+    };
+
+    const handleDeleteNotice = async (id: string, title: string) => {
+        if (!confirm(`Tem certeza que deseja excluir o aviso "${title}"?`)) return;
+        await supabase.from('platform_notices').delete().eq('id', id);
+        fetchDashboardData();
+    };
+
+
+    const handleUpdateCommission = async (id: string, status: string) => {
+        await supabase.from('commissions').update({ status }).eq('id', id);
+        fetchDashboardData();
+    };
+
+    const [isSavingUser, setIsSavingUser] = useState(false);
+    const [isSavingTicket, setIsSavingTicket] = useState(false);
+    const [recoveryLoading, setRecoveryLoading] = useState(false);
+    const [newEmail, setNewEmail] = useState('');
+
+    const handleUpdateUser = async () => {
+        if (!editingUser) return;
+        setIsSavingUser(true);
+        try {
+            await supabase.from('profiles').update({
+                plano: editingUser.plano,
+                account_status: editingUser.account_status,
+                is_premium: editingUser.plano === 'pro',
+                admin_notes: editingUser.admin_notes
+            }).eq('id', editingUser.id);
+            fetchDashboardData();
+            setEditingUser(null);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSavingUser(false);
+        }
+    };
+
+    const handleUpdateTicket = async () => {
+        if (!editingTicket) return;
+        setIsSavingTicket(true);
+        try {
+            await supabase.from('support_tickets').update({
+                status: ticketStatus,
+                admin_reply: ticketReply,
+                updated_at: new Date().toISOString()
+            }).eq('id', editingTicket.id);
+            fetchDashboardData();
+            setEditingTicket(null);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSavingTicket(false);
+        }
+    };
+
+    const handleRecoveryAction = async (userId: string, action: 'reset_password' | 'force_logout' | 'update_email') => {
+        setRecoveryLoading(true);
+        try {
+            if (action === 'reset_password') {
+                // Trigger password reset email
+                const { data: userProfile } = await supabase.from('profiles').select('email').eq('id', userId).single();
+                if (userProfile?.email) {
+                    await supabase.auth.resetPasswordForEmail(userProfile.email);
+                    alert('Email de redefinição enviado com sucesso.');
+                }
+            } else if (action === 'force_logout') {
+                // In Supabase, we can't easily force logout without server-side admin API, 
+                // but we can invalidate sessions if we had a table for it or RLS policies checking a 'last_logout_at'
+                // For now, we'll just update a metadata field to trigger client-side logout if implemented
+                await supabase.from('profiles').update({
+                    account_status: 'suspended' // Temporary suspension as a crude force logout
+                }).eq('id', userId);
+                alert('Usuário suspenso temporariamente (logout forçado indireto).');
+            } else if (action === 'update_email') {
+                if (!newEmail) return alert("Digite o novo email");
+                // Updating email requires admin privs on backend usually, or we update profile and let user change auth
+                await supabase.from('profiles').update({ email: newEmail }).eq('id', userId);
+                alert('Email no perfil atualizado. O usuário deve atualizar no Auth.');
+            }
+            fetchDashboardData();
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao executar ação.');
+        } finally {
+            setRecoveryLoading(false);
+        }
+    }
+
+    // Computed
+    const filteredUsers = users.filter(u =>
+        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredTickets = tickets.filter(t =>
+        t.title.toLowerCase().includes(ticketSearch.toLowerCase()) ||
+        t.id.toLowerCase().includes(ticketSearch.toLowerCase())
+    );
+
+    const filteredLogs = logs.filter(l =>
+        l.description.toLowerCase().includes(logSearch.toLowerCase()) ||
+        l.action.toLowerCase().includes(logSearch.toLowerCase())
+    );
+
+    const filteredCommissions = commissions.filter(c =>
+        c.referrer?.name?.toLowerCase().includes(referralSearch.toLowerCase()) ||
+        c.referred?.name?.toLowerCase().includes(referralSearch.toLowerCase())
+    );
+
+    const globalStats = {
+        totalRevenue: users.reduce((acc, curr) => acc + (curr.total_revenue || 0), 0),
+        totalFreights: users.reduce((acc, curr) => acc + (curr.total_freights || 0), 0),
+        avgFreights: Math.round(users.reduce((acc, curr) => acc + (curr.total_freights || 0), 0) / (users.length || 1)),
+        activeRate: Math.round((stats.newUsersMonth / (stats.totalUsers || 1)) * 100)
+    };
 
     if (loading) {
         return (
@@ -1151,7 +1465,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                                             <div className="space-y-3">
                                                 <button
-                                                    onClick={() => handleRecoveryAction('send_password_reset')}
+                                                    onClick={() => handleRecoveryAction(editingUser.id, 'reset_password')}
                                                     disabled={recoveryLoading}
                                                     className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
                                                 >
@@ -1163,7 +1477,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                 </button>
 
                                                 <button
-                                                    onClick={() => handleRecoveryAction('force_logout')}
+                                                    onClick={() => handleRecoveryAction(editingUser.id, 'force_logout')}
                                                     disabled={recoveryLoading}
                                                     className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
                                                 >
@@ -1187,7 +1501,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                     onChange={(e) => setNewEmail(e.target.value)}
                                                 />
                                                 <button
-                                                    onClick={() => handleRecoveryAction('update_user_email', { email: newEmail })}
+                                                    onClick={() => handleRecoveryAction(editingUser.id, 'update_email')}
                                                     disabled={!newEmail || recoveryLoading}
                                                     className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[10px] font-black uppercase disabled:opacity-50"
                                                 >
@@ -1207,12 +1521,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     Cancelar
                                 </button>
                                 <button
-                                    onClick={() => handleUpdateUser({
-                                        plano: editingUser.plano,
-                                        is_premium: editingUser.plano === 'pro',
-                                        account_status: editingUser.account_status,
-                                        admin_notes: editingUser.admin_notes
-                                    })}
+                                    onClick={() => handleUpdateUser()}
                                     disabled={isSavingUser}
                                     className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
                                 >
