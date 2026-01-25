@@ -15,7 +15,7 @@ import { Button } from './components/Button';
 import { Paywall } from './components/Paywall';
 import { PaymentSuccessModal } from './components/PaymentSuccessModal';
 import { supabase } from './supabase';
-import { Loader2, ShieldAlert, Cloud } from 'lucide-react';
+import { Loader2, ShieldAlert, Cloud, DollarSign } from 'lucide-react';
 import { useSubscription } from './hooks/useSubscription';
 import { WorkCalendar } from './components/WorkCalendar';
 import { LandingPage } from './components/LandingPage';
@@ -34,6 +34,7 @@ import { MaintenanceLogs } from './components/MaintenanceLogs';
 import { DocumentVault } from './components/DocumentVault';
 import { Skeleton, CardSkeleton, ListSkeleton } from './components/Skeleton';
 import { ToastProvider } from './contexts/ToastContext';
+import { BankAccounts } from './components/Financial/BankAccounts';
 
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
@@ -801,6 +802,7 @@ Obs: ${of.description || 'Sem observações'}`;
           {view === 'ADD_FREIGHT' && (
             <motion.div key="add-freight" variants={viewVariants} initial="initial" animate="animate" exit="exit">
               <AddFreight
+                user={currentUser}
                 settings={settings}
                 clients={clients}
                 onSave={async (f) => {
@@ -824,7 +826,8 @@ Obs: ${of.description || 'Sem observações'}`;
                         destination: f.destination,
                         description: f.description,
                         payment_method: f.paymentMethod,
-                        client_doc: f.clientDoc
+                        client_doc: f.clientDoc,
+                        bank_account_id: f.bank_account_id || null
                       }).eq('id', f.id);
                       if (error) throw error;
                     } else {
@@ -845,7 +848,8 @@ Obs: ${of.description || 'Sem observações'}`;
                         destination: f.destination,
                         description: f.description,
                         payment_method: f.paymentMethod,
-                        client_doc: f.clientDoc
+                        client_doc: f.clientDoc,
+                        bank_account_id: f.bank_account_id || null
                       }]);
                       if (error) throw error;
                     }
@@ -870,6 +874,7 @@ Obs: ${of.description || 'Sem observações'}`;
           {view === 'ADD_EXPENSE' && (
             <motion.div key="add-expense" variants={viewVariants} initial="initial" animate="animate" exit="exit">
               <AddExpense
+                user={currentUser}
                 onSave={async (e) => {
                   if (!currentUser) return;
                   await supabase.from('expenses').insert([{
@@ -878,7 +883,8 @@ Obs: ${of.description || 'Sem observações'}`;
                     description: e.description,
                     value: e.value,
                     source: e.source,
-                    category: e.category
+                    category: e.category,
+                    bank_account_id: e.bank_account_id || null
                   }]);
                   fetchData();
                   setView('DASHBOARD');
@@ -1195,6 +1201,12 @@ Obs: ${of.description || 'Sem observações'}`;
                 }}
                 onBack={() => setView('DASHBOARD')}
               />
+            </motion.div>
+          )}
+
+          {view === 'FINANCIAL' && currentUser && (
+            <motion.div key="financial" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <BankAccounts user={currentUser} />
             </motion.div>
           )}
 

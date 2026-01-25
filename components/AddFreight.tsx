@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppSettings, Freight, Client } from '../types';
+import { AppSettings, Freight, Client, User } from '../types';
 import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
 import { CalendarPicker } from './CalendarPicker';
-import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle, FileText, Search, User, MapPin } from 'lucide-react';
+import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle, FileText, Search, User as UserIcon, MapPin, Landmark } from 'lucide-react';
+import { useBankAccounts } from '../hooks/useBankAccounts';
 
 interface AddFreightProps {
+  user: User;
   settings: AppSettings;
   clients?: Client[];
   onSave: (freight: Freight) => void;
@@ -15,7 +17,7 @@ interface AddFreightProps {
   initialData?: Partial<Freight>;
 }
 
-export const AddFreight: React.FC<AddFreightProps> = ({ settings, clients = [], onSave, onCancel, initialData }) => {
+export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients = [], onSave, onCancel, initialData }) => {
   const [totalValue, setTotalValue] = useState<string>(initialData?.totalValue ? String(initialData.totalValue) : '');
   const [client, setClient] = useState(initialData?.client || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
@@ -36,6 +38,10 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, clients = [], 
   const [description, setDescription] = useState(initialData?.description || '');
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'PIX');
   const [clientDoc, setClientDoc] = useState(initialData?.clientDoc || '');
+
+  // Bank Account
+  const { accounts } = useBankAccounts(user);
+  const [selectedAccount, setSelectedAccount] = useState<string>(initialData?.bank_account_id || '');
 
   // UI State for Client Selection
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -140,7 +146,8 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, clients = [], 
       destination,
       description,
       paymentMethod,
-      clientDoc
+      clientDoc,
+      bank_account_id: selectedAccount || null
     };
 
     setIsSuccess(true);
@@ -315,6 +322,32 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, clients = [], 
                 </div>
               </div>
             )}
+
+            {/* Bank Account Selection (New) */}
+            {accounts.length > 0 && (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2 flex items-center gap-2">
+                  <Landmark className="w-4 h-4" />
+                  Conta de Entrada
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {accounts.map(acc => (
+                    <button
+                      key={acc.id}
+                      type="button"
+                      onClick={() => setSelectedAccount(selectedAccount === acc.id ? '' : acc.id)}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${selectedAccount === acc.id ? 'bg-purple-50 border-purple-500 dark:bg-purple-900/20' : 'bg-slate-50 border-transparent hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800'}`}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs" style={{ backgroundColor: acc.color }}>
+                        <Landmark className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{acc.name}</span>
+                      {selectedAccount === acc.id && <CheckCircle className="w-4 h-4 text-purple-600 ml-auto" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
         </div>
 
@@ -485,3 +518,4 @@ export const AddFreight: React.FC<AddFreightProps> = ({ settings, clients = [], 
     </div>
   );
 };
+

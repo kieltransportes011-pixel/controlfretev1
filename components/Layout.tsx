@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewState } from '../types';
-import { LayoutGrid, List, Settings, Wallet, Truck, Users } from 'lucide-react';
+import { LayoutGrid, List, Settings, Wallet, Truck, Users, Landmark } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -68,6 +68,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           >
             <List className="w-5 h-5" strokeWidth={currentView === 'HISTORY' ? 2.5 : 2} />
             <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Histórico</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('FINANCIAL')}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'FINANCIAL' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+          >
+            <Landmark className="w-5 h-5" strokeWidth={currentView === 'FINANCIAL' ? 2.5 : 2} />
+            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Bancos</span>
           </button>
 
           <button

@@ -27,6 +27,7 @@ export interface Freight {
   description?: string;
   paymentMethod?: string;
   clientDoc?: string;
+  bank_account_id?: string | null;
 }
 
 export interface OFretejaFreight {
@@ -76,6 +77,7 @@ export interface Expense {
   value: number;
   source: ExpenseSource;
   category?: ExpenseCategory;
+  bank_account_id?: string | null;
 }
 
 export interface User {
@@ -150,7 +152,18 @@ export interface Client {
   created_at: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'DOCUMENTS';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'REFERRALS' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'DOCUMENTS' | 'FINANCIAL';
+
+export interface BankAccount {
+  id: string;
+  user_id: string;
+  name: string;
+  bank_code?: string;
+  color: string;
+  initial_balance: number;
+  current_balance?: number; // Calculated on frontend or view
+  created_at: string;
+}
 
 export interface DashboardStats {
   monthTotal: number;
@@ -237,6 +250,7 @@ export interface ExtraIncome {
   value: number;
   source: ExpenseSource;
   created_at: string;
+  bank_account_id?: string | null;
 }
 
 export interface Vehicle {
