@@ -891,6 +891,13 @@ Obs: ${of.description || 'Sem observações'}`;
             <History
               freights={freights}
               expenses={expenses}
+              extraIncomes={extraIncomes}
+              accountsPayable={accountsPayable}
+              onDeleteExtraIncome={async (id) => {
+                if (!currentUser) return;
+                await supabase.from('entradas_extras').delete().eq('id', id);
+                fetchData();
+              }}
               onDeleteFreight={async (id) => {
                 if (!currentUser) return;
                 await supabase.from('freights').delete().eq('id', id);

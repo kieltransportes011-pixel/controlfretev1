@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Freight, Expense, AppSettings, ExpenseCategory } from '../types';
+import { Freight, Expense, AppSettings, ExpenseCategory, ExtraIncome, AccountPayable } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { CalendarRange, ArrowDownCircle, ArrowUpCircle, Trash2, AlertTriangle, X, Printer, Pencil, Filter, Fuel, Wrench, Receipt, Utensils, Tag, CalendarDays, FileText } from 'lucide-react';
 import { Button } from './Button';
@@ -9,8 +9,11 @@ import { MonthlyClosureModal } from './MonthlyClosureModal';
 interface HistoryProps {
   freights: Freight[];
   expenses: Expense[];
+  extraIncomes?: ExtraIncome[];
+  accountsPayable?: AccountPayable[];
   onDeleteFreight: (id: string) => void;
   onDeleteExpense: (id: string) => void;
+  onDeleteExtraIncome?: (id: string) => void;
   onEditFreight: (freight: Freight) => void;
   settings?: AppSettings;
   isPremium?: boolean;
@@ -20,7 +23,19 @@ interface HistoryProps {
 type FilterType = 'ALL' | 'MONTH' | 'WEEK' | 'CUSTOM';
 type StatusFilterType = 'ALL' | 'PAID' | 'PARTIAL' | 'PENDING';
 
-export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFreight, onDeleteExpense, onEditFreight, settings, isPremium, onRequestUpgrade }) => {
+export const History: React.FC<HistoryProps> = ({
+  freights,
+  expenses,
+  extraIncomes = [],
+  accountsPayable = [],
+  onDeleteFreight,
+  onDeleteExpense,
+  onDeleteExtraIncome,
+  onEditFreight,
+  settings,
+  isPremium,
+  onRequestUpgrade
+}) => {
 
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [customStart, setCustomStart] = useState('');
@@ -38,15 +53,19 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
     const currentWeek = getWeekNumber(now);
 
     const allItems = [
-      ...freights.map(f => ({ ...f, type: 'INCOME' as const, sortDate: new Date(f.date) })),
-      ...expenses.map(e => ({ ...e, type: 'EXPENSE' as const, sortDate: new Date(e.date) }))
+      ...freights.map(f => ({ ...f, type: 'INCOME' as const, sortDate: new Date(f.date), itemType: 'FREIGHT' })),
+      ...extraIncomes.map(e => ({ ...e, type: 'INCOME' as const, sortDate: new Date(e.date), itemType: 'EXTRA' })),
+      ...expenses.map(e => ({ ...e, type: 'EXPENSE' as const, sortDate: new Date(e.date), itemType: 'EXPENSE' })),
+      ...accountsPayable
+        .filter(p => p.status === 'pago')
+        .map(p => ({ ...p, type: 'EXPENSE' as const, sortDate: new Date(p.due_date), itemType: 'BILL' }))
     ];
 
     return allItems.filter(item => {
       // Date Filter logic
       let matchesDate = true;
       const date = item.sortDate;
-      const dateStr = item.date; // YYYY-MM-DD string
+      const dateStr = (item as any).itemType === 'BILL' ? (item as any).due_date : (item as any).date;
 
       if (filter === 'MONTH') {
         matchesDate = date.getMonth() === currentMonth && date.getFullYear() === currentYear;
@@ -63,22 +82,38 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
         if (item.type === 'EXPENSE') {
           matchesStatus = false; // Hide expenses when filtering by status
         } else {
-          const freight = item as Freight;
-          const status = freight.status || 'PAID';
-          matchesStatus = status === statusFilter;
+          // Freight or ExtraIncome
+          if ((item as any).itemType === 'EXTRA') {
+            // Extras are always "PAID" effectively
+            matchesStatus = statusFilter === 'PAID';
+          } else {
+            const freight = item as Freight;
+            const status = freight.status || 'PAID';
+            matchesStatus = status === statusFilter;
+          }
         }
       }
 
       return matchesDate && matchesStatus;
     }).sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
-  }, [freights, expenses, filter, statusFilter, customStart, customEnd]);
+  }, [freights, expenses, extraIncomes, accountsPayable, filter, statusFilter, customStart, customEnd]);
 
   const confirmDelete = () => {
     if (itemToDelete) {
       if (itemToDelete.type === 'INCOME') {
-        onDeleteFreight(itemToDelete.id);
+        if ((itemToDelete as any).itemType === 'EXTRA') {
+          onDeleteExtraIncome?.(itemToDelete.id);
+        } else {
+          onDeleteFreight(itemToDelete.id);
+        }
       } else {
-        onDeleteExpense(itemToDelete.id);
+        // DELETE EXPENSE
+        // Note: We don't delete BILLS from history (they are in Payable), but expenses yes.
+        // If it's a bill, maybe we shouldn't allow delete here or it deletes the payable?
+        // For safety, only allowing deleting expenses. Bills must be reopened in Finance.
+        if ((itemToDelete as any).itemType !== 'BILL') {
+          onDeleteExpense(itemToDelete.id);
+        }
       }
       setItemToDelete(null);
     }
@@ -201,7 +236,7 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
           </div>
         ) : (
           filteredItems.map((item) => {
-            if (item.type === 'INCOME') {
+            if (item.type === 'INCOME' && (item as any).itemType === 'FREIGHT') {
               const freight = item as Freight;
               const isPaid = freight.status === 'PAID' || !freight.status;
               const isPartial = freight.status === 'PARTIAL';
@@ -263,7 +298,6 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
                         <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{formatCurrency(freight.reserveValue)}</p>
                       </div>
 
-                      {/* Receipt Action - Only for PRO */}
                       {/* Receipt Action - Intercept for FREE */}
                       <button
                         onClick={() => {
@@ -282,9 +316,53 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
                   </div>
                 </div>
               );
-            } else {
-              const expense = item as Expense;
+            } else if ((item as any).itemType === 'EXTRA') {
+              const extra = item as ExtraIncome;
               const sourceMap = {
+                'COMPANY': 'Empresa',
+                'DRIVER': 'Motorista',
+                'RESERVE': 'Reserva'
+              };
+              return (
+                <div key={extra.id} className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:shadow-md animate-fadeIn">
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-green-500"></div>
+                  <div className="pl-3">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <ArrowUpCircle className="w-3.5 h-3.5 text-green-600" />
+                          <span className="text-xs font-semibold uppercase tracking-wide text-green-600">
+                            Entrada Extra
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-slate-800 dark:text-white text-lg">{extra.description}</h3>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(extra.date)}</p>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xl font-bold text-slate-900 dark:text-white">+{formatCurrency(extra.value)}</p>
+                          <button
+                            onClick={() => setItemToDelete({ id: extra.id, type: 'INCOME', itemType: 'EXTRA' } as any)}
+                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-1 inline-block px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-xs font-medium rounded-md">
+                      Destino: {sourceMap[extra.source]}
+                    </div>
+                  </div>
+                </div>
+              );
+            } else {
+              // EXPENSE or BILL
+              const isBill = (item as any).itemType === 'BILL';
+              const expense = item as any;
+
+              const sourceMap: Record<string, string> = {
                 'COMPANY': 'Empresa',
                 'DRIVER': 'Motorista',
                 'RESERVE': 'Reserva'
@@ -299,34 +377,38 @@ export const History: React.FC<HistoryProps> = ({ freights, expenses, onDeleteFr
 
               return (
                 <div key={expense.id} className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 relative overflow-hidden opacity-90 group transition-all duration-300 hover:-translate-y-1 hover:shadow-md animate-fadeIn">
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-red-500"></div>
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isBill ? 'bg-red-400' : 'bg-red-500'}`}></div>
                   <div className="pl-3">
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
-                          {getCategoryIcon(expense.category)}
-                          <span className="text-xs font-semibold text-red-500 uppercase tracking-wide">
-                            {expense.category ? categoryMap[expense.category] : 'Saída'}
+                          {isBill ? <FileText className="w-3.5 h-3.5 text-red-400" /> : getCategoryIcon(expense.category)}
+                          <span className={`text-xs font-semibold  uppercase tracking-wide ${isBill ? 'text-red-400' : 'text-red-500'}`}>
+                            {isBill ? 'Conta Paga' : (expense.category ? categoryMap[expense.category] : 'Saída')}
                           </span>
                         </div>
                         <h3 className="font-bold text-slate-800 dark:text-white text-lg">{expense.description}</h3>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(expense.date)}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(isBill ? expense.due_date : expense.date)}</p>
                       </div>
                       <div className="text-right flex flex-col items-end">
                         <div className="flex items-center gap-2">
                           <p className="text-xl font-bold text-red-600">-{formatCurrency(expense.value)}</p>
-                          <button
-                            onClick={() => setItemToDelete({ id: expense.id, type: 'EXPENSE' })}
-                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {!isBill && (
+                            <button
+                              onClick={() => setItemToDelete({ id: expense.id, type: 'EXPENSE' })}
+                              className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <div className="mt-3 inline-block px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs font-medium rounded-md">
-                      Saiu de: {sourceMap[expense.source]}
-                    </div>
+                    {expense.source && (
+                      <div className="mt-3 inline-block px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs font-medium rounded-md">
+                        Saiu de: {sourceMap[expense.source] || (isBill && expense.payment_source ? sourceMap[expense.payment_source] : 'Caixa')}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
