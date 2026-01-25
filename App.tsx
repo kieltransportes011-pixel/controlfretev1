@@ -33,6 +33,7 @@ import { Fleet } from './components/Fleet';
 import { MaintenanceLogs } from './components/MaintenanceLogs';
 import { DocumentVault } from './components/DocumentVault';
 import { Skeleton, CardSkeleton, ListSkeleton } from './components/Skeleton';
+import { ToastProvider } from './contexts/ToastContext';
 
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
@@ -685,541 +686,543 @@ Obs: ${of.description || 'Sem observações'}`;
   }
 
   return (
-    <Layout currentView={view} onNavigate={(v) => {
-      // Intercept Freight Integration for temporary notice
-      if (v === 'FREIGHT_INTEGRATION') {
-        setShowFreightNotice(true);
-        return;
-      }
+    <ToastProvider>
+      <Layout currentView={view} onNavigate={(v) => {
+        // Intercept Freight Integration for temporary notice
+        if (v === 'FREIGHT_INTEGRATION') {
+          setShowFreightNotice(true);
+          return;
+        }
 
-      // Pro Features Guard
+        // Pro Features Guard
 
-      const proFeatures: ViewState[] = ['AGENDA', 'GOALS', 'SUPPORT'];
-      const hasProAccess = isActive; // isActive is true if Pro OR Trial
+        const proFeatures: ViewState[] = ['AGENDA', 'GOALS', 'SUPPORT'];
+        const hasProAccess = isActive; // isActive is true if Pro OR Trial
 
-      if (proFeatures.includes(v) && !hasProAccess) {
-        handleOpenUpgrade('FEATURE');
-        return;
-      }
+        if (proFeatures.includes(v) && !hasProAccess) {
+          handleOpenUpgrade('FEATURE');
+          return;
+        }
 
-      setView(v);
-      if (v !== 'ADD_FREIGHT') setFormData(undefined);
-      if (window.location.hash) window.history.replaceState(null, '', ' ');
-    }}>
-      <AnimatePresence mode="wait">
-        {syncing && (
-          <div className="fixed top-2 right-2 z-50 bg-brand/10 backdrop-blur-sm p-1.5 rounded-full flex items-center gap-1.5 border border-brand/20">
-            <Cloud className="w-3 h-3 text-brand animate-pulse" />
-            <span className="text-[8px] font-bold text-brand uppercase tracking-tighter">Sincronizando...</span>
-          </div>
-        )}
+        setView(v);
+        if (v !== 'ADD_FREIGHT') setFormData(undefined);
+        if (window.location.hash) window.history.replaceState(null, '', ' ');
+      }}>
+        <AnimatePresence mode="wait">
+          {syncing && (
+            <div className="fixed top-2 right-2 z-50 bg-brand/10 backdrop-blur-sm p-1.5 rounded-full flex items-center gap-1.5 border border-brand/20">
+              <Cloud className="w-3 h-3 text-brand animate-pulse" />
+              <span className="text-[8px] font-bold text-brand uppercase tracking-tighter">Sincronizando...</span>
+            </div>
+          )}
 
-        {view === 'DASHBOARD' && (
-          <motion.div key="dashboard" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <Dashboard
-              user={currentUser}
-              freights={freights}
-              expenses={expenses}
-              accountsPayable={accountsPayable}
-              extraIncomes={extraIncomes}
-              settings={settings}
-              loading={loadingData}
-              onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
-              onAddExpense={() => setView('ADD_EXPENSE')}
-              onViewSchedule={() => setView('RECEIVABLES')}
-              onOpenCalculator={() => setView('CALCULATOR')}
-              onViewGoals={() => setView('GOALS')}
-              onUpgrade={() => setView('PAYMENT')}
-              onViewAgenda={() => setView('AGENDA')}
-              onRequestUpgrade={() => handleOpenUpgrade('GENERAL')}
-              onViewReferrals={() => setView('REFERRALS')}
-              onViewClients={() => setView('CLIENTS')}
-              onViewFleet={() => {
-                if (!isActive) return handleOpenUpgrade('FEATURE');
-                setView('FLEET');
-              }}
-              onViewMaintenance={() => {
-                if (!isActive) return handleOpenUpgrade('FEATURE');
-                setView('MAINTENANCE');
-              }}
-              onViewDocuments={() => {
-                if (!isActive) return handleOpenUpgrade('FEATURE');
-                setView('DOCUMENTS');
-              }}
-              onAddExtraIncome={async (ei) => {
-                if (!currentUser) return;
-                const { error } = await supabase.from('entradas_extras').insert([{
-                  user_id: currentUser.id,
-                  description: ei.description,
-                  value: ei.value,
-                  source: ei.source,
-                  date: ei.date
-                }]);
-                if (!error) fetchData();
-              }}
-              onDeleteExtraIncome={async (id) => {
-                const { error } = await supabase.from('entradas_extras').delete().eq('id', id);
-                if (!error) fetchData();
-              }}
-            />
-          </motion.div>
-        )}
+          {view === 'DASHBOARD' && (
+            <motion.div key="dashboard" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <Dashboard
+                user={currentUser}
+                freights={freights}
+                expenses={expenses}
+                accountsPayable={accountsPayable}
+                extraIncomes={extraIncomes}
+                settings={settings}
+                loading={loadingData}
+                onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
+                onAddExpense={() => setView('ADD_EXPENSE')}
+                onViewSchedule={() => setView('RECEIVABLES')}
+                onOpenCalculator={() => setView('CALCULATOR')}
+                onViewGoals={() => setView('GOALS')}
+                onUpgrade={() => setView('PAYMENT')}
+                onViewAgenda={() => setView('AGENDA')}
+                onRequestUpgrade={() => handleOpenUpgrade('GENERAL')}
+                onViewReferrals={() => setView('REFERRALS')}
+                onViewClients={() => setView('CLIENTS')}
+                onViewFleet={() => {
+                  if (!isActive) return handleOpenUpgrade('FEATURE');
+                  setView('FLEET');
+                }}
+                onViewMaintenance={() => {
+                  if (!isActive) return handleOpenUpgrade('FEATURE');
+                  setView('MAINTENANCE');
+                }}
+                onViewDocuments={() => {
+                  if (!isActive) return handleOpenUpgrade('FEATURE');
+                  setView('DOCUMENTS');
+                }}
+                onAddExtraIncome={async (ei) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('entradas_extras').insert([{
+                    user_id: currentUser.id,
+                    description: ei.description,
+                    value: ei.value,
+                    source: ei.source,
+                    date: ei.date
+                  }]);
+                  if (!error) fetchData();
+                }}
+                onDeleteExtraIncome={async (id) => {
+                  const { error } = await supabase.from('entradas_extras').delete().eq('id', id);
+                  if (!error) fetchData();
+                }}
+              />
+            </motion.div>
+          )}
 
-        {view === 'AGENDA' && (
-          <motion.div key="agenda" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <WorkCalendar
-              bookings={bookings}
-              onAddBooking={async (b) => {
-                const { data, error } = await supabase.from('bookings').insert([{
-                  user_id: currentUser.id,
-                  date: b.date,
-                  client: b.client,
-                  time: b.time,
-                  estimated_value: b.estimatedValue,
-                  status: b.status
-                }]).select();
-                if (data) fetchData();
-              }}
-              onDeleteBooking={async (id) => {
-                await supabase.from('bookings').delete().eq('id', id);
-                fetchData();
-              }}
-              onConvertBooking={(booking) => {
-                setFormData({
-                  client: booking.client,
-                  totalValue: booking.estimatedValue || 0,
-                  date: booking.date
-                });
-                setView('ADD_FREIGHT');
-              }}
-            />
-          </motion.div>
-        )}
+          {view === 'AGENDA' && (
+            <motion.div key="agenda" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <WorkCalendar
+                bookings={bookings}
+                onAddBooking={async (b) => {
+                  const { data, error } = await supabase.from('bookings').insert([{
+                    user_id: currentUser.id,
+                    date: b.date,
+                    client: b.client,
+                    time: b.time,
+                    estimated_value: b.estimatedValue,
+                    status: b.status
+                  }]).select();
+                  if (data) fetchData();
+                }}
+                onDeleteBooking={async (id) => {
+                  await supabase.from('bookings').delete().eq('id', id);
+                  fetchData();
+                }}
+                onConvertBooking={(booking) => {
+                  setFormData({
+                    client: booking.client,
+                    totalValue: booking.estimatedValue || 0,
+                    date: booking.date
+                  });
+                  setView('ADD_FREIGHT');
+                }}
+              />
+            </motion.div>
+          )}
 
-        {view === 'ADD_FREIGHT' && (
-          <motion.div key="add-freight" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <AddFreight
-              settings={settings}
-              clients={clients}
-              onSave={async (f) => {
-                if (!currentUser) return;
-                try {
-                  // Strict separation: Check if ID exists and is valid (not empty)
-                  if (f.id && f.id.length > 10) {
-                    // Update existing freight
-                    const { error } = await supabase.from('freights').update({
-                      date: f.date,
-                      client: f.client,
-                      total_value: f.totalValue,
-                      company_value: f.companyValue,
-                      driver_value: f.driverValue,
-                      reserve_value: f.reserveValue,
-                      status: f.status,
-                      received_value: f.receivedValue,
-                      pending_value: f.pendingValue,
-                      due_date: f.dueDate,
-                      origin: f.origin,
-                      destination: f.destination,
-                      description: f.description,
-                      payment_method: f.paymentMethod,
-                      client_doc: f.clientDoc
-                    }).eq('id', f.id);
-                    if (error) throw error;
-                  } else {
-                    // Insert new freight
-                    const { error } = await supabase.from('freights').insert([{
-                      user_id: currentUser.id,
-                      date: f.date,
-                      client: f.client,
-                      total_value: f.totalValue,
-                      company_value: f.companyValue,
-                      driver_value: f.driverValue,
-                      reserve_value: f.reserveValue,
-                      status: f.status,
-                      received_value: f.receivedValue,
-                      pending_value: f.pendingValue,
-                      due_date: f.dueDate,
-                      origin: f.origin,
-                      destination: f.destination,
-                      description: f.description,
-                      payment_method: f.paymentMethod,
-                      client_doc: f.clientDoc
-                    }]);
-                    if (error) throw error;
+          {view === 'ADD_FREIGHT' && (
+            <motion.div key="add-freight" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <AddFreight
+                settings={settings}
+                clients={clients}
+                onSave={async (f) => {
+                  if (!currentUser) return;
+                  try {
+                    // Strict separation: Check if ID exists and is valid (not empty)
+                    if (f.id && f.id.length > 10) {
+                      // Update existing freight
+                      const { error } = await supabase.from('freights').update({
+                        date: f.date,
+                        client: f.client,
+                        total_value: f.totalValue,
+                        company_value: f.companyValue,
+                        driver_value: f.driverValue,
+                        reserve_value: f.reserveValue,
+                        status: f.status,
+                        received_value: f.receivedValue,
+                        pending_value: f.pendingValue,
+                        due_date: f.dueDate,
+                        origin: f.origin,
+                        destination: f.destination,
+                        description: f.description,
+                        payment_method: f.paymentMethod,
+                        client_doc: f.clientDoc
+                      }).eq('id', f.id);
+                      if (error) throw error;
+                    } else {
+                      // Insert new freight
+                      const { error } = await supabase.from('freights').insert([{
+                        user_id: currentUser.id,
+                        date: f.date,
+                        client: f.client,
+                        total_value: f.totalValue,
+                        company_value: f.companyValue,
+                        driver_value: f.driverValue,
+                        reserve_value: f.reserveValue,
+                        status: f.status,
+                        received_value: f.receivedValue,
+                        pending_value: f.pendingValue,
+                        due_date: f.dueDate,
+                        origin: f.origin,
+                        destination: f.destination,
+                        description: f.description,
+                        payment_method: f.paymentMethod,
+                        client_doc: f.clientDoc
+                      }]);
+                      if (error) throw error;
+                    }
+
+                    fetchData();
+                    setView('DASHBOARD');
+                  } catch (error: any) {
+                    console.error("Erro ao salvar:", error);
+                    if (error.message && error.message.includes('Limite do Plano Gratuito')) {
+                      handleOpenUpgrade('LIMIT');
+                    } else {
+                      alert("Erro ao salvar: " + (error.message || "Tente novamente."));
+                    }
                   }
+                }}
+                onCancel={() => setView('DASHBOARD')}
+                initialData={formData}
+              />
+            </motion.div>
+          )}
 
+          {view === 'ADD_EXPENSE' && (
+            <motion.div key="add-expense" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <AddExpense
+                onSave={async (e) => {
+                  if (!currentUser) return;
+                  await supabase.from('expenses').insert([{
+                    user_id: currentUser.id,
+                    date: e.date,
+                    description: e.description,
+                    value: e.value,
+                    source: e.source,
+                    category: e.category
+                  }]);
                   fetchData();
                   setView('DASHBOARD');
-                } catch (error: any) {
-                  console.error("Erro ao salvar:", error);
-                  if (error.message && error.message.includes('Limite do Plano Gratuito')) {
-                    handleOpenUpgrade('LIMIT');
-                  } else {
-                    alert("Erro ao salvar: " + (error.message || "Tente novamente."));
+                }}
+                onCancel={() => setView('DASHBOARD')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'HISTORY' && (
+            <motion.div key="history" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <History
+                freights={freights}
+                expenses={expenses}
+                extraIncomes={extraIncomes}
+                accountsPayable={accountsPayable}
+                onDeleteExtraIncome={async (id) => {
+                  if (!currentUser) return;
+                  await supabase.from('entradas_extras').delete().eq('id', id);
+                  fetchData();
+                }}
+                onDeleteFreight={async (id) => {
+                  if (!currentUser) return;
+                  await supabase.from('freights').delete().eq('id', id);
+                  fetchData();
+                }}
+                onDeleteExpense={async (id) => {
+                  if (!currentUser) return;
+                  await supabase.from('expenses').delete().eq('id', id);
+                  fetchData();
+                }}
+                onEditFreight={(f) => { setFormData(f); setView('ADD_FREIGHT'); }}
+                settings={settings}
+                isPremium={isActive}
+                onRequestUpgrade={() => handleOpenUpgrade('FEATURE')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'RECEIVABLES' && (
+            <motion.div key="receivables" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <Schedule
+                freights={freights}
+                onReceivePayment={async (freightId) => {
+                  try {
+                    const f = freights.find(item => item.id === freightId);
+                    if (f && currentUser) {
+                      await supabase.from('freights').update({
+                        status: 'PAID',
+                        received_value: f.totalValue,
+                        pending_value: 0,
+                        due_date: null
+                      }).eq('id', freightId);
+                      fetchData();
+                    }
+                  } catch (error) {
+                    console.error("Erro ao salvar recebimento:", error);
+                    alert("Erro ao salvar no banco de dados.");
                   }
-                }
-              }}
-              onCancel={() => setView('DASHBOARD')}
-              initialData={formData}
-            />
-          </motion.div>
-        )}
-
-        {view === 'ADD_EXPENSE' && (
-          <motion.div key="add-expense" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <AddExpense
-              onSave={async (e) => {
-                if (!currentUser) return;
-                await supabase.from('expenses').insert([{
-                  user_id: currentUser.id,
-                  date: e.date,
-                  description: e.description,
-                  value: e.value,
-                  source: e.source,
-                  category: e.category
-                }]);
-                fetchData();
-                setView('DASHBOARD');
-              }}
-              onCancel={() => setView('DASHBOARD')}
-            />
-          </motion.div>
-        )}
-
-        {view === 'HISTORY' && (
-          <motion.div key="history" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <History
-              freights={freights}
-              expenses={expenses}
-              extraIncomes={extraIncomes}
-              accountsPayable={accountsPayable}
-              onDeleteExtraIncome={async (id) => {
-                if (!currentUser) return;
-                await supabase.from('entradas_extras').delete().eq('id', id);
-                fetchData();
-              }}
-              onDeleteFreight={async (id) => {
-                if (!currentUser) return;
-                await supabase.from('freights').delete().eq('id', id);
-                fetchData();
-              }}
-              onDeleteExpense={async (id) => {
-                if (!currentUser) return;
-                await supabase.from('expenses').delete().eq('id', id);
-                fetchData();
-              }}
-              onEditFreight={(f) => { setFormData(f); setView('ADD_FREIGHT'); }}
-              settings={settings}
-              isPremium={isActive}
-              onRequestUpgrade={() => handleOpenUpgrade('FEATURE')}
-            />
-          </motion.div>
-        )}
-
-        {view === 'RECEIVABLES' && (
-          <motion.div key="receivables" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <Schedule
-              freights={freights}
-              onReceivePayment={async (freightId) => {
-                try {
-                  const f = freights.find(item => item.id === freightId);
-                  if (f && currentUser) {
-                    await supabase.from('freights').update({
-                      status: 'PAID',
-                      received_value: f.totalValue,
-                      pending_value: 0,
-                      due_date: null
-                    }).eq('id', freightId);
-                    fetchData();
+                }}
+                accountsPayable={accountsPayable}
+                onAddAccountPayable={async (acc) => {
+                  if (!currentUser) return;
+                  const { data, error } = await supabase.from('contas_a_pagar').insert([{
+                    ...acc,
+                    user_id: currentUser.id
+                  }]).select();
+                  if (data) fetchData();
+                }}
+                onDeleteAccountPayable={async (id) => {
+                  if (!currentUser) return;
+                  await supabase.from('contas_a_pagar').delete().eq('id', id);
+                  fetchData();
+                }}
+                onUpdateAccountPayable={async (acc) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('contas_a_pagar').update({
+                    description: acc.description,
+                    value: acc.value,
+                    due_date: acc.due_date,
+                    recurrence: acc.recurrence,
+                    status: acc.status
+                  }).eq('id', acc.id);
+                  if (error) {
+                    console.error("Error updating account payable:", error);
+                    throw error;
                   }
-                } catch (error) {
-                  console.error("Erro ao salvar recebimento:", error);
-                  alert("Erro ao salvar no banco de dados.");
-                }
-              }}
-              accountsPayable={accountsPayable}
-              onAddAccountPayable={async (acc) => {
-                if (!currentUser) return;
-                const { data, error } = await supabase.from('contas_a_pagar').insert([{
-                  ...acc,
-                  user_id: currentUser.id
-                }]).select();
-                if (data) fetchData();
-              }}
-              onDeleteAccountPayable={async (id) => {
-                if (!currentUser) return;
-                await supabase.from('contas_a_pagar').delete().eq('id', id);
-                fetchData();
-              }}
-              onUpdateAccountPayable={async (acc) => {
-                if (!currentUser) return;
-                const { error } = await supabase.from('contas_a_pagar').update({
-                  description: acc.description,
-                  value: acc.value,
-                  due_date: acc.due_date,
-                  recurrence: acc.recurrence,
-                  status: acc.status
-                }).eq('id', acc.id);
-                if (error) {
-                  console.error("Error updating account payable:", error);
-                  throw error;
-                }
-                fetchData();
-              }}
-              onToggleAccountPayableStatus={async (acc, source) => {
-                if (!currentUser) return;
-                const newStatus = acc.status === 'aberto' ? 'pago' : 'aberto';
-                await supabase.from('contas_a_pagar').update({
-                  status: newStatus,
-                  payment_source: newStatus === 'pago' ? source : null
-                }).eq('id', acc.id);
-                fetchData();
+                  fetchData();
+                }}
+                onToggleAccountPayableStatus={async (acc, source) => {
+                  if (!currentUser) return;
+                  const newStatus = acc.status === 'aberto' ? 'pago' : 'aberto';
+                  await supabase.from('contas_a_pagar').update({
+                    status: newStatus,
+                    payment_source: newStatus === 'pago' ? source : null
+                  }).eq('id', acc.id);
+                  fetchData();
+                }}
+              />
+            </motion.div>
+          )}
+
+          {view === 'CALCULATOR' && (
+            <motion.div key="calculator" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <FreightCalculator onCancel={() => setView('DASHBOARD')} onRegister={(d) => { setFormData(d); setView('ADD_FREIGHT'); }} />
+            </motion.div>
+          )}
+
+
+
+          {view === 'GOALS' && (
+            <motion.div key="goals" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <MonthlyGoal
+                freights={freights}
+                settings={settings}
+                onUpdateSettings={async (s) => {
+                  if (!currentUser) return;
+                  setSettings(s);
+                  await supabase.from('settings').upsert({
+                    user_id: currentUser.id,
+                    theme: s.theme,
+                    default_company_percent: s.defaultCompanyPercent,
+                    default_driver_percent: s.defaultDriverPercent,
+                    default_reserve_percent: s.defaultReservePercent,
+                    monthly_goal: s.monthlyGoal,
+                    issuer_name: s.issuerName,
+                    issuer_doc: s.issuerDoc,
+                    issuer_phone: s.issuerPhone,
+                    issuer_address_street: s.issuerAddressStreet,
+                    issuer_address_number: s.issuerAddressNumber,
+                    issuer_address_neighborhood: s.issuerAddressNeighborhood,
+                    issuer_address_city: s.issuerAddressCity,
+                    issuer_address_state: s.issuerAddressState,
+                    issuer_address_zip: s.issuerAddressZip,
+                    issuer_logo_url: s.issuerLogoUrl
+                  }, { onConflict: 'user_id' });
+                }}
+                onBack={() => setView('DASHBOARD')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'SETTINGS' && (
+            <motion.div key="settings" variants={viewVariants} initial="initial" animate="animate" exit="exit" className="space-y-6">
+              <Settings
+                settings={settings}
+                user={currentUser}
+                onSave={async (s) => {
+                  if (!currentUser) return;
+                  setSettings(s);
+                  const { error } = await supabase.from('settings').upsert({
+                    user_id: currentUser.id,
+                    theme: s.theme,
+                    default_company_percent: s.defaultCompanyPercent,
+                    default_driver_percent: s.defaultDriverPercent,
+                    default_reserve_percent: s.defaultReservePercent,
+                    monthly_goal: s.monthlyGoal,
+                    issuer_name: s.issuerName,
+                    issuer_doc: s.issuerDoc,
+                    issuer_phone: s.issuerPhone,
+                    issuer_address_street: s.issuerAddressStreet,
+                    issuer_address_number: s.issuerAddressNumber,
+                    issuer_address_neighborhood: s.issuerAddressNeighborhood,
+                    issuer_address_city: s.issuerAddressCity,
+                    issuer_address_state: s.issuerAddressState,
+                    issuer_address_zip: s.issuerAddressZip,
+                    issuer_logo_url: s.issuerLogoUrl
+                  }, { onConflict: 'user_id' });
+
+                  if (error) {
+                    console.error("Error saving settings to Supabase:", error);
+                    throw error;
+                  }
+                }}
+                onNavigate={setView}
+                onUpdateUser={async (u) => {
+                  // We refresh profile to get latest data from DB (changes_used, url)
+                  if (currentUser) fetchUserProfile(currentUser.id);
+                }}
+              />
+              <div className="px-4 pb-20">
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-3 rounded-xl border-2 border-red-100 text-red-600 font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 transition-colors"
+                >
+                  Sair da Conta
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {view === 'REFERRALS' && currentUser && (
+            <motion.div key="referrals" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <ReferralSystem
+                user={currentUser}
+              />
+            </motion.div>
+          )}
+
+          {view === 'SUPPORT' && (
+            <motion.div key="support" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <Support user={currentUser!} onBack={() => setView('SETTINGS')} />
+            </motion.div>
+          )}
+
+          {showSuccessModal && (
+            <PaymentSuccessModal onClose={() => setShowSuccessModal(false)} />
+          )}
+
+          {showPrivacyModal && currentUser && (
+            <PrivacyModal
+              userId={currentUser.id}
+              onAccept={() => {
+                setShowPrivacyModal(false);
+                // Update local user state instantly to prevent flicker
+                setCurrentUser(prev => prev ? ({ ...prev, privacy_accepted: true }) : null);
               }}
             />
-          </motion.div>
-        )}
+          )}
 
-        {view === 'CALCULATOR' && (
-          <motion.div key="calculator" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <FreightCalculator onCancel={() => setView('DASHBOARD')} onRegister={(d) => { setFormData(d); setView('ADD_FREIGHT'); }} />
-          </motion.div>
-        )}
-
-
-
-        {view === 'GOALS' && (
-          <motion.div key="goals" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <MonthlyGoal
+          {view === 'FREIGHT_INTEGRATION' && (
+            <FreightIntegration
               freights={freights}
-              settings={settings}
-              onUpdateSettings={async (s) => {
-                if (!currentUser) return;
-                setSettings(s);
-                await supabase.from('settings').upsert({
-                  user_id: currentUser.id,
-                  theme: s.theme,
-                  default_company_percent: s.defaultCompanyPercent,
-                  default_driver_percent: s.defaultDriverPercent,
-                  default_reserve_percent: s.defaultReservePercent,
-                  monthly_goal: s.monthlyGoal,
-                  issuer_name: s.issuerName,
-                  issuer_doc: s.issuerDoc,
-                  issuer_phone: s.issuerPhone,
-                  issuer_address_street: s.issuerAddressStreet,
-                  issuer_address_number: s.issuerAddressNumber,
-                  issuer_address_neighborhood: s.issuerAddressNeighborhood,
-                  issuer_address_city: s.issuerAddressCity,
-                  issuer_address_state: s.issuerAddressState,
-                  issuer_address_zip: s.issuerAddressZip,
-                  issuer_logo_url: s.issuerLogoUrl
-                }, { onConflict: 'user_id' });
-              }}
+              ofretejaFreights={ofretejaFreights}
+              onApprove={handleApproveOFreteja}
+              onReject={handleRejectOFreteja}
+              onCancel={handleCancelOFreteja}
               onBack={() => setView('DASHBOARD')}
             />
-          </motion.div>
+          )}
+
+          {view === 'CLIENTS' && (
+            <motion.div key="clients" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <Clients
+                clients={clients}
+                onSaveClient={handleSaveClient}
+                onDeleteClient={handleDeleteClient}
+                onBack={() => setView('DASHBOARD')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'FLEET' && (
+            <motion.div key="fleet" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <Fleet
+                vehicles={vehicles}
+                onAddVehicle={async (v) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('vehicles').insert([{ ...v, user_id: currentUser.id }]);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onEditVehicle={async (v) => {
+                  const { error } = await supabase.from('vehicles').update({
+                    plate: v.plate,
+                    brand: v.brand,
+                    model: v.model,
+                    year: v.year,
+                    current_km: v.current_km
+                  }).eq('id', v.id);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onDeleteVehicle={async (id) => {
+                  const { error } = await supabase.from('vehicles').delete().eq('id', id);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onViewDetails={(v) => { /* Could implement details view later */ }}
+                onBack={() => setView('DASHBOARD')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'MAINTENANCE' && (
+            <motion.div key="maintenance" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <MaintenanceLogs
+                logs={maintenanceLogs}
+                vehicles={vehicles}
+                onAddLog={async (l) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('maintenance_logs').insert([{ ...l, user_id: currentUser.id }]);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onDeleteLog={async (id) => {
+                  const { error } = await supabase.from('maintenance_logs').delete().eq('id', id);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onBack={() => setView('DASHBOARD')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'DOCUMENTS' && currentUser && (
+            <motion.div key="documents" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <DocumentVault
+                documents={documents}
+                vehicles={vehicles}
+                user={currentUser}
+                onAddDocument={async (d) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('documents').insert([{ ...d, user_id: currentUser.id }]);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onDeleteDocument={async (id) => {
+                  // Delete from Storage first if image exists? 
+                  // For now, simple DB delete.
+                  const { error } = await supabase.from('documents').delete().eq('id', id);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onBack={() => setView('DASHBOARD')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'NOTICES' && currentUser && (
+            <motion.div key="notices" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <NoticesCenter user={currentUser} onBack={() => setView('DASHBOARD')} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {currentUser && (
+          <MandatoryNoticeModal user={currentUser} />
         )}
-
-        {view === 'SETTINGS' && (
-          <motion.div key="settings" variants={viewVariants} initial="initial" animate="animate" exit="exit" className="space-y-6">
-            <Settings
-              settings={settings}
-              user={currentUser}
-              onSave={async (s) => {
-                if (!currentUser) return;
-                setSettings(s);
-                const { error } = await supabase.from('settings').upsert({
-                  user_id: currentUser.id,
-                  theme: s.theme,
-                  default_company_percent: s.defaultCompanyPercent,
-                  default_driver_percent: s.defaultDriverPercent,
-                  default_reserve_percent: s.defaultReservePercent,
-                  monthly_goal: s.monthlyGoal,
-                  issuer_name: s.issuerName,
-                  issuer_doc: s.issuerDoc,
-                  issuer_phone: s.issuerPhone,
-                  issuer_address_street: s.issuerAddressStreet,
-                  issuer_address_number: s.issuerAddressNumber,
-                  issuer_address_neighborhood: s.issuerAddressNeighborhood,
-                  issuer_address_city: s.issuerAddressCity,
-                  issuer_address_state: s.issuerAddressState,
-                  issuer_address_zip: s.issuerAddressZip,
-                  issuer_logo_url: s.issuerLogoUrl
-                }, { onConflict: 'user_id' });
-
-                if (error) {
-                  console.error("Error saving settings to Supabase:", error);
-                  throw error;
-                }
-              }}
-              onNavigate={setView}
-              onUpdateUser={async (u) => {
-                // We refresh profile to get latest data from DB (changes_used, url)
-                if (currentUser) fetchUserProfile(currentUser.id);
-              }}
-            />
-            <div className="px-4 pb-20">
-              <button
-                onClick={handleLogout}
-                className="w-full py-3 rounded-xl border-2 border-red-100 text-red-600 font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 transition-colors"
-              >
-                Sair da Conta
-              </button>
-            </div>
-          </motion.div>
+        <UpgradeModal
+          isOpen={upgradeModal.open}
+          title={upgradeModal.title}
+          description={upgradeModal.description}
+          onClose={() => setUpgradeModal(prev => ({ ...prev, open: false }))}
+          onUpgrade={() => {
+            setUpgradeModal(prev => ({ ...prev, open: false }));
+            setView('PAYMENT');
+          }}
+        />
+        {showFreightNotice && (
+          <FreightNoticeModal onClose={() => setShowFreightNotice(false)} />
         )}
-
-        {view === 'REFERRALS' && currentUser && (
-          <motion.div key="referrals" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <ReferralSystem
-              user={currentUser}
-            />
-          </motion.div>
-        )}
-
-        {view === 'SUPPORT' && (
-          <motion.div key="support" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <Support user={currentUser!} onBack={() => setView('SETTINGS')} />
-          </motion.div>
-        )}
-
-        {showSuccessModal && (
-          <PaymentSuccessModal onClose={() => setShowSuccessModal(false)} />
-        )}
-
-        {showPrivacyModal && currentUser && (
-          <PrivacyModal
-            userId={currentUser.id}
-            onAccept={() => {
-              setShowPrivacyModal(false);
-              // Update local user state instantly to prevent flicker
-              setCurrentUser(prev => prev ? ({ ...prev, privacy_accepted: true }) : null);
-            }}
-          />
-        )}
-
-        {view === 'FREIGHT_INTEGRATION' && (
-          <FreightIntegration
-            freights={freights}
-            ofretejaFreights={ofretejaFreights}
-            onApprove={handleApproveOFreteja}
-            onReject={handleRejectOFreteja}
-            onCancel={handleCancelOFreteja}
-            onBack={() => setView('DASHBOARD')}
-          />
-        )}
-
-        {view === 'CLIENTS' && (
-          <motion.div key="clients" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <Clients
-              clients={clients}
-              onSaveClient={handleSaveClient}
-              onDeleteClient={handleDeleteClient}
-              onBack={() => setView('DASHBOARD')}
-            />
-          </motion.div>
-        )}
-
-        {view === 'FLEET' && (
-          <motion.div key="fleet" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <Fleet
-              vehicles={vehicles}
-              onAddVehicle={async (v) => {
-                if (!currentUser) return;
-                const { error } = await supabase.from('vehicles').insert([{ ...v, user_id: currentUser.id }]);
-                if (error) throw error;
-                fetchData();
-              }}
-              onEditVehicle={async (v) => {
-                const { error } = await supabase.from('vehicles').update({
-                  plate: v.plate,
-                  brand: v.brand,
-                  model: v.model,
-                  year: v.year,
-                  current_km: v.current_km
-                }).eq('id', v.id);
-                if (error) throw error;
-                fetchData();
-              }}
-              onDeleteVehicle={async (id) => {
-                const { error } = await supabase.from('vehicles').delete().eq('id', id);
-                if (error) throw error;
-                fetchData();
-              }}
-              onViewDetails={(v) => { /* Could implement details view later */ }}
-              onBack={() => setView('DASHBOARD')}
-            />
-          </motion.div>
-        )}
-
-        {view === 'MAINTENANCE' && (
-          <motion.div key="maintenance" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <MaintenanceLogs
-              logs={maintenanceLogs}
-              vehicles={vehicles}
-              onAddLog={async (l) => {
-                if (!currentUser) return;
-                const { error } = await supabase.from('maintenance_logs').insert([{ ...l, user_id: currentUser.id }]);
-                if (error) throw error;
-                fetchData();
-              }}
-              onDeleteLog={async (id) => {
-                const { error } = await supabase.from('maintenance_logs').delete().eq('id', id);
-                if (error) throw error;
-                fetchData();
-              }}
-              onBack={() => setView('DASHBOARD')}
-            />
-          </motion.div>
-        )}
-
-        {view === 'DOCUMENTS' && currentUser && (
-          <motion.div key="documents" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <DocumentVault
-              documents={documents}
-              vehicles={vehicles}
-              user={currentUser}
-              onAddDocument={async (d) => {
-                if (!currentUser) return;
-                const { error } = await supabase.from('documents').insert([{ ...d, user_id: currentUser.id }]);
-                if (error) throw error;
-                fetchData();
-              }}
-              onDeleteDocument={async (id) => {
-                // Delete from Storage first if image exists? 
-                // For now, simple DB delete.
-                const { error } = await supabase.from('documents').delete().eq('id', id);
-                if (error) throw error;
-                fetchData();
-              }}
-              onBack={() => setView('DASHBOARD')}
-            />
-          </motion.div>
-        )}
-
-        {view === 'NOTICES' && currentUser && (
-          <motion.div key="notices" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-            <NoticesCenter user={currentUser} onBack={() => setView('DASHBOARD')} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {currentUser && (
-        <MandatoryNoticeModal user={currentUser} />
-      )}
-      <UpgradeModal
-        isOpen={upgradeModal.open}
-        title={upgradeModal.title}
-        description={upgradeModal.description}
-        onClose={() => setUpgradeModal(prev => ({ ...prev, open: false }))}
-        onUpgrade={() => {
-          setUpgradeModal(prev => ({ ...prev, open: false }));
-          setView('PAYMENT');
-        }}
-      />
-      {showFreightNotice && (
-        <FreightNoticeModal onClose={() => setShowFreightNotice(false)} />
-      )}
-    </Layout>
+      </Layout>
+    </ToastProvider>
 
   );
 };

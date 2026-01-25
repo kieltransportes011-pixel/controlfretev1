@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { AppSettings, User, ViewState } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
 import { ActivityHistory } from './ActivityHistory';
+import { useImageUpload } from '../hooks/useImageUpload';
+import { useToast } from '../contexts/ToastContext';
 
 interface SettingsProps {
   settings: AppSettings;
@@ -17,8 +19,12 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNavigate, onUpdateUser }) => {
-  /* Removed handleStripeUpgrade */
   const { isTrial, isActive, daysRemaining } = useSubscription(user);
+  const { success: toastSuccess, error: toastError } = useToast();
+
+  // Hooks for Image Upload
+  const avatarUpload = useImageUpload({ bucket: 'avatars', minDimension: 150 });
+  const logoUpload = useImageUpload({ bucket: 'avatars', minDimension: 100 });
 
   // Initialize state with props
   const [company, setCompany] = useState(settings.defaultCompanyPercent);
@@ -35,9 +41,10 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   const [issuerCity, setIssuerCity] = useState(settings.issuerAddressCity || '');
   const [issuerState, setIssuerState] = useState(settings.issuerAddressState || '');
   const [issuerZip, setIssuerZip] = useState(settings.issuerAddressZip || '');
-  const [issuerLogoUrl, setIssuerLogoUrl] = useState(settings.issuerLogoUrl || '');
 
-  // Sync state with props when they change (e.g. initial fetch completes)
+  const [tempLogoUrl, setTempLogoUrl] = useState(settings.issuerLogoUrl || '');
+
+  // Effects to sync with props
   React.useEffect(() => {
     setCompany(settings.defaultCompanyPercent);
     setDriver(settings.defaultDriverPercent);
@@ -51,7 +58,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
     setIssuerCity(settings.issuerAddressCity || '');
     setIssuerState(settings.issuerAddressState || '');
     setIssuerZip(settings.issuerAddressZip || '');
-    setIssuerLogoUrl(settings.issuerLogoUrl || '');
+    setTempLogoUrl(settings.issuerLogoUrl || '');
   }, [settings, user?.name]);
 
   // Check Unread Notices
@@ -68,191 +75,55 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   }, [user.id]);
 
   // Profile Photo Logic
-  const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
   const changesUsed = user.profile_photo_changes_used || 0;
   const freeChangesRemaining = Math.max(0, 3 - changesUsed);
   const isPaidChange = freeChangesRemaining === 0;
 
-  const processImage = (file: File): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const size = 300;
-        canvas.width = size;
-        canvas.height = size;
-        const minDim = Math.min(img.width, img.height);
-        const sx = (img.width - minDim) / 2;
-        const sy = (img.height - minDim) / 2;
-        if (ctx) {
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, size, size);
-          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
-        }
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Canvas blob error'));
-        }, 'image/webp', 0.85);
-      };
-      img.onerror = reject;
-    });
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      alert('Formato inválido. Use JPG ou PNG.');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Arquivo muito grande. Máximo 2MB.');
-      return;
-    }
-
-    // Check dimensions
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.onload = async () => {
-      if (img.width < 150 || img.height < 150) {
-        alert('A imagem deve ter pelo menos 150x150 pixels.');
-        return;
-      }
-      try {
-        const processed = await processImage(file);
-        setPreviewBlob(processed);
-        setPreviewUrl(URL.createObjectURL(processed));
-      } catch (err) {
-        console.error(err);
-        alert('Erro ao processar imagem.');
-      }
-    };
-  };
-
-  const handleConfirmUpload = async () => {
-    if (!previewBlob) return;
-
-    const cost = 0;
-
+  const handleProfileUpload = async () => {
     try {
-      setUploading(true);
-      // Removed redundant 'avatars/' prefix since we are already IN the 'avatars' bucket
-      const filePath = `${user.id}.webp`;
-      const processedFile = new File([previewBlob], 'avatar.webp', { type: 'image/webp' });
-
-      // Upload
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, processedFile, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get Public URL
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const publicUrl = await avatarUpload.upload(`${user.id}.webp`);
 
       // RPC to update profile
       const { error: rpcError } = await supabase.rpc('update_profile_avatar', {
-        new_photo_url: `${publicUrl}?t=${Date.now()}`,
-        cost: 0 // Logic handled in backend or irrelevant for free changes
+        new_photo_url: publicUrl,
+        cost: 0
       });
 
       if (rpcError) throw rpcError;
 
       if (onUpdateUser) await onUpdateUser({ ...user, profile_photo_url: publicUrl, profile_photo_changes_used: (user.profile_photo_changes_used || 0) + 1 });
-      handleCancelPreview();
-      alert('Foto de perfil atualizada com sucesso!');
+
+      avatarUpload.cancel();
+      toastSuccess('Foto de perfil atualizada com sucesso!');
     } catch (error: any) {
       console.error(error);
-      alert('Erro ao salvar foto: ' + (error.message || 'Erro desconhecido'));
-    } finally {
-      setUploading(false);
+      toastError('Erro ao salvar foto: ' + (error.message || 'Erro desconhecido'));
     }
   };
 
-  const handleCancelPreview = () => {
-    setPreviewUrl(null);
-    setPreviewBlob(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  // Company Logo Upload Logic
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
-  const [logoPreviewBlob, setLogoPreviewBlob] = useState<Blob | null>(null);
-  const logoInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isActive) {
-      alert('Upload de logo é um recurso PRO.');
-      return;
-    }
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      alert('Formato inválido. Use JPG ou PNG.');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Arquivo muito grande. Máximo 2MB.');
-      return;
-    }
-
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.onload = async () => {
-      try {
-        const processed = await processImage(file);
-        setLogoPreviewBlob(processed);
-        setLogoPreviewUrl(URL.createObjectURL(processed));
-      } catch (err) {
-        console.error(err);
-        alert('Erro ao processar imagem.');
-      }
-    };
-  };
-
-  const handleConfirmLogoUpload = async () => {
-    if (!logoPreviewBlob) return;
-
+  const handleLogoUpload = async () => {
     try {
-      setUploadingLogo(true);
-      const filePath = `logos/${user.id}_logo.webp`;
-      const processedFile = new File([logoPreviewBlob], 'logo.webp', { type: 'image/webp' });
-
-      // Upload to 'avatars' bucket (using it for logos too as it's already configured)
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, processedFile, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const finalUrl = `${publicUrl}?t=${Date.now()}`;
-
-      setIssuerLogoUrl(finalUrl);
-      setLogoPreviewUrl(null);
-      setLogoPreviewBlob(null);
-      alert('Logo carregada com sucesso! Não esqueça de salvar as alterações.');
+      const publicUrl = await logoUpload.upload(`logos/${user.id}_logo.webp`);
+      setTempLogoUrl(publicUrl);
+      logoUpload.cancel();
+      toastSuccess('Logo carregada! Clique em "Salvar Tudo" para confirmar.');
     } catch (error: any) {
       console.error(error);
-      alert('Erro ao salvar logo: ' + (error.message || 'Erro desconhecido'));
-    } finally {
-      setUploadingLogo(false);
+      toastError('Erro ao salvar logo: ' + (error.message || 'Erro desconhecido'));
     }
   };
 
   const [isSaved, setIsSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // Add saving state
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
+    // Validation
+    const total = company + driver + reserve;
+    if (total !== 100) {
+      toastError(`A soma das porcentagens é ${total}%. Deve ser exatamente 100%.`);
+      return;
+    }
+
     try {
       setIsSaving(true);
       await onSave({
@@ -266,17 +137,17 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         issuerAddressStreet: issuerStreet,
         issuerAddressNumber: issuerNumber,
         issuerAddressNeighborhood: issuerNeighborhood,
-        issuerCity,
+        issuerAddressCity: issuerCity,
         issuerAddressState: issuerState,
         issuerAddressZip: issuerZip,
-        issuerLogoUrl: issuerLogoUrl,
+        issuerLogoUrl: tempLogoUrl,
       });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
-      alert('Dados e configurações salvos com sucesso!');
+      toastSuccess('Configurações salvas com sucesso!');
     } catch (error: any) {
       console.error("Failed to save settings:", error);
-      alert("Falha ao salvar configurações: " + (error.message || "Erro desconhecido"));
+      toastError("Falha ao salvar: " + (error.message || "Erro desconhecido"));
     } finally {
       setIsSaving(false);
     }
@@ -306,8 +177,8 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         <Card className="flex flex-col sm:flex-row items-center gap-6 p-6">
           <div className="relative group">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-800 shadow-lg">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              {avatarUpload.previewUrl ? (
+                <img src={avatarUpload.previewUrl} alt="Preview" className="w-full h-full object-cover" />
               ) : user.profile_photo_url ? (
                 <img src={user.profile_photo_url} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -316,7 +187,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
                 </div>
               )}
             </div>
-            {uploading && (
+            {avatarUpload.uploading && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full z-10">
                 <Loader2 className="w-8 h-8 text-white animate-spin" />
               </div>
@@ -326,9 +197,9 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           <div className="flex-1 text-center sm:text-left space-y-3 w-full">
             <div>
               <h3 className="font-bold text-lg text-base-text dark:text-white mb-1">
-                {previewUrl ? 'Confirmar Alteração?' : 'Sua Foto de Perfil'}
+                {avatarUpload.previewUrl ? 'Confirmar Alteração?' : 'Sua Foto de Perfil'}
               </h3>
-              {!previewUrl && (
+              {!avatarUpload.previewUrl && (
                 <p className={`text-xs font-medium px-2 py-1 rounded inline-block ${freeChangesRemaining > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
                   {freeChangesRemaining > 0
                     ? `${freeChangesRemaining} de 3 trocas gratuitas`
@@ -338,19 +209,19 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
               )}
             </div>
 
-            {previewUrl ? (
+            {avatarUpload.previewUrl ? (
               <div className="flex items-center justify-center sm:justify-start gap-3">
                 <button
-                  onClick={handleConfirmUpload}
-                  disabled={uploading}
+                  onClick={handleProfileUpload}
+                  disabled={avatarUpload.uploading}
                   className="flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-600 transition-colors"
                 >
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  {avatarUpload.uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                   {freeChangesRemaining > 0 ? 'Salvar (Grátis)' : 'Salvar'}
                 </button>
                 <button
-                  onClick={handleCancelPreview}
-                  disabled={uploading}
+                  onClick={avatarUpload.cancel}
+                  disabled={avatarUpload.uploading}
                   className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-200 transition-colors dark:bg-slate-800 dark:text-slate-400"
                 >
                   Cancelar
@@ -360,15 +231,15 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
               <div>
                 <input
                   type="file"
-                  ref={fileInputRef}
+                  ref={avatarUpload.fileInputRef}
                   className="hidden"
                   accept="image/jpeg, image/png"
-                  onChange={handleFileSelect}
+                  onChange={avatarUpload.handleFileSelect}
                 />
                 <Button
                   variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
+                  onClick={() => avatarUpload.fileInputRef.current?.click()}
+                  disabled={avatarUpload.uploading}
                   className="w-full sm:w-auto"
                 >
                   <Camera className="w-4 h-4 mr-2" />
@@ -385,65 +256,45 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         </Card>
       </section>
 
-
-
       {/* Subscription Section */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
           <Crown className="w-4 h-4 text-brand" />
           Assinatura
         </h2>
-        <Card className={`relative overflow-hidden border-2 transition-all ${isActive ? 'border-accent-success bg-green-50/50 dark:bg-green-900/10' : 'border-brand/20'}`}>
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="font-black text-slate-800 dark:text-white uppercase text-sm">
-                Plano {user.plano === 'pro' ? 'Profissional' : (isTrial ? 'Período de Teste' : 'Gratuito')}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {isActive
-                  ? (isTrial ? `Status: Ativo (${daysRemaining} dias restantes)` : `Status: ${user.status_assinatura === 'ativa' ? 'Ativa' : 'Inadimplente'}`)
-                  : 'Upgrade para liberar todas as funções'}
-              </p>
-            </div>
-            {isActive ? (
-              <div className={`p-2 rounded-full shadow-lg ${isTrial ? 'bg-brand text-white' : 'bg-accent-success text-white shadow-accent-success/30'}`}>
-                {isTrial ? <Zap className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
+        <Card className={`relative overflow-hidden transition-all ${isActive ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-full ${isActive ? 'bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-300' : 'bg-slate-100 text-slate-400 dark:bg-slate-700'}`}>
+                {isActive ? <Shield className="w-6 h-6" /> : <Zap className="w-6 h-6" />}
               </div>
-            ) : (
-              <Zap className="w-6 h-6 text-brand animate-pulse" />
+              <div>
+                <h3 className="font-bold text-slate-800 dark:text-white text-lg">
+                  {user.plano === 'pro' ? 'Plano Profissional' : (isTrial ? 'Período de Teste' : 'Plano Gratuito')}
+                </h3>
+                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                  <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  {isActive ? (isTrial ? `${daysRemaining} dias restantes` : 'Assinatura Ativa') : 'Assinatura Inativa'}
+                </div>
+              </div>
+            </div>
+
+            {!isActive && (
+              <Button onClick={() => onNavigate('PAYMENT')} className="w-full sm:w-auto bg-brand hover:bg-brand-600 text-white shadow-lg shadow-brand/20">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4" />
+                  <span>Fazer Upgrade (R$ 34,99/ano)</span>
+                </div>
+              </Button>
             )}
-          </div>
-
-          {!isActive && (
-            <div className="space-y-4">
-              <button
-                onClick={() => onNavigate('PAYMENT')}
-                className="w-full bg-brand text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 transition-all active:scale-95 shadow-lg shadow-brand/20"
-              >
-                <>
-                  Assinar Plano Pro (Oferta R$ 34,99/ano)
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              </button>
-            </div>
-          )}
-
-          {isTrial && (
-            <div className="space-y-4">
-              <button
-                onClick={() => onNavigate('PAYMENT')}
-                className="w-full bg-white text-brand border border-brand/20 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
-              >
-                <>
-                  Assinar Plano Pro (Oferta R$ 34,99/ano)
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              </button>
-            </div>
-          )}
-
-          <div className="absolute -right-4 -bottom-4 opacity-[0.03] dark:opacity-[0.05] pointer-events-none">
-            <Crown className="w-24 h-24" />
+            {isTrial && (
+              <Button variant="outline" onClick={() => onNavigate('PAYMENT')} className="w-full sm:w-auto border-brand text-brand hover:bg-brand-50 dark:hover:bg-brand-900/20">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  <span>Assinar Definitivo</span>
+                </div>
+              </Button>
+            )}
           </div>
         </Card>
       </section>
@@ -521,26 +372,26 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
             </label>
             <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
               <div className="w-16 h-16 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center overflow-hidden">
-                {logoPreviewUrl ? (
-                  <img src={logoPreviewUrl} alt="Logo Preview" className="w-full h-full object-contain" />
-                ) : issuerLogoUrl ? (
-                  <img src={issuerLogoUrl} alt="Logo" className="w-full h-full object-contain" />
+                {logoUpload.previewUrl ? (
+                  <img src={logoUpload.previewUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                ) : tempLogoUrl ? (
+                  <img src={tempLogoUrl} alt="Logo" className="w-full h-full object-contain" />
                 ) : (
                   <Camera className="w-6 h-6 text-slate-300" />
                 )}
               </div>
               <div className="flex-1">
-                {logoPreviewUrl ? (
+                {logoUpload.previewUrl ? (
                   <div className="flex gap-2">
                     <button
-                      onClick={handleConfirmLogoUpload}
-                      disabled={uploadingLogo}
+                      onClick={handleLogoUpload}
+                      disabled={logoUpload.uploading}
                       className="text-xs bg-brand text-white px-3 py-1.5 rounded-lg font-bold hover:bg-brand-600 disabled:opacity-50"
                     >
-                      {uploadingLogo ? 'Carregando...' : 'Confirmar'}
+                      {logoUpload.uploading ? 'Carregando...' : 'Confirmar'}
                     </button>
                     <button
-                      onClick={() => { setLogoPreviewUrl(null); setLogoPreviewBlob(null); }}
+                      onClick={logoUpload.cancel}
                       className="text-xs bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-300"
                     >
                       Cancelar
@@ -550,16 +401,22 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
                   <>
                     <input
                       type="file"
-                      ref={logoInputRef}
+                      ref={logoUpload.fileInputRef}
                       className="hidden"
                       accept="image/jpeg, image/png"
-                      onChange={handleLogoSelect}
+                      onChange={logoUpload.handleFileSelect}
                     />
                     <button
-                      onClick={() => logoInputRef.current?.click()}
+                      onClick={() => {
+                        if (!isActive) {
+                          toastError('Upload de logo é exclusivo para PRO');
+                          return;
+                        }
+                        logoUpload.fileInputRef.current?.click();
+                      }}
                       className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${isActive ? 'bg-white dark:bg-slate-800 text-brand border border-brand/20 hover:bg-slate-50' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                     >
-                      {issuerLogoUrl ? 'Alterar Logo' : 'Adicionar Logo'}
+                      {tempLogoUrl ? 'Alterar Logo' : 'Adicionar Logo'}
                     </button>
                     <p className="text-[10px] text-slate-400 mt-1">
                       {isActive ? 'PNG ou JPG, máx 2MB' : 'Recurso disponível apenas no plano PRO'}
