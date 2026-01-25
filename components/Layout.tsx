@@ -32,7 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 px-2 py-3 flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.08)] transition-colors duration-200">
           <button
             onClick={() => onNavigate('DASHBOARD')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'DASHBOARD' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'DASHBOARD' ? 'text-blue-600 dark:text-blue-400 scale-105' : 'text-slate-400 hover:text-blue-500 dark:hover:text-blue-400'}`}
           >
             <LayoutGrid className="w-5 h-5" strokeWidth={currentView === 'DASHBOARD' ? 2.5 : 2} />
             <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Início</span>
@@ -40,23 +40,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
           <button
             onClick={() => onNavigate('RECEIVABLES')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'RECEIVABLES' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'RECEIVABLES' ? 'text-emerald-600 dark:text-emerald-400 scale-105' : 'text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400'}`}
           >
             <Wallet className="w-5 h-5" strokeWidth={currentView === 'RECEIVABLES' ? 2.5 : 2} />
             <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Contas</span>
           </button>
 
-          <button
-            onClick={() => onNavigate('FREIGHT_INTEGRATION')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'FREIGHT_INTEGRATION' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
-          >
-            <Truck className="w-5 h-5" strokeWidth={currentView === 'FREIGHT_INTEGRATION' ? 2.5 : 2} />
-            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Fretes</span>
-          </button>
+
 
           <button
             onClick={() => onNavigate('REFERRALS')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'REFERRALS' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'REFERRALS' ? 'text-purple-600 dark:text-purple-400 scale-105' : 'text-slate-400 hover:text-purple-500 dark:hover:text-purple-400'}`}
           >
             <Users className="w-5 h-5" strokeWidth={currentView === 'REFERRALS' ? 2.5 : 2} />
             <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Indicar</span>
@@ -64,7 +58,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
           <button
             onClick={() => onNavigate('HISTORY')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'HISTORY' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'HISTORY' ? 'text-orange-600 dark:text-orange-400 scale-105' : 'text-slate-400 hover:text-orange-500 dark:hover:text-orange-400'}`}
           >
             <List className="w-5 h-5" strokeWidth={currentView === 'HISTORY' ? 2.5 : 2} />
             <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Histórico</span>
@@ -72,7 +66,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
           <button
             onClick={() => onNavigate('FINANCIAL')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'FINANCIAL' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'FINANCIAL' ? 'text-rose-600 dark:text-rose-400 scale-105' : 'text-slate-400 hover:text-rose-500 dark:hover:text-rose-400'}`}
           >
             <Landmark className="w-5 h-5" strokeWidth={currentView === 'FINANCIAL' ? 2.5 : 2} />
             <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Bancos</span>
@@ -80,7 +74,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
           <button
             onClick={() => onNavigate('SETTINGS')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'SETTINGS' ? 'text-brand-secondary scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'SETTINGS' ? 'text-slate-800 dark:text-white scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
           >
             <Settings className="w-5 h-5" strokeWidth={currentView === 'SETTINGS' ? 2.5 : 2} />
             <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Ajustes</span>
