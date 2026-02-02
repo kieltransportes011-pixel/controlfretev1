@@ -49,25 +49,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [isSavingTicket, setIsSavingTicket] = useState(false);
 
     const handleSaveTicketResponse = async () => {
-        if (!editingTicket) return;
+        console.log("Attempting to save ticket response...", { editingTicket, isSavingTicket });
+
+        if (!editingTicket) {
+            console.error("No editingTicket found!");
+            return;
+        }
+
         setIsSavingTicket(true);
         try {
-            const { error } = await supabase
+            console.log("Sending update to Supabase...", {
+                id: editingTicket.id,
+                reply: ticketReply,
+                status: ticketStatus
+            });
+
+            const { data, error } = await supabase
                 .from('support_tickets')
                 .update({
                     admin_reply: ticketReply,
                     status: ticketStatus,
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', editingTicket.id);
+                .eq('id', editingTicket.id)
+                .select(); // Add select to see returned data
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase Error:", error);
+                throw error;
+            }
+
+            console.log("Update successful:", data);
 
             await fetchDashboardData();
             setEditingTicket(null);
-        } catch (error) {
-            console.error('Error updating ticket:', error);
-            alert('Erro ao responder ticket');
+            alert("Resposta enviada com sucesso!");
+        } catch (error: any) {
+            console.error('Error updating ticket logic:', error);
+            alert(`Erro ao responder ticket: ${error.message || 'Erro desconhecido'}`);
         } finally {
             setIsSavingTicket(false);
         }
