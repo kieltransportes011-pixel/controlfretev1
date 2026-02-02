@@ -46,6 +46,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [ticketStatus, setTicketStatus] = useState<string>('open');
     const [editingNotice, setEditingNotice] = useState<Partial<PlatformNotice> | null>(null);
     const [isSavingNotice, setIsSavingNotice] = useState(false);
+    const [isSavingTicket, setIsSavingTicket] = useState(false);
+
+    const handleSaveTicketResponse = async () => {
+        if (!editingTicket) return;
+        setIsSavingTicket(true);
+        try {
+            const { error } = await supabase
+                .from('support_tickets')
+                .update({
+                    admin_reply: ticketReply,
+                    status: ticketStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', editingTicket.id);
+
+            if (error) throw error;
+
+            await fetchDashboardData();
+            setEditingTicket(null);
+        } catch (error) {
+            console.error('Error updating ticket:', error);
+            alert('Erro ao responder ticket');
+        } finally {
+            setIsSavingTicket(false);
+        }
+    };
 
     const [stats, setStats] = useState<AdminStats>({
         totalUsers: 0,
@@ -438,8 +464,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <option value="resolved">RESOLVED</option>
                                 </select>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setEditingTicket(null)} className="px-4 py-2 text-xs uppercase font-bold text-gray-500 hover:text-white">Cancel</button>
-                                    <button className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500">Transmit</button>
+                                    <button onClick={() => setEditingTicket(null)} className="px-4 py-2 text-xs uppercase font-bold text-gray-500 hover:text-white" disabled={isSavingTicket}>Cancel</button>
+                                    <button onClick={handleSaveTicketResponse} disabled={isSavingTicket} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500">
+                                        {isSavingTicket ? 'Transmitting...' : 'Transmit'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
