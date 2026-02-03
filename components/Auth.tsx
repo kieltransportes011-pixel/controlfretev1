@@ -8,6 +8,7 @@ import { supabase } from '../supabase';
 interface AuthProps {
   onLogin: (user: User) => void;
   onBack?: () => void;
+  initialView?: AuthView;
 }
 
 type AuthView = 'LOGIN' | 'REGISTER' | 'SUCCESS' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'CONFIRM_EMAIL';
@@ -41,8 +42,8 @@ const InputField = ({
   </div>
 );
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
-  const [view, setView] = useState<AuthView>('LOGIN');
+export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGIN' }) => {
+  const [view, setView] = useState<AuthView>(initialView);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);

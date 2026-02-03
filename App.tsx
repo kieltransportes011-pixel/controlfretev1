@@ -35,6 +35,7 @@ import { DocumentVault } from './components/DocumentVault';
 import { Skeleton, CardSkeleton, ListSkeleton } from './components/Skeleton';
 import { ToastProvider } from './contexts/ToastContext';
 import { BankAccounts } from './components/Financial/BankAccounts';
+import { UpdateModal } from './components/UpdateModal';
 
 
 const SAFE_DEFAULT_SETTINGS: AppSettings = {
@@ -1219,6 +1220,9 @@ Obs: ${of.description || 'Sem observações'}`;
 
         {currentUser && (
           <MandatoryNoticeModal user={currentUser} />
+        )}
+        {currentUser && (
+          <UpdateModal user={currentUser} />
         )}
         <UpgradeModal
           isOpen={upgradeModal.open}

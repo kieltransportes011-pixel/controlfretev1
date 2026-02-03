@@ -526,6 +526,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <option value="important">Important (Orange)</option>
                                     <option value="critical">Critical (Red)</option>
                                 </select>
+
+                                <div className="flex flex-col gap-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="w-4 h-4 rounded border-white/10 bg-black text-orange-600 focus:ring-orange-500"
+                                            checked={editingNotice.is_mandatory || false}
+                                            onChange={e => setEditingNotice({ ...editingNotice, is_mandatory: e.target.checked })}
+                                        />
+                                        <span className="text-xs text-white">Mandatory (Block User)</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="w-4 h-4 rounded border-white/10 bg-black text-green-600 focus:ring-green-500"
+                                            checked={editingNotice.is_active ?? true}
+                                            onChange={e => setEditingNotice({ ...editingNotice, is_active: e.target.checked })}
+                                        />
+                                        <span className="text-xs text-white">Active (Visible)</span>
+                                    </label>
+                                </div>
                             </div>
 
                             <div className="flex justify-end gap-2 mt-4">
