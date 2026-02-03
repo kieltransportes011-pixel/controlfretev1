@@ -1,27 +1,42 @@
 import React, { useRef } from 'react';
-import { Freight, Expense, AppSettings } from '../types';
+import { Freight, Expense, AppSettings, ExtraIncome } from '../types';
 import { formatCurrency, formatDate } from '../utils';
 import { X, Printer, FileText } from 'lucide-react';
 import { Button } from './Button';
 
 interface MonthlyClosureModalProps {
-    month: string; // "YYYY-MM"
+    month?: string; // "YYYY-MM"
+    customPeriod?: string;
+    title?: string;
     freights: Freight[];
     expenses: Expense[];
+    extraIncomes?: ExtraIncome[];
     settings: AppSettings;
     onClose: () => void;
 }
 
-export const MonthlyClosureModal: React.FC<MonthlyClosureModalProps> = ({ month, freights, expenses, settings, onClose }) => {
+export const MonthlyClosureModal: React.FC<MonthlyClosureModalProps> = ({ month, customPeriod, title, freights, expenses, extraIncomes = [], settings, onClose }) => {
     const printRef = useRef<HTMLDivElement>(null);
 
-    const [year, monthNum] = month.split('-');
-    const monthName = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    let monthName = '';
+    let docId = '';
 
-    const totalIncome = freights.reduce((acc, f) => acc + f.totalValue, 0);
-    const totalCompany = freights.reduce((acc, f) => acc + f.companyValue, 0);
-    const totalDriver = freights.reduce((acc, f) => acc + f.driverValue, 0);
-    const totalReserve = freights.reduce((acc, f) => acc + f.reserveValue, 0);
+    if (month) {
+        const [year, monthNum] = month.split('-');
+        monthName = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+        docId = month.replace('-', '');
+    } else {
+        monthName = customPeriod || 'Período Personalizado';
+        docId = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    }
+
+    const totalFreights = freights.reduce((acc, f) => acc + f.totalValue, 0);
+    const totalExtra = extraIncomes.reduce((acc, e) => acc + e.value, 0);
+    const totalIncome = totalFreights + totalExtra;
+
+    const totalCompany = freights.reduce((acc, f) => acc + f.companyValue, 0) + extraIncomes.filter(e => e.source === 'COMPANY').reduce((acc, e) => acc + e.value, 0);
+    const totalDriver = freights.reduce((acc, f) => acc + f.driverValue, 0) + extraIncomes.filter(e => e.source === 'DRIVER').reduce((acc, e) => acc + e.value, 0);
+    const totalReserve = freights.reduce((acc, f) => acc + f.reserveValue, 0) + extraIncomes.filter(e => e.source === 'RESERVE').reduce((acc, e) => acc + e.value, 0);
 
     const expensesBySource = expenses.reduce((acc, e) => {
         acc[e.source] = (acc[e.source] || 0) + e.value;
@@ -39,7 +54,7 @@ export const MonthlyClosureModal: React.FC<MonthlyClosureModalProps> = ({ month,
 
         const printWindow = window.open('', '', 'height=800,width=1000');
         if (printWindow) {
-            printWindow.document.write('<html><head><title>Fechamento Mensal - ' + monthName + '</title>');
+            printWindow.document.write('<html><head><title>' + (title || 'Relatório Financeiro') + ' - ' + monthName + '</title>');
             printWindow.document.write(`
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -114,7 +129,7 @@ export const MonthlyClosureModal: React.FC<MonthlyClosureModalProps> = ({ month,
                             <FileText className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight">Fechamento Mensal</h3>
+                            <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight">{title || 'Relatório Financeiro'}</h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{monthName}</p>
                         </div>
                     </div>
@@ -139,10 +154,10 @@ export const MonthlyClosureModal: React.FC<MonthlyClosureModalProps> = ({ month,
                                 )}
                             </div>
                             <div className="document-title">
-                                <h2>Fechamento de Frete</h2>
+                                <h2>{title || 'Relatório de Frete'}</h2>
                                 <p>Período: {monthName}</p>
-                                <div style={{ marginTop: '8px', fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontBold: '700' }}>
-                                    Documento Digital CF-FECH-{month.replace('-', '')}
+                                <div style={{ marginTop: '8px', fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>
+                                    Documento Digital CF-REL-{docId}
                                 </div>
                             </div>
                         </div>
@@ -220,6 +235,32 @@ export const MonthlyClosureModal: React.FC<MonthlyClosureModalProps> = ({ month,
                             </>
                         )}
 
+                        {extraIncomes.length > 0 && (
+                            <>
+                                <div className="section-title">Entradas Extras</div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Descrição</th>
+                                            <th>Destino</th>
+                                            <th className="text-right">Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {extraIncomes.map(e => (
+                                            <tr key={e.id}>
+                                                <td>{formatDate(e.date).split('/').slice(0, 2).join('/')}</td>
+                                                <td className="font-bold">{e.description}</td>
+                                                <td>{e.source === 'COMPANY' ? 'Empresa' : (e.source === 'DRIVER' ? 'Motorista' : 'Reserva')}</td>
+                                                <td className="text-right font-bold" style={{ color: '#10b981' }}>+{formatCurrency(e.value)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </>
+                        )}
+
                         <div className="section-title">Consolidado Final</div>
                         <table style={{ background: '#f8fafc', borderRadius: '8px' }}>
                             <tbody>
@@ -236,7 +277,7 @@ export const MonthlyClosureModal: React.FC<MonthlyClosureModalProps> = ({ month,
                                     <td className="text-right font-bold" style={{ color: '#3b82f6' }}>{formatCurrency(netReserve)}</td>
                                 </tr>
                                 <tr style={{ borderTop: '2px solid #3b82f6' }}>
-                                    <td style={{ fontSize: '16px', fontWeight: '800' }}>LUCRO LÍQUIDO DO MÊS</td>
+                                    <td style={{ fontSize: '16px', fontWeight: '800' }}>LUCRO LÍQUIDO DO PERÍODO</td>
                                     <td className="text-right" style={{ fontSize: '18px', fontWeight: '900', color: '#10b981' }}>{formatCurrency(netCompany + netDriver + netReserve)}</td>
                                 </tr>
                             </tbody>

@@ -136,13 +136,13 @@ export const History: React.FC<HistoryProps> = ({
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Histórico</h1>
         <div className="flex justify-between items-center">
           <p className="text-slate-500 dark:text-slate-400 text-sm">Extrato completo</p>
-          {filter === 'MONTH' && isPremium && (
+          {isPremium && (
             <button
               onClick={() => setShowClosure(true)}
               className="flex items-center gap-2 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all border border-blue-100 dark:border-blue-800"
             >
               <FileText className="w-3.5 h-3.5" />
-              Gerar Fechamento PDF
+              Gerar Relatório PDF
             </button>
           )}
         </div>
@@ -473,9 +473,16 @@ export const History: React.FC<HistoryProps> = ({
 
       {showClosure && settings && (
         <MonthlyClosureModal
-          month={new Date().toISOString().substring(0, 7)}
-          freights={filteredItems.filter(i => i.type === 'INCOME') as Freight[]}
-          expenses={filteredItems.filter(i => i.type === 'EXPENSE') as Expense[]}
+          month={filter === 'MONTH' ? new Date().toISOString().substring(0, 7) : undefined}
+          customPeriod={
+            filter === 'WEEK' ? 'Relatório Semanal' :
+              filter === 'CUSTOM' ? `${customStart ? formatDate(customStart) : 'Inicio'} até ${customEnd ? formatDate(customEnd) : 'Hoje'}` :
+                filter === 'ALL' ? 'Todo o Período' : undefined
+          }
+          title={filter === 'MONTH' ? 'Fechamento Mensal' : 'Relatório Personalizado'}
+          freights={filteredItems.filter(i => (i as any).itemType === 'FREIGHT') as Freight[]}
+          extraIncomes={filteredItems.filter(i => (i as any).itemType === 'EXTRA') as ExtraIncome[]}
+          expenses={filteredItems.filter(i => i.type === 'EXPENSE' || (i as any).itemType === 'BILL') as Expense[]}
           settings={settings}
           onClose={() => setShowClosure(false)}
         />
