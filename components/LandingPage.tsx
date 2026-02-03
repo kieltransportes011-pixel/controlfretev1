@@ -148,6 +148,27 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                         Elimine a ineficiência. Maximize o lucro.
                     </motion.p>
 
+                    {/* PROMO BANNER (FEB ONLY) */}
+                    {new Date().getMonth() === 1 && new Date().getFullYear() === 2026 && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.6 }}
+                            className="mt-6 p-4 border border-orange-500/30 bg-orange-500/10 backdrop-blur-sm max-w-lg relative overflow-hidden group"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            <div className="flex items-center gap-3 relative z-10">
+                                <Zap className="w-5 h-5 text-orange-500 animate-pulse" />
+                                <div>
+                                    <div className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-1">Oferta de Fevereiro</div>
+                                    <div className="text-sm font-bold text-white">
+                                        Novos cadastros ganham <span className="text-orange-500">PRO GRÁTIS</span> até 28/02/2026!
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
                     {/* Industrial Buttons */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
