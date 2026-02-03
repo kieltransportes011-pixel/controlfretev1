@@ -192,7 +192,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         setIsSavingNotice(true);
         try {
             if (editingNotice.id) {
-                await supabase.from('platform_notices').update({
+                const { error } = await supabase.from('platform_notices').update({
                     title: editingNotice.title,
                     content: editingNotice.content,
                     level: editingNotice.level,
@@ -200,21 +200,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     is_mandatory: editingNotice.is_mandatory,
                     summary: editingNotice.summary
                 }).eq('id', editingNotice.id);
+                if (error) throw error;
             } else {
-                await supabase.from('platform_notices').insert([{
+                const { error } = await supabase.from('platform_notices').insert([{
                     title: editingNotice.title,
                     content: editingNotice.content,
                     level: editingNotice.level || 'info',
-                    is_active: editingNotice.is_active || true,
-                    is_mandatory: editingNotice.is_mandatory || false,
+                    is_active: editingNotice.is_active ?? true,
+                    is_mandatory: editingNotice.is_mandatory ?? false,
                     summary: editingNotice.summary,
                     created_by: currentUser.id
                 }]);
+                if (error) throw error;
             }
             await fetchDashboardData();
             setEditingNotice(null);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
+            alert(`Erro ao salvar aviso: ${e.message}`);
         } finally {
             setIsSavingNotice(false);
         }
