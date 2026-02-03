@@ -115,13 +115,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     const currentYear = now.getFullYear();
     const currentWeek = getWeekNumber(now);
 
+    let prevMonth = currentMonth - 1;
+    let prevYear = currentYear;
+    if (prevMonth < 0) {
+      prevMonth = 11;
+      prevYear = currentYear - 1;
+    }
+
     const incomeStats = freights.reduce((acc, curr) => {
       // Normalizing date to midday (12:00:00) to avoid timezone shifts affecting month/week calculation
       const date = new Date(curr.date + 'T12:00:00');
       const isThisMonth = date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      const isPrevMonth = date.getMonth() === prevMonth && date.getFullYear() === prevYear;
       const isThisWeek = getWeekNumber(date) === currentWeek && date.getFullYear() === currentYear;
 
       if (isThisMonth) acc.monthTotal += curr.totalValue;
+      if (isPrevMonth) acc.previousMonthTotal += curr.totalValue;
       if (isThisWeek) acc.weekTotal += curr.totalValue;
 
       const received = curr.receivedValue ?? (curr.status === 'PAID' ? curr.totalValue : 0);
@@ -134,7 +143,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       }
 
       return acc;
-    }, { monthTotal: 0, weekTotal: 0, companyMonth: 0, driverMonth: 0, reserveMonth: 0, receivedMonth: 0 });
+    }, { monthTotal: 0, weekTotal: 0, previousMonthTotal: 0, companyMonth: 0, driverMonth: 0, reserveMonth: 0, receivedMonth: 0 });
 
     const expenseStats = expenses.reduce((acc, curr) => {
       const date = new Date(curr.date + 'T12:00:00');
@@ -170,7 +179,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       netProfit,
       netCompany,
       netDriver,
-      netReserve
+      netReserve,
+      previousMonthTotal: incomeStats.previousMonthTotal
     };
   }, [freights, expenses, extraIncomes]);
 
@@ -290,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       )}
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {loading ? (
           <>
             <CardSkeleton />
@@ -317,6 +327,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
                 <span className="text-[10px] font-black uppercase tracking-widest">Faturamento do Mês</span>
               </div>
               <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.monthTotal)}</p>
+            </Card>
+
+            <Card className="border-l-4 border-l-indigo-500">
+              <div className="flex items-center gap-2 text-slate-400 mb-1">
+                <TrendingUp className="w-3 h-3" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Faturamento Mês Anterior</span>
+              </div>
+              <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.previousMonthTotal)}</p>
             </Card>
 
             <Card onClick={() => setShowBalanceModal(true)} className="border-l-4 border-l-blue-500 group cursor-pointer hover:border-blue-500/30 transition-all">

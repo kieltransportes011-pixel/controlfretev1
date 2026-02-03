@@ -178,6 +178,7 @@ export interface DashboardStats {
   netCompany: number;
   netDriver: number;
   netReserve: number;
+  previousMonthTotal: number;
 }
 
 export interface AccountPayable {
