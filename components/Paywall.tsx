@@ -5,51 +5,34 @@ import { Shield, Crown } from 'lucide-react';
 import { supabase } from '../supabase';
 import { PricingCard } from './PricingCard';
 
-// Lazy load to avoid loading MP SDK on every page load if Paywall is imported but not shown
-const InternalCheckout = React.lazy(() => import('./InternalCheckout').then(module => ({ default: module.InternalCheckout })));
-
 interface PaywallProps {
   user: User;
   onPaymentSuccess: () => void;
   onCancel?: () => void;
 }
 
-export const Paywall: React.FC<PaywallProps> = ({ user, onCancel, onPaymentSuccess }) => {
+export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
   const [loading, setLoading] = useState(false);
 
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<{ type: string, price: number, name: string } | null>(null);
+  const handleCheckout = async (planType: string = 'annual_promo') => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { email: user.email, plan: planType }
+      });
 
-  const handleCheckout = (planType: string) => {
-    console.log("Button clicked. Plan:", planType);
-    let price = 34.99;
-    let name = "Assinatura Anual Promo";
+      if (error) throw error;
+      if (!data?.init_point) throw new Error("Link de pagamento não retornado.");
 
-    if (planType === 'monthly') {
-      price = 9.90;
-      name = "Assinatura Mensal";
-    } else if (planType === 'lifetime') {
-      price = 249.90;
-      name = "Acesso Vitalício";
+      // Redirect to Mercado Pago Official Checkout
+      window.location.href = data.init_point;
+
+    } catch (err: any) {
+      console.error('Erro ao iniciar checkout:', err);
+      alert(`Erro: ${err.message || 'Falha ao conectar com Mercado Pago'}`);
+      setLoading(false);
     }
-
-    console.log("Setting selected plan:", { type: planType, price, name });
-    setSelectedPlan({ type: planType, price, name });
-    setShowCheckout(true);
   };
-
-  // Callback wrapper to match existing success signature if needed, or refresh user
-  const handleSuccess = (id: string) => {
-    alert(`Pagamento realizado com sucesso! ID: ${id}`);
-    onPaymentSuccess();
-    setShowCheckout(false);
-  };
-
-  const handleError = (msg: string) => {
-    alert(msg);
-    // Don't close immediately so user can try again
-  };
-
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
@@ -123,6 +106,12 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel, onPaymentSucce
                 "Suporte VIP",
                 "Selo de Membro Fundador"
               ]}
+              features={[
+                "Acesso Vitalício",
+                "Sem mensalidades",
+                "Suporte VIP",
+                "Selo de Membro Fundador"
+              ]}
               tag="VIP"
               onSelect={() => handleCheckout('lifetime')}
             />
@@ -145,34 +134,6 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel, onPaymentSucce
           </div>
         </div>
       </Card>
-
-      {showCheckout && selectedPlan && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-          <Card className="max-w-2xl w-full bg-slate-50 dark:bg-slate-950 border-none relative overflow-visible shadow-2xl p-0">
-            <button
-              onClick={() => setShowCheckout(false)}
-              className="absolute -top-2 -right-2 z-50 bg-slate-800 text-white p-2 rounded-full hover:bg-slate-700 shadow-lg border-2 border-slate-600"
-            >
-              ✕
-            </button>
-            <div className="p-6 bg-white dark:bg-slate-900 rounded-t-2xl">
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-1">Finalizar Pagamento</h2>
-              <p className="text-slate-500">{selectedPlan.name} - <span className="text-brand font-bold">R$ {selectedPlan.price.toFixed(2).replace('.', ',')}</span></p>
-            </div>
-            <div className="p-4 bg-white">
-              <React.Suspense fallback={<div className="p-8 text-center">Carregando Checkout...</div>}>
-                <InternalCheckout
-                  amount={selectedPlan.price}
-                  description={selectedPlan.name}
-                  userEmail={user.email}
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                />
-              </React.Suspense>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };
