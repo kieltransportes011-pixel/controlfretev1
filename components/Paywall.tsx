@@ -21,6 +21,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel, onPaymentSucce
   const [selectedPlan, setSelectedPlan] = useState<{ type: string, price: number, name: string } | null>(null);
 
   const handleCheckout = (planType: string) => {
+    console.log("Button clicked. Plan:", planType);
     let price = 34.99;
     let name = "Assinatura Anual Promo";
 
@@ -32,6 +33,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel, onPaymentSucce
       name = "Acesso Vitalício";
     }
 
+    console.log("Setting selected plan:", { type: planType, price, name });
     setSelectedPlan({ type: planType, price, name });
     setShowCheckout(true);
   };
