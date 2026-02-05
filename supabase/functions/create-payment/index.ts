@@ -49,14 +49,17 @@ serve(async (req) => {
         console.log(`Webhook URL: ${notification_url}`);
 
         const body = {
-            transaction_amount: 49.99,
-            description: 'Assinatura Anual Control Frete Pro',
-            payment_method_id: 'pix',
+            transaction_amount: reqData.transaction_amount,
+            description: reqData.description || 'Pagamento Control Frete',
+            payment_method_id: reqData.payment_method_id,
             payer: {
-                email: email,
-                first_name: 'Usuario',
-                last_name: 'ControlFrete'
+                email: reqData.payer.email,
+                first_name: reqData.payer.first_name || 'User',
+                identification: reqData.payer.identification
             },
+            token: reqData.token,
+            installments: reqData.installments,
+            issuer_id: reqData.issuer_id,
             metadata: {
                 user_id: user.id
             },
