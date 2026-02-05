@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Payment } from '@mercadopago/sdk-react';
+import { Payment, initMercadoPago } from '@mercadopago/sdk-react';
 import { supabase } from '../supabase';
 import { Loader2 } from 'lucide-react';
 
@@ -14,6 +14,11 @@ interface InternalCheckoutProps {
 
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
 
+// Initialize once if possible, or inside component 
+if (MP_PUBLIC_KEY) {
+    initMercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+}
+
 export const InternalCheckout: React.FC<InternalCheckoutProps> = ({
     amount,
     description,
@@ -26,6 +31,9 @@ export const InternalCheckout: React.FC<InternalCheckoutProps> = ({
         if (!MP_PUBLIC_KEY) {
             console.error("VITE_MP_PUBLIC_KEY is missing!");
             onError("Configuração de pagamento incompleta (Chave Pública ausente).");
+        } else {
+            // Ensure init is called
+            initMercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
         }
     }, [onError]);
 
