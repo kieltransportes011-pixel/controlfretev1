@@ -68,6 +68,14 @@ export const InternalCheckout: React.FC<InternalCheckoutProps> = ({
 
     const onSubmit = async ({ formData }: any) => {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            console.log("Session exists:", !!session, "Token:", session?.access_token?.substring(0, 10) + "...");
+
+            if (!session) {
+                onError("Sessão expirada. Faça login novamente.");
+                return;
+            }
+
             // Send data to our backend to process payment
             const { data, error } = await supabase.functions.invoke('create-payment', {
                 body: {
