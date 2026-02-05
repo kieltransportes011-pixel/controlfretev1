@@ -12,7 +12,7 @@ interface InternalCheckoutProps {
     userEmail: string;
 }
 
-const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
+const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY || "APP_USR-8e0c75cf-c860-4efa-80ef-122c95d41d7c";
 
 // Initialize once if possible, or inside component 
 if (MP_PUBLIC_KEY) {
