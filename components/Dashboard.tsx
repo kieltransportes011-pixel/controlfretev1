@@ -33,6 +33,8 @@ import {
   PieChart, Pie, Cell, Legend, LineChart, Line
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StatsGrid } from './Dashboard/StatsGrid';
+import { FloatingActions } from './Dashboard/FloatingActions';
 
 interface DashboardProps {
   user: User;
@@ -49,7 +51,6 @@ interface DashboardProps {
   onUpgrade: () => void;
   onViewAgenda: () => void;
   onRequestUpgrade?: () => void;
-  onViewReferrals?: () => void;
   onViewClients: () => void;
   onViewFleet: () => void;
   onViewMaintenance: () => void;
@@ -59,7 +60,7 @@ interface DashboardProps {
   loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewReferrals, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -76,7 +77,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     const freightCount = freights.length;
     const daysSinceSignup = Math.floor((new Date().getTime() - new Date(user.createdAt).getTime()) / (1000 * 3600 * 24));
 
-    if (freightCount >= 5 || daysSinceSignup >= 7) {
+    if (freightCount >= 5 || daysSinceSignup >= 15) {
       const lastPrompt = localStorage.getItem('control_frete_upgrade_prompt');
       if (!lastPrompt || (new Date().getTime() - new Date(lastPrompt).getTime()) > (7 * 24 * 60 * 60 * 1000)) {
         setShowUsageBanner(true);
@@ -106,7 +107,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     const now = new Date();
     const diffMs = now.getTime() - start.getTime();
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    return Math.max(0, Math.ceil(7 - diffDays));
+    return Math.max(0, Math.ceil(15 - diffDays));
   }, [user]);
 
   const stats: DashboardStats = useMemo(() => {
@@ -300,71 +301,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       )}
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {loading ? (
-          <>
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
-          </>
-        ) : (
-          <>
-            <Card
-              onClick={onViewSchedule}
-              className="group cursor-pointer hover:border-brand/30 transition-all border-l-4 border-l-brand"
-            >
-              <div className="flex items-center gap-2 text-slate-400 mb-1">
-                <Calendar className="w-3 h-3" />
-                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-brand transition-colors">Faturamento Semanal</span>
-              </div>
-              <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.weekTotal)}</p>
-            </Card>
-
-            <Card className="border-l-4 border-l-emerald-500">
-              <div className="flex items-center gap-2 text-slate-400 mb-1">
-                <TrendingUp className="w-3 h-3" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Faturamento do Mês</span>
-              </div>
-              <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.monthTotal)}</p>
-            </Card>
-
-            <Card className="border-l-4 border-l-indigo-500">
-              <div className="flex items-center gap-2 text-slate-400 mb-1">
-                <TrendingUp className="w-3 h-3" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Faturamento Mês Anterior</span>
-              </div>
-              <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.previousMonthTotal)}</p>
-            </Card>
-
-            <Card onClick={() => setShowBalanceModal(true)} className="border-l-4 border-l-blue-500 group cursor-pointer hover:border-blue-500/30 transition-all">
-              <div className="flex items-center gap-2 text-slate-400 mb-1">
-                <TrendingUp className="w-3 h-3" />
-                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-blue-500 transition-colors">Saldo Líquido</span>
-              </div>
-              <div className="flex items-end justify-between">
-                <p className={`text-lg font-black ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {formatCurrency(stats.netProfit)}
-                </p>
-                <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-              </div>
-            </Card>
-
-            <Card onClick={onViewGoals} className="group cursor-pointer hover:border-orange-500/30 transition-all border-l-4 border-l-orange-500">
-              <div className="flex items-center gap-2 text-slate-400 mb-1">
-                <Target className="w-3 h-3" />
-                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-orange-500 transition-colors">Meta Mensal</span>
-              </div>
-              <div className="flex items-end justify-between">
-                <p className="text-lg font-black text-slate-800 dark:text-white">
-                  {settings.monthlyGoal && settings.monthlyGoal > 0 ? Math.round((stats.monthTotal / settings.monthlyGoal) * 100) : 0}%
-                </p>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Card>
-          </>
-        )}
-      </div>
+      <StatsGrid
+        stats={stats}
+        settings={settings}
+        loading={loading}
+        onViewSchedule={onViewSchedule}
+        onViewGoals={onViewGoals}
+        onOpenBalance={() => setShowBalanceModal(true)}
+      />
 
       {/* Pro Features Shortcuts */}
       {isActive && (
@@ -642,74 +586,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         </div>
       )}
 
-      {/* Floating Action Button (FAB) */}
-      <div className="fixed bottom-24 right-6 z-[60] flex flex-col items-end gap-3">
-        <AnimatePresence>
-          {isMenuOpen && (
-            <div className="flex flex-col items-end gap-3 mb-2">
-              <motion.button
-                initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                onClick={() => { onAddFreight(); setIsMenuOpen(false); }}
-                className="flex items-center gap-3 px-4 py-2.5 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
-              >
-                Novo Frete <TrendingUp className="w-4 h-4" />
-              </motion.button>
-
-              <motion.button
-                initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                onClick={() => { onAddExpense(); setIsMenuOpen(false); }}
-                className="flex items-center gap-3 px-4 py-2.5 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
-              >
-                Lançar Despesa <Minus className="w-4 h-4" />
-              </motion.button>
-
-              <motion.button
-                initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                onClick={() => { setShowExtraIncomeModal(true); setIsMenuOpen(false); }}
-                className="flex items-center gap-3 px-4 py-2.5 bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-800/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
-              >
-                Entrada Extra <Plus className="w-4 h-4" />
-              </motion.button>
-
-              <motion.button
-                initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                onClick={() => { onOpenCalculator(); setIsMenuOpen(false); }}
-                className="flex items-center gap-3 px-4 py-2.5 bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
-              >
-                Simular Lucro <Calculator className="w-4 h-4" />
-              </motion.button>
-            </div>
-          )}
-        </AnimatePresence>
-
-        <button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl shadow-brand/30 transition-all duration-300 ${isMenuOpen ? 'bg-slate-800 rotate-45 scale-90' : 'bg-brand rotate-0 hover:scale-110'}`}
-        >
-          <Plus size={28} color="white" strokeWidth={3} />
-        </button>
-      </div>
-
-      {/* Backdrop for FAB */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsMenuOpen(false)}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[50]"
-          />
-        )}
-      </AnimatePresence>
+      {/* Floating Action Button (FAB) and Backdrop */}
+      <FloatingActions
+        isMenuOpen={isMenuOpen}
+        setIsMenuOpen={setIsMenuOpen}
+        onAddFreight={onAddFreight}
+        onAddExpense={onAddExpense}
+        onAddExtraIncome={() => setShowExtraIncomeModal(true)}
+        onOpenCalculator={onOpenCalculator}
+      />
     </div>
   );
 };

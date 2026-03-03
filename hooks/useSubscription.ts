@@ -26,7 +26,7 @@ export const useSubscription = (user: User | null) => {
         } else {
             const createdAt = new Date(user.createdAt);
             trialEndDate = new Date(createdAt);
-            trialEndDate.setDate(trialEndDate.getDate() + 7);
+            trialEndDate.setDate(trialEndDate.getDate() + 15);
         }
 
         const remainingTime = trialEndDate.getTime() - now.getTime();

@@ -12,7 +12,7 @@ interface InternalCheckoutProps {
     userEmail: string;
 }
 
-const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY || "APP_USR-8e0c75cf-c860-4efa-80ef-122c95d41d7c";
+const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY || "";
 
 // Initialize once if possible, or inside component 
 if (MP_PUBLIC_KEY) {
@@ -50,7 +50,7 @@ export const InternalCheckout: React.FC<InternalCheckoutProps> = ({
         preferenceId: "<PREFERENCE_ID>", // Not needed for transparent payment if we handle processPayment
     };
 
-    const customization = {
+    const customization: any = {
         paymentMethods: {
             ticket: "all",
             bankTransfer: "all",

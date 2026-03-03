@@ -24,7 +24,7 @@ import { PrivacyModal } from './components/PrivacyModal';
 import { Support } from './components/Support';
 import { MandatoryNoticeModal } from './components/MandatoryNoticeModal';
 import { NoticesCenter } from './components/NoticesCenter';
-import { ReferralSystem } from './components/ReferralSystem';
+
 import { UpgradeModal } from './components/UpgradeModal';
 import { FreightIntegration } from './components/FreightIntegration';
 import { FreightNoticeModal } from './components/FreightNoticeModal';
@@ -736,7 +736,7 @@ Obs: ${of.description || 'Sem observações'}`;
                 onUpgrade={() => setView('PAYMENT')}
                 onViewAgenda={() => setView('AGENDA')}
                 onRequestUpgrade={() => handleOpenUpgrade('GENERAL')}
-                onViewReferrals={() => setView('REFERRALS')}
+
                 onViewClients={() => setView('CLIENTS')}
                 onViewFleet={() => {
                   if (!isActive) return handleOpenUpgrade('FEATURE');
@@ -1077,13 +1077,7 @@ Obs: ${of.description || 'Sem observações'}`;
             </motion.div>
           )}
 
-          {view === 'REFERRALS' && currentUser && (
-            <motion.div key="referrals" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-              <ReferralSystem
-                user={currentUser}
-              />
-            </motion.div>
-          )}
+
 
           {view === 'SUPPORT' && (
             <motion.div key="support" variants={viewVariants} initial="initial" animate="animate" exit="exit">

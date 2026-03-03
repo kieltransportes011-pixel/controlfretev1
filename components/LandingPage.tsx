@@ -162,7 +162,7 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                                 <div>
                                     <div className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-1">Oferta de Fevereiro</div>
                                     <div className="text-sm font-bold text-white">
-                                        Novos cadastros ganham <span className="text-orange-500">PRO GRÁTIS</span> até 28/02/2026!
+                                        Novos cadastros ganham <span className="text-orange-500">15 DIAS PRO GRÁTIS</span>!
                                     </div>
                                 </div>
                             </div>
@@ -337,12 +337,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                         imageSrc="/assets/landing/history.jpg"
                     />
 
-                    <FeatureRow
-                        title="Sistema de Indicação"
-                        desc="Transforme sua rede de contatos em renda extra. Compartilhe seu link exclusivo e ganhe comissão recorrente por cada motorista indicado."
-                        icon={Zap}
-                        imageSrc="/assets/landing/referrals.jpg"
-                    />
+
 
                     <FeatureRow
                         reversed
@@ -384,8 +379,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                                 Oferta Limitada
                             </div>
                             <div className="text-xs font-black uppercase tracking-[0.2em] text-[var(--precision-accent)] mb-6">Anual Pro</div>
-                            <div className="text-5xl font-black text-white mb-2">R$ 34<span className="text-2xl">,99</span></div>
-                            <div className="text-gray-500 text-sm mb-8">Valor promocional (R$ 2,90/mês)</div>
+                            <div className="text-5xl font-black text-white mb-2">R$ 49<span className="text-2xl">,99</span></div>
+                            <div className="text-gray-500 text-sm mb-8">Valor promocional (R$ 4,16/mês)</div>
                             <ul className="space-y-4 mb-8 flex-1">
                                 {['Economia de 70%', 'Prioridade no Suporte', 'Módulo Financeiro', 'Sem anúncios', 'Mentoria em Grupo'].map(i => (
                                     <li key={i} className="flex items-center gap-3 text-sm text-white">

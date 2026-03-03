@@ -48,13 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
 
 
 
-          <button
-            onClick={() => onNavigate('REFERRALS')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${currentView === 'REFERRALS' ? 'text-purple-600 dark:text-purple-400 scale-105' : 'text-slate-400 hover:text-purple-500 dark:hover:text-purple-400'}`}
-          >
-            <Users className="w-5 h-5" strokeWidth={currentView === 'REFERRALS' ? 2.5 : 2} />
-            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Indicar</span>
-          </button>
+
 
           <button
             onClick={() => onNavigate('HISTORY')}
