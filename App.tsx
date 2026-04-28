@@ -261,7 +261,8 @@ export default function App() {
         issuerAddressCity: settingsData.issuer_address_city,
         issuerAddressState: settingsData.issuer_address_state,
         issuerAddressZip: settingsData.issuer_address_zip,
-        issuerLogoUrl: settingsData.issuer_logo_url
+        issuerLogoUrl: settingsData.issuer_logo_url,
+        customPercentages: settingsData.custom_percentages
       });
     }
 
@@ -275,12 +276,10 @@ export default function App() {
     if (freightsData) {
       setFreights(freightsData.map(f => ({
         ...f,
-        companyPercent: 0, // Calculate or store? Assuming derived or stored differently
-        driverPercent: 0,
-        reservePercent: 0,
-        // Map snake_case to CamelCase if needed or update Types. 
-        // Ideally we should update Types to match DB or map here.
-        // For simplicity, let's map manualy:
+        companyPercent: f.company_percent,
+        driverPercent: f.driver_percent,
+        reservePercent: f.reserve_percent,
+        distribution: f.distribution,
         companyValue: f.company_value,
         driverValue: f.driver_value,
         reserveValue: f.reserve_value,
@@ -448,9 +447,14 @@ Peso: ${of.weight || '--'}kg
 Contato: ${of.contact_phone || 'Não informado'}
 Obs: ${of.description || 'Sem observações'}`;
 
-      const companyVal = (total * settings.defaultCompanyPercent) / 100;
-      const driverVal = (total * settings.defaultDriverPercent) / 100;
-      const reserveVal = (total * settings.defaultReservePercent) / 100;
+      const distribution = (settings.customPercentages || [
+        { id: 'company', label: 'Empresa', percent: settings.defaultCompanyPercent },
+        { id: 'driver', label: 'Motorista', percent: settings.defaultDriverPercent },
+        { id: 'reserve', label: 'Reserva', percent: settings.defaultReservePercent },
+      ]).map(p => ({
+        ...p,
+        value: Number((total * (p.percent / 100)).toFixed(2))
+      }));
 
       // 2. Insert into main freights table
       const { error: insertError } = await supabase.from('freights').insert([{
@@ -458,9 +462,13 @@ Obs: ${of.description || 'Sem observações'}`;
         date: of.date,
         client: of.empresas_ofreteja?.name || 'Cliente O FreteJá',
         total_value: total,
-        company_value: companyVal,
-        driver_value: driverVal,
-        reserve_value: reserveVal,
+        company_value: distribution.find(d => d.id === 'company')?.value || 0,
+        driver_value: distribution.find(d => d.id === 'driver')?.value || 0,
+        reserve_value: distribution.find(d => d.id === 'reserve')?.value || 0,
+        company_percent: distribution.find(d => d.id === 'company')?.percent || 0,
+        driver_percent: distribution.find(d => d.id === 'driver')?.percent || 0,
+        reserve_percent: distribution.find(d => d.id === 'reserve')?.percent || 0,
+        distribution, // Dynamic field
         status: 'PENDING',
         received_value: 0,
         pending_value: total,
@@ -828,7 +836,8 @@ Obs: ${of.description || 'Sem observações'}`;
                         description: f.description,
                         payment_method: f.paymentMethod,
                         client_doc: f.clientDoc,
-                        bank_account_id: f.bank_account_id || null
+                        bank_account_id: f.bank_account_id || null,
+                        distribution: f.distribution // New dynamic field
                       }).eq('id', f.id);
                       if (error) throw error;
                     } else {
@@ -850,7 +859,8 @@ Obs: ${of.description || 'Sem observações'}`;
                         description: f.description,
                         payment_method: f.paymentMethod,
                         client_doc: f.clientDoc,
-                        bank_account_id: f.bank_account_id || null
+                        bank_account_id: f.bank_account_id || null,
+                        distribution: f.distribution // New dynamic field
                       }]);
                       if (error) throw error;
                     }
@@ -1020,7 +1030,8 @@ Obs: ${of.description || 'Sem observações'}`;
                     issuer_address_city: s.issuerAddressCity,
                     issuer_address_state: s.issuerAddressState,
                     issuer_address_zip: s.issuerAddressZip,
-                    issuer_logo_url: s.issuerLogoUrl
+                    issuer_logo_url: s.issuerLogoUrl,
+                    custom_percentages: s.customPercentages // New dynamic field
                   }, { onConflict: 'user_id' });
                 }}
                 onBack={() => setView('DASHBOARD')}
@@ -1052,7 +1063,8 @@ Obs: ${of.description || 'Sem observações'}`;
                     issuer_address_city: s.issuerAddressCity,
                     issuer_address_state: s.issuerAddressState,
                     issuer_address_zip: s.issuerAddressZip,
-                    issuer_logo_url: s.issuerLogoUrl
+                    issuer_logo_url: s.issuerLogoUrl,
+                    custom_percentages: s.customPercentages // New dynamic field
                   }, { onConflict: 'user_id' });
 
                   if (error) {

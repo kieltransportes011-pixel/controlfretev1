@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppSettings, Freight, Client, User } from '../types';
+import { AppSettings, Freight, Client, User, PercentageCategory } from '../types';
 import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
@@ -28,9 +28,14 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
   const [dueDate, setDueDate] = useState(initialData?.dueDate || '');
 
   // Percentages - Use stored percentages if editing, otherwise default
-  const [companyPercent, setCompanyPercent] = useState(initialData?.companyPercent || settings.defaultCompanyPercent);
-  const [driverPercent, setDriverPercent] = useState(initialData?.driverPercent || settings.defaultDriverPercent);
-  const [reservePercent, setReservePercent] = useState(initialData?.reservePercent || settings.defaultReservePercent);
+  const [distribution, setDistribution] = useState<Array<PercentageCategory & { value: number }>>(
+    initialData?.distribution ||
+    (settings.customPercentages || [
+      { id: 'company', label: 'Empresa', percent: settings.defaultCompanyPercent },
+      { id: 'driver', label: 'Motorista', percent: settings.defaultDriverPercent },
+      { id: 'reserve', label: 'Reserva', percent: settings.defaultReservePercent },
+    ]).map(p => ({ ...p, value: 0 }))
+  );
 
   // Advanced Details for Receipt
   const [origin, setOrigin] = useState(initialData?.origin || '');
@@ -47,29 +52,39 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
 
-  // Calculation Results
-  const [calculated, setCalculated] = useState({
-    company: 0,
-    driver: 0,
-    reserve: 0
-  });
-
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleCalculate = () => {
-    const value = parseFloat(totalValue) || 0;
-    const company = value * (companyPercent / 100);
-    const driver = value * (driverPercent / 100);
-    const reserve = value * (reservePercent / 100);
+  const updateValues = (total: number, currentDist: typeof distribution) => {
+    const newDist = currentDist.map(p => ({
+      ...p,
+      value: Number((total * (p.percent / 100)).toFixed(2))
+    }));
+    setDistribution(newDist);
+  };
 
-    setCalculated({ company, driver, reserve });
+  const handleTotalValueChange = (val: string) => {
+    setTotalValue(val);
+    const num = Number(val);
+    if (!isNaN(num)) {
+      updateValues(num, distribution);
+    }
+  };
+
+  const handlePercentChange = (id: string, newPercent: number) => {
+    const newDist = distribution.map(p => p.id === id ? { ...p, percent: newPercent } : p);
+    setDistribution(newDist);
+    const num = Number(totalValue);
+    if (!isNaN(num)) {
+      updateValues(num, newDist);
+    }
   };
 
   // Auto calculate when inputs change
   useEffect(() => {
-    handleCalculate();
+    const num = parseFloat(totalValue) || 0;
+    updateValues(num, distribution);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalValue, companyPercent, driverPercent, reservePercent]);
+  }, [totalValue, distribution.map(d => d.percent).join(',')]); // Re-calculate if totalValue or any percentage changes
 
   // If initial data indicates a partial payment, update the toggle on mount
   useEffect(() => {
@@ -127,36 +142,44 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
       else status = 'PAID';
     }
 
-    const newFreight: Freight = {
-      id: initialData?.id || '', // Only use existing ID if editing, otherwise empty
+    const numTotal = parseFloat(totalValue);
+
+    const newFreight: Omit<Freight, 'id' | 'created_at'> = {
       date,
+      totalValue: numTotal,
+      // Legacy fields for backward compatibility
+      companyValue: distribution.find(d => d.id === 'company')?.value || 0,
+      driverValue: distribution.find(d => d.id === 'driver')?.value || 0,
+      reserveValue: distribution.find(d => d.id === 'reserve')?.value || 0,
+      companyPercent: distribution.find(d => d.id === 'company')?.percent || 0,
+      driverPercent: distribution.find(d => d.id === 'driver')?.percent || 0,
+      reservePercent: distribution.find(d => d.id === 'reserve')?.percent || 0,
+      // New dynamic field
+      distribution,
       client,
-      totalValue: total,
-      companyValue: calculated.company,
-      driverValue: calculated.driver,
-      reserveValue: calculated.reserve,
-      companyPercent,
-      driverPercent,
-      reservePercent,
-      status,
-      receivedValue: received,
-      pendingValue: pending,
-      dueDate: pending > 0 ? dueDate : undefined,
       origin,
       destination,
       description,
+      status,
       paymentMethod,
       clientDoc,
+      receivedValue: received,
+      pendingValue: pending,
+      dueDate: pending > 0 ? dueDate : undefined,
       bank_account_id: selectedAccount || null
     };
 
     setIsSuccess(true);
     setTimeout(() => {
-      onSave(newFreight);
+      onSave({
+        ...newFreight,
+        id: initialData?.id || '',
+        created_at: initialData?.created_at || new Date().toISOString()
+      } as Freight);
     }, 1500);
   };
 
-  const totalPercent = companyPercent + driverPercent + reservePercent;
+  const totalPercent = distribution.reduce((acc, p) => acc + p.percent, 0);
   const isPercentValid = Math.abs(totalPercent - 100) < 0.1;
 
   const totalNum = parseFloat(totalValue) || 0;
@@ -435,43 +458,21 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
             )}
           </div>
           <Card className={`space-y-4 transition-all duration-300 ${!isPercentValid ? 'border-red-300 dark:border-red-700 ring-2 ring-red-100 dark:ring-red-900/20 shadow-red-100 dark:shadow-none' : ''}`}>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className={`block text-xs font-medium mb-1 ${!isPercentValid ? 'text-accent-error' : 'text-slate-500'}`}>Empresa</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={companyPercent}
-                    onChange={(e) => setCompanyPercent(Number(e.target.value))}
-                    className={`w-full p-2 bg-[#F5F7FA] dark:bg-slate-900 rounded-lg border text-center font-semibold outline-none focus:border-brand transition-colors ${!isPercentValid ? 'border-red-300 dark:border-red-700 text-accent-error dark:text-red-400' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white'}`}
-                  />
-                  <span className="absolute right-2 top-2 text-xs text-slate-400">%</span>
+            <div className={`grid gap-4 ${distribution.length > 3 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {distribution.map((p) => (
+                <div key={p.id}>
+                  <label className={`block text-xs font-medium mb-1 truncate ${!isPercentValid ? 'text-accent-error' : 'text-slate-500'}`}>{p.label}</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={p.percent}
+                      onChange={(e) => handlePercentChange(p.id, Number(e.target.value))}
+                      className={`w-full p-2 bg-[#F5F7FA] dark:bg-slate-900 rounded-lg border text-center font-semibold outline-none focus:border-brand transition-colors ${!isPercentValid ? 'border-red-300 dark:border-red-700 text-accent-error dark:text-red-400' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white'}`}
+                    />
+                    <span className="absolute right-2 top-2 text-xs text-slate-400">%</span>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className={`block text-xs font-medium mb-1 ${!isPercentValid ? 'text-accent-error' : 'text-slate-500'}`}>Motorista</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={driverPercent}
-                    onChange={(e) => setDriverPercent(Number(e.target.value))}
-                    className={`w-full p-2 bg-[#F5F7FA] dark:bg-slate-900 rounded-lg border text-center font-semibold outline-none focus:border-brand transition-colors ${!isPercentValid ? 'border-red-300 dark:border-red-700 text-accent-error dark:text-red-400' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white'}`}
-                  />
-                  <span className="absolute right-2 top-2 text-xs text-slate-400">%</span>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-xs font-medium mb-1 ${!isPercentValid ? 'text-accent-error' : 'text-slate-500'}`}>Reserva</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={reservePercent}
-                    onChange={(e) => setReservePercent(Number(e.target.value))}
-                    className={`w-full p-2 bg-[#F5F7FA] dark:bg-slate-900 rounded-lg border text-center font-semibold outline-none focus:border-brand transition-colors ${!isPercentValid ? 'border-red-300 dark:border-red-700 text-accent-error dark:text-red-400' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white'}`}
-                  />
-                  <span className="absolute right-2 top-2 text-xs text-slate-400">%</span>
-                </div>
-              </div>
+              ))}
             </div>
             {!isPercentValid && (
               <div className="text-xs text-accent-error bg-red-50 dark:bg-red-900/20 p-2 rounded flex items-center justify-center gap-2">
@@ -489,18 +490,14 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
             Resultado (Valor Total)
           </h3>
           <div className="bg-slate-800 rounded-2xl p-5 text-white shadow-lg space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-              <span className="text-slate-400 text-sm">Empresa ({companyPercent}%)</span>
-              <span className="font-mono font-bold text-lg text-green-400">{formatCurrency(calculated.company)}</span>
-            </div>
-            <div className="flex justify-between items-center border-b border-slate-700 pb-2">
-              <span className="text-slate-400 text-sm">Motorista ({driverPercent}%)</span>
-              <span className="font-mono font-bold text-lg text-blue-400">{formatCurrency(calculated.driver)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400 text-sm">Reserva ({reservePercent}%)</span>
-              <span className="font-mono font-bold text-lg text-orange-400">{formatCurrency(calculated.reserve)}</span>
-            </div>
+            {distribution.map((d, idx) => (
+              <div key={d.id} className={`flex justify-between items-center ${idx < distribution.length - 1 ? 'border-b border-slate-700 pb-2' : ''}`}>
+                <span className="text-slate-400 text-sm">{d.label} ({d.percent}%)</span>
+                <span className={`font-mono font-bold text-lg ${idx === 0 ? 'text-green-400' : idx === 1 ? 'text-blue-400' : 'text-orange-400'}`}>
+                  {formatCurrency(d.value)}
+                </span>
+              </div>
+            ))}
           </div>
           {!isPaidInFull && (
             <p className="text-xs text-slate-400 text-center">
@@ -508,6 +505,7 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
             </p>
           )}
         </div>
+
 
         <div className="pt-4">
           <Button type="submit" fullWidth disabled={!totalValue || !isPercentValid || isAdvanceInvalid}>

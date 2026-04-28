@@ -137,14 +137,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       const received = curr.receivedValue ?? (curr.status === 'PAID' ? curr.totalValue : 0);
 
       if (isThisMonth) {
-        acc.companyMonth += curr.companyValue;
-        acc.driverMonth += curr.driverValue;
-        acc.reserveMonth += curr.reserveValue;
+        // Handle legacy fields for backward compatibility
+        acc.companyMonth += curr.companyValue || 0;
+        acc.driverMonth += curr.driverValue || 0;
+        acc.reserveMonth += curr.reserveValue || 0;
+
+        // Handle dynamic distribution
+        if (curr.distribution && Array.isArray(curr.distribution)) {
+          curr.distribution.forEach(dist => {
+            acc.distributionMonth[dist.id] = (acc.distributionMonth[dist.id] || 0) + dist.value;
+          });
+        } else {
+          // Fallback for legacy freights without distribution array
+          acc.distributionMonth['company'] = (acc.distributionMonth['company'] || 0) + (curr.companyValue || 0);
+          acc.distributionMonth['driver'] = (acc.distributionMonth['driver'] || 0) + (curr.driverValue || 0);
+          acc.distributionMonth['reserve'] = (acc.distributionMonth['reserve'] || 0) + (curr.reserveValue || 0);
+        }
+
         acc.receivedMonth += received;
       }
 
       return acc;
-    }, { monthTotal: 0, weekTotal: 0, previousMonthTotal: 0, companyMonth: 0, driverMonth: 0, reserveMonth: 0, receivedMonth: 0 });
+    }, {
+      monthTotal: 0,
+      weekTotal: 0,
+      previousMonthTotal: 0,
+      companyMonth: 0,
+      driverMonth: 0,
+      reserveMonth: 0,
+      receivedMonth: 0,
+      distributionMonth: {} as Record<string, number>
+    });
 
     const expenseStats = expenses.reduce((acc, curr) => {
       const date = new Date(curr.date + 'T12:00:00');
@@ -153,9 +176,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         if (curr.source === 'COMPANY') acc.company += curr.value;
         if (curr.source === 'DRIVER') acc.driver += curr.value;
         if (curr.source === 'RESERVE') acc.reserve += curr.value;
+
+        // Map legacy sources to IDs used in distribution
+        const sourceId = curr.source.toLowerCase();
+        acc.byCategory[sourceId] = (acc.byCategory[sourceId] || 0) + curr.value;
       }
       return acc;
-    }, { total: 0, company: 0, driver: 0, reserve: 0 });
+    }, { total: 0, company: 0, driver: 0, reserve: 0, byCategory: {} as Record<string, number> });
 
     const extraStats = extraIncomes.reduce((acc, curr) => {
       const date = new Date(curr.date + 'T12:00:00');
@@ -164,14 +191,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         if (curr.source === 'COMPANY') acc.company += curr.value;
         if (curr.source === 'DRIVER') acc.driver += curr.value;
         if (curr.source === 'RESERVE') acc.reserve += curr.value;
+
+        // Map legacy sources to IDs used in distribution
+        const sourceId = curr.source.toLowerCase();
+        acc.byCategory[sourceId] = (acc.byCategory[sourceId] || 0) + curr.value;
       }
       return acc;
-    }, { total: 0, company: 0, driver: 0, reserve: 0 });
+    }, { total: 0, company: 0, driver: 0, reserve: 0, byCategory: {} as Record<string, number> });
 
     const netProfit = incomeStats.monthTotal - expenseStats.total + extraStats.total;
     const netCompany = incomeStats.companyMonth - expenseStats.company + extraStats.company;
     const netDriver = incomeStats.driverMonth - expenseStats.driver + extraStats.driver;
     const netReserve = incomeStats.reserveMonth - expenseStats.reserve + extraStats.reserve;
+
+    // Calculate dynamic net values
+    const netDistribution: Record<string, number> = {};
+
+    // Start with all categories from income
+    Object.keys(incomeStats.distributionMonth).forEach(id => {
+      netDistribution[id] = incomeStats.distributionMonth[id] - (expenseStats.byCategory[id] || 0) + (extraStats.byCategory[id] || 0);
+    });
 
     return {
       ...incomeStats,
@@ -181,6 +220,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       netCompany,
       netDriver,
       netReserve,
+      netDistribution,
       previousMonthTotal: incomeStats.previousMonthTotal
     };
   }, [freights, expenses, extraIncomes]);
@@ -534,41 +574,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               </div>
 
               <div className="space-y-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Empresa</span>
-                    <span className={`text-sm font-black ${stats.netCompany >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {formatCurrency(stats.netCompany)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-brand h-full" style={{ width: `${Math.max(0, Math.min(100, (stats.netCompany / (stats.netProfit || 1)) * 100))}%` }}></div>
-                  </div>
-                </div>
+                {Object.entries(stats.netDistribution).map(([id, value], idx) => {
+                  const category = (settings.customPercentages || []).find(cp => cp.id === id) ||
+                    (id === 'company' ? { label: 'Empresa' } :
+                      id === 'driver' ? { label: 'Motorista' } :
+                        id === 'reserve' ? { label: 'Reserva' } : { label: id });
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motorista</span>
-                    <span className={`text-sm font-black ${stats.netDriver >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {formatCurrency(stats.netDriver)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full" style={{ width: `${Math.max(0, Math.min(100, (stats.netDriver / (stats.netProfit || 1)) * 100))}%` }}></div>
-                  </div>
-                </div>
+                  const colors = ['bg-brand', 'bg-emerald-500', 'bg-amber-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500'];
+                  const colorClass = colors[idx % colors.length];
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reserva</span>
-                    <span className={`text-sm font-black ${stats.netReserve >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {formatCurrency(stats.netReserve)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-amber-500 h-full" style={{ width: `${Math.max(0, Math.min(100, (stats.netReserve / (stats.netProfit || 1)) * 100))}%` }}></div>
-                  </div>
-                </div>
+                  return (
+                    <div key={id} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{category.label}</span>
+                        <span className={`text-sm font-black ${value >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {formatCurrency(value)}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div className={`${colorClass} h-full`} style={{ width: `${Math.max(0, Math.min(100, (value / (Math.abs(stats.netProfit) || 1)) * 100))}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">

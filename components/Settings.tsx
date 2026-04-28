@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppSettings, User, ViewState } from '../types';
+import { AppSettings, User, ViewState, PercentageCategory } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload } from 'lucide-react';
@@ -27,9 +27,13 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   const logoUpload = useImageUpload({ bucket: 'avatars', minDimension: 100 });
 
   // Initialize state with props
-  const [company, setCompany] = useState(settings.defaultCompanyPercent);
-  const [driver, setDriver] = useState(settings.defaultDriverPercent);
-  const [reserve, setReserve] = useState(settings.defaultReservePercent);
+  const [percentages, setPercentages] = useState<PercentageCategory[]>(
+    settings.customPercentages || [
+      { id: 'company', label: 'Empresa', percent: settings.defaultCompanyPercent },
+      { id: 'driver', label: 'Motorista', percent: settings.defaultDriverPercent },
+      { id: 'reserve', label: 'Reserva', percent: settings.defaultReservePercent },
+    ]
+  );
 
   const [issuerName, setIssuerName] = useState(settings.issuerName || user?.name || '');
   const [issuerDoc, setIssuerDoc] = useState(settings.issuerDoc || '');
@@ -46,9 +50,11 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
 
   // Effects to sync with props
   React.useEffect(() => {
-    setCompany(settings.defaultCompanyPercent);
-    setDriver(settings.defaultDriverPercent);
-    setReserve(settings.defaultReservePercent);
+    setPercentages(settings.customPercentages || [
+      { id: 'company', label: 'Empresa', percent: settings.defaultCompanyPercent },
+      { id: 'driver', label: 'Motorista', percent: settings.defaultDriverPercent },
+      { id: 'reserve', label: 'Reserva', percent: settings.defaultReservePercent },
+    ]);
     setIssuerName(settings.issuerName || user?.name || '');
     setIssuerDoc(settings.issuerDoc || '');
     setIssuerPhone(settings.issuerPhone || '');
@@ -116,9 +122,10 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const total = percentages.reduce((acc, p) => acc + p.percent, 0);
+
   const handleSave = async () => {
     // Validation
-    const total = company + driver + reserve;
     if (total !== 100) {
       toastError(`A soma das porcentagens é ${total}%. Deve ser exatamente 100%.`);
       return;
@@ -128,9 +135,10 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
       setIsSaving(true);
       await onSave({
         ...settings,
-        defaultCompanyPercent: company,
-        defaultDriverPercent: driver,
-        defaultReservePercent: reserve,
+        defaultCompanyPercent: percentages.find(p => p.id === 'company')?.percent || 0,
+        defaultDriverPercent: percentages.find(p => p.id === 'driver')?.percent || 0,
+        defaultReservePercent: percentages.find(p => p.id === 'reserve')?.percent || 0,
+        customPercentages: percentages,
         issuerName,
         issuerDoc,
         issuerPhone,
@@ -153,11 +161,22 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
     }
   };
 
+  const handleAddCategory = () => {
+    const newId = `custom_${Date.now()}`;
+    setPercentages([...percentages, { id: newId, label: 'Nova Categoria', percent: 0 }]);
+  };
+
+  const handleRemoveCategory = (id: string) => {
+    setPercentages(percentages.filter(p => p.id !== id));
+  };
+
+  const handleUpdateCategory = (id: string, updates: Partial<PercentageCategory>) => {
+    setPercentages(percentages.map(p => p.id === id ? { ...p, ...updates } : p));
+  };
+
   const toggleTheme = (theme: 'light' | 'dark') => {
     onSave({ ...settings, theme });
   };
-
-  const total = company + driver + reserve;
 
   return (
     <div className="pb-24 space-y-6">
@@ -283,7 +302,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
               <Button onClick={() => onNavigate('PAYMENT')} className="w-full sm:w-auto bg-brand hover:bg-brand-600 text-white shadow-lg shadow-brand/20">
                 <div className="flex items-center gap-2">
                   <Crown className="w-4 h-4" />
-                  <span>Fazer Upgrade (R$ 34,99/ano)</span>
+                  <span>Fazer Upgrade (R$ 49,99/ano)</span>
                 </div>
               </Button>
             )}
@@ -319,44 +338,56 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
-          <SettingsIcon className="w-4 h-4" />
-          Porcentagens Padrão
-        </h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <SettingsIcon className="w-4 h-4" />
+            Porcentagens Padrão
+          </h2>
+          <button
+            onClick={handleAddCategory}
+            className="text-xs font-bold text-brand hover:text-brand-600 transition-colors flex items-center gap-1"
+          >
+            <Upload className="w-3 h-3 rotate-45" /> Adicionar Categoria
+          </button>
+        </div>
         <Card className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Empresa (%)</label>
-            <input
-              type="number"
-              value={company}
-              onChange={(e) => setCompany(Number(e.target.value))}
-              className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Motorista (%)</label>
-            <input
-              type="number"
-              value={driver}
-              onChange={(e) => setDriver(Number(e.target.value))}
-              className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Reserva (%)</label>
-            <input
-              type="number"
-              value={reserve}
-              onChange={(e) => setReserve(Number(e.target.value))}
-              className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white"
-            />
-          </div>
+          {percentages.map((p) => (
+            <div key={p.id} className="group relative flex items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1 ml-1">Nome</label>
+                <input
+                  type="text"
+                  value={p.label}
+                  onChange={(e) => handleUpdateCategory(p.id, { label: e.target.value })}
+                  className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                />
+              </div>
+              <div className="w-24">
+                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1 ml-1">Valor (%)</label>
+                <input
+                  type="number"
+                  value={p.percent}
+                  onChange={(e) => handleUpdateCategory(p.id, { percent: Number(e.target.value) })}
+                  className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                />
+              </div>
+              {percentages.length > 1 && (
+                <button
+                  onClick={() => handleRemoveCategory(p.id)}
+                  className="p-3 text-slate-400 hover:text-red-500 transition-colors bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
 
-          <div className={`text-xs p-2 rounded text-center ${total === 100 ? 'text-accent-success bg-green-50 dark:bg-green-900/20' : 'text-accent-error bg-red-50 dark:bg-red-900/20'}`}>
-            Total: {total}% (Deve ser 100%)
+          <div className={`text-xs p-2 rounded text-center font-bold ${total === 100 ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : 'text-red-600 bg-red-50 dark:bg-red-900/20'}`}>
+            Total: {total}% {total !== 100 && '(Deve ser exatamente 100%)'}
           </div>
         </Card>
       </section>
+
 
       {/* Receipt Issuer Settings */}
       <section className="space-y-3">
@@ -572,31 +603,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         </Card>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
-          <Users className="w-4 h-4" />
-          Indique e Ganhe
-        </h2>
-        <Card className="p-4 bg-gradient-to-r from-brand/10 to-brand-secondary/10 dark:from-brand/20 dark:to-brand-secondary/20 border-brand/20">
-          <button
-            onClick={() => onNavigate('REFERRALS')}
-            className="w-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg hover:scale-[1.02]"
-          >
-            <Users className="w-5 h-5" />
-            Acessar Painel de Indicações
-          </button>
-          <div className="flex items-center justify-center gap-4 mt-3">
-            <div className="flex items-center gap-1 text-xs text-brand font-bold">
-              <DollarSign className="w-3 h-3" />
-              Ganhe 20%
-            </div>
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <CheckCircle className="w-3 h-3" />
-              Sem limites
-            </div>
-          </div>
-        </Card>
-      </section>
+
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">

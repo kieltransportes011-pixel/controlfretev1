@@ -1,4 +1,10 @@
 
+export interface PercentageCategory {
+  id: string;
+  label: string;
+  percent: number;
+}
+
 export interface Freight {
   id: string;
   date: string; // ISO Date string
@@ -28,6 +34,7 @@ export interface Freight {
   paymentMethod?: string;
   clientDoc?: string;
   bank_account_id?: string | null;
+  distribution?: Array<PercentageCategory & { value: number }>;
 }
 
 export interface OFretejaFreight {
@@ -134,6 +141,7 @@ export interface AppSettings {
   issuerAddressState?: string;
   issuerAddressZip?: string;
   issuerLogoUrl?: string;
+  customPercentages?: PercentageCategory[];
 }
 
 export interface Client {
@@ -171,6 +179,7 @@ export interface DashboardStats {
   companyMonth: number;
   driverMonth: number;
   reserveMonth: number;
+  distributionMonth: Record<string, number>; // Dynamic categories: id -> value
   receivedMonth: number;
   expenseMonth: number;
   extraMonth: number;
@@ -178,6 +187,7 @@ export interface DashboardStats {
   netCompany: number;
   netDriver: number;
   netReserve: number;
+  netDistribution: Record<string, number>; // Dynamic categories: id -> netValue
   previousMonthTotal: number;
 }
 
