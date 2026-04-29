@@ -44,6 +44,11 @@ export const FreightCalculator: React.FC<FreightCalculatorProps> = ({ onCancel, 
   const [consumption, setConsumption] = useState<string>('2.5');
   const [dieselPrice, setDieselPrice] = useState<string>('');
 
+  // Custos Fixos & Margem
+  const [fixedDailyCost, setFixedDailyCost] = useState<string>('');
+  const [tripDays, setTripDays] = useState<string>('1');
+  const [targetMargin, setTargetMargin] = useState<string>('20');
+
   // Estados de Validação
   const [consumptionError, setConsumptionError] = useState(false);
 
@@ -60,16 +65,26 @@ export const FreightCalculator: React.FC<FreightCalculatorProps> = ({ onCancel, 
     const kmL = isNaN(rawKmL) || rawKmL <= 0 ? 1 : rawKmL;
     const diesel = Math.max(0, parseFloat(dieselPrice) || 0);
     const fuelCost = (km / kmL) * diesel;
-    const estimatedProfit = total - extrasTotal - fuelCost;
+    
+    const fixedDaily = Math.max(0, parseFloat(fixedDailyCost) || 0);
+    const days = Math.max(1, parseFloat(tripDays) || 1);
+    const tripFixedCost = fixedDaily * days;
+
+    const estimatedProfit = total - extrasTotal - fuelCost - tripFixedCost;
+    const profitMargin = total > 0 ? (estimatedProfit / total) * 100 : 0;
+    const isMarginOk = profitMargin >= (parseFloat(targetMargin) || 0);
 
     return {
       freightBase,
       extrasTotal,
       total,
       fuelCost,
-      estimatedProfit
+      tripFixedCost,
+      estimatedProfit,
+      profitMargin,
+      isMarginOk
     };
-  }, [distance, pricePerKm, extraItems, consumption, dieselPrice]);
+  }, [distance, pricePerKm, extraItems, consumption, dieselPrice, fixedDailyCost, tripDays, targetMargin]);
 
   const addExtraItem = () => {
     setExtraItems([...extraItems, { id: generateId(), label: '', value: '' }]);
@@ -99,7 +114,7 @@ export const FreightCalculator: React.FC<FreightCalculatorProps> = ({ onCancel, 
 💰 Valor por Km: ${formatCurrency(parseFloat(pricePerKm) || 0)}
 📦 Frete Base: ${formatCurrency(totals.freightBase)}
 ${extrasDetails ? `${extrasDetails}\n` : ''}
-✅ *TOTAL: ${formatCurrency(totals.total)}*
+✅ *TOTAL COBRADO: ${formatCurrency(totals.total)}*
     `.trim();
 
     navigator.clipboard.writeText(text);
@@ -120,7 +135,7 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
 📦 Frete Base: ${formatCurrency(totals.freightBase)}
 ${extrasDetails ? `${extrasDetails}\n` : ''}
 ----------------
-✅ *VALOR TOTAL: ${formatCurrency(totals.total)}*
+✅ *VALOR TOTAL COBRADO: ${formatCurrency(totals.total)}*
     `.trim();
 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
@@ -254,9 +269,9 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
             onClick={() => setShowFuel(!showFuel)}
             className="flex items-center justify-between w-full text-[10px] font-roboto font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest"
           >
-            <span className="flex items-center gap-2"><Fuel className="w-4 h-4" /> Custo Combustível Estimado</span>
+            <span className="flex items-center gap-2"><Fuel className="w-4 h-4" /> Custos Operacionais e Margem Estimada</span>
             <span className={`px-2 py-1 rounded-lg ${showFuel ? 'bg-brand text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
-              {showFuel ? 'OCULTAR' : 'CALCULAR'}
+              {showFuel ? 'OCULTAR' : 'CONFIGURAR'}
             </span>
           </button>
 
@@ -286,16 +301,56 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Custo Fixo/Dia (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={fixedDailyCost}
+                    onChange={(e) => setFixedDailyCost(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-none shadow-sm text-sm font-bold text-slate-700 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Dias de Viagem</label>
+                  <input
+                    type="number"
+                    value={tripDays}
+                    onChange={(e) => setTripDays(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-none shadow-sm text-sm font-bold text-slate-700 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Margem Alvo (%)</label>
+                  <input
+                    type="number"
+                    value={targetMargin}
+                    onChange={(e) => setTargetMargin(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-none shadow-sm text-sm font-bold text-slate-700 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl border border-red-100 dark:border-red-900/20">
-                  <p className="text-[9px] text-accent-error font-black uppercase mb-1">Custo Diesel</p>
+                  <p className="text-[9px] text-accent-error font-black uppercase mb-1">Combustível</p>
                   <p className="text-xl font-black text-accent-error tabular-nums">
                     {formatCurrency(totals.fuelCost)}
                   </p>
                 </div>
-                <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-2xl border border-green-100 dark:border-green-900/20">
-                  <p className="text-[9px] text-accent-success font-black uppercase mb-1">Lucro Estimado</p>
-                  <p className="text-xl font-black text-accent-success tabular-nums">
+                <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/20">
+                  <p className="text-[9px] text-orange-500 font-black uppercase mb-1">Custo Fixo</p>
+                  <p className="text-xl font-black text-orange-500 tabular-nums">
+                    {formatCurrency(totals.tripFixedCost)}
+                  </p>
+                </div>
+                <div className={`col-span-2 lg:col-span-1 p-4 rounded-2xl border ${totals.isMarginOk ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20'}`}>
+                  <p className={`text-[9px] font-black uppercase mb-1 ${totals.isMarginOk ? 'text-accent-success' : 'text-accent-error'}`}>Lucro Estimado ({totals.profitMargin.toFixed(1)}%)</p>
+                  <p className={`text-xl font-black tabular-nums ${totals.isMarginOk ? 'text-accent-success' : 'text-accent-error'}`}>
                     {formatCurrency(totals.estimatedProfit)}
                   </p>
                 </div>

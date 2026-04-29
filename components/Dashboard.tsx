@@ -350,6 +350,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         onOpenBalance={() => setShowBalanceModal(true)}
       />
 
+      {/* Quick Actions */}
+      <div className="space-y-3">
+        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
+          <Zap className="w-3 h-3" /> Ações Rápidas
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card onClick={onOpenCalculator} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-brand bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-brand/10 rounded-lg text-brand group-hover:scale-110 transition-transform">
+                <Calculator className="w-5 h-5 bg-transparent" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Simular Lucro</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Calculadora Avançada</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
       {/* Pro Features Shortcuts */}
       {isActive && (
         <div className="space-y-3">
@@ -621,7 +641,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         onAddFreight={onAddFreight}
         onAddExpense={onAddExpense}
         onAddExtraIncome={() => setShowExtraIncomeModal(true)}
-        onOpenCalculator={onOpenCalculator}
       />
     </div>
   );

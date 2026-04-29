@@ -8,7 +8,6 @@ interface FloatingActionsProps {
     onAddFreight: () => void;
     onAddExpense: () => void;
     onAddExtraIncome: () => void;
-    onOpenCalculator: () => void;
 }
 
 export const FloatingActions: React.FC<FloatingActionsProps> = ({
@@ -16,8 +15,7 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
     setIsMenuOpen,
     onAddFreight,
     onAddExpense,
-    onAddExtraIncome,
-    onOpenCalculator
+    onAddExtraIncome
 }) => {
     return (
         <>
@@ -53,16 +51,6 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
                                 className="flex items-center gap-3 px-4 py-2.5 bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-800/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
                             >
                                 Entrada Extra <Plus className="w-4 h-4" />
-                            </motion.button>
-
-                            <motion.button
-                                initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                                onClick={() => { onOpenCalculator(); setIsMenuOpen(false); }}
-                                className="flex items-center gap-3 px-4 py-2.5 bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20 font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
-                            >
-                                Simular Lucro <Calculator className="w-4 h-4" />
                             </motion.button>
                         </div>
                     )}
