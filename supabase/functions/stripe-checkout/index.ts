@@ -86,7 +86,7 @@ serve(async (req) => {
                             name: 'Plano Pro - Control Frete (Anual)',
                             description: 'Acesso total: Histórico ilimitado, Metas, Relatórios e mais.',
                         },
-                        unit_amount: 4999, // R$ 49,99
+                        unit_amount: 1999, // R$ 19,99
                         recurring: {
                             interval: 'year',
                         },

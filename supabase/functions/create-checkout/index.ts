@@ -78,7 +78,7 @@ serve(async (req) => {
             description: 'Acesso completo - 1 Ano',
             quantity: 1,
             currency_id: 'BRL',
-            unit_price: 59.99
+            unit_price: 19.99
         };
 
         if (planType === 'monthly') {
@@ -97,7 +97,7 @@ serve(async (req) => {
                 description: 'Acesso completo - 1 Ano',
                 quantity: 1,
                 currency_id: 'BRL',
-                unit_price: 34.99
+                unit_price: 19.99
             };
         } else if (planType === 'lifetime') {
             item = {

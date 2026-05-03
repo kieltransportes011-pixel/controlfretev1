@@ -302,7 +302,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
               <Button onClick={() => onNavigate('PAYMENT')} className="w-full sm:w-auto bg-brand hover:bg-brand-600 text-white shadow-lg shadow-brand/20">
                 <div className="flex items-center gap-2">
                   <Crown className="w-4 h-4" />
-                  <span>Fazer Upgrade (R$ 49,99/ano)</span>
+                  <span>Fazer Upgrade (R$ 19,99/ano)</span>
                 </div>
               </Button>
             )}
