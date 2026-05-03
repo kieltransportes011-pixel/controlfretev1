@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog, Document } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -31,7 +31,6 @@ import { FreightNoticeModal } from './components/FreightNoticeModal';
 import { Clients } from './components/Clients';
 import { Fleet } from './components/Fleet';
 import { MaintenanceLogs } from './components/MaintenanceLogs';
-import { DocumentVault } from './components/DocumentVault';
 import { Skeleton, CardSkeleton, ListSkeleton } from './components/Skeleton';
 import { ToastProvider } from './contexts/ToastContext';
 import { BankAccounts } from './components/Financial/BankAccounts';
@@ -57,7 +56,6 @@ export default function App() {
   const [clients, setClients] = useState<Client[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
   const [permissionError, setPermissionError] = useState(false);
@@ -382,14 +380,6 @@ export default function App() {
       .eq('user_id', currentUser.id)
       .order('date', { ascending: false });
     if (maintenanceData) setMaintenanceLogs(maintenanceData as MaintenanceLog[]);
-
-    // Fetch Documents
-    const { data: documentsData } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('expiry_date', { ascending: true });
-    if (documentsData) setDocuments(documentsData as Document[]);
 
     setSyncing(false);
     setLoadingData(false);
@@ -753,10 +743,6 @@ Obs: ${of.description || 'Sem observações'}`;
                 onViewMaintenance={() => {
                   if (!isActive) return handleOpenUpgrade('FEATURE');
                   setView('MAINTENANCE');
-                }}
-                onViewDocuments={() => {
-                  if (!isActive) return handleOpenUpgrade('FEATURE');
-                  setView('DOCUMENTS');
                 }}
                 onAddExtraIncome={async (ei) => {
                   if (!currentUser) return;
@@ -1187,29 +1173,7 @@ Obs: ${of.description || 'Sem observações'}`;
             </motion.div>
           )}
 
-          {view === 'DOCUMENTS' && currentUser && (
-            <motion.div key="documents" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-              <DocumentVault
-                documents={documents}
-                vehicles={vehicles}
-                user={currentUser}
-                onAddDocument={async (d) => {
-                  if (!currentUser) return;
-                  const { error } = await supabase.from('documents').insert([{ ...d, user_id: currentUser.id }]);
-                  if (error) throw error;
-                  fetchData();
-                }}
-                onDeleteDocument={async (id) => {
-                  // Delete from Storage first if image exists? 
-                  // For now, simple DB delete.
-                  const { error } = await supabase.from('documents').delete().eq('id', id);
-                  if (error) throw error;
-                  fetchData();
-                }}
-                onBack={() => setView('DASHBOARD')}
-              />
-            </motion.div>
-          )}
+
 
           {view === 'FINANCIAL' && currentUser && (
             <motion.div key="financial" variants={viewVariants} initial="initial" animate="animate" exit="exit">

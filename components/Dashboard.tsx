@@ -54,13 +54,12 @@ interface DashboardProps {
   onViewClients: () => void;
   onViewFleet: () => void;
   onViewMaintenance: () => void;
-  onViewDocuments: () => void;
   onAddExtraIncome: (ei: Omit<ExtraIncome, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
   onDeleteExtraIncome: (id: string) => Promise<void>;
   loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewDocuments, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -293,7 +292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           </button>
           {!user.isPremium && (
             <button onClick={onUpgrade} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:scale-105 transition-all">
-              <Sparkles className="w-4 h-4" /> Virar PRO (R$ 34,99)
+              <Sparkles className="w-4 h-4" /> Virar PRO (R$ 19,99)
             </button>
           )}
           {user.role === 'admin' && (
@@ -338,7 +337,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             </div>
           </div>
           <button onClick={onUpgrade} className="bg-white text-brand px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
-            Assinar com Desconto (R$ 34,99)
+            Assinar com Desconto (R$ 19,99)
           </button>
         </div>
       )}
@@ -405,7 +404,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
             <ShieldCheck className="w-3 h-3" /> Gestão de Ativos (Frota)
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Card onClick={onViewFleet} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-brand">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 group-hover:text-brand group-hover:bg-brand/10 transition-all">
@@ -425,17 +424,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
                 <div>
                   <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Manutenção</h3>
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Alertas de Revisão</p>
-                </div>
-              </div>
-            </Card>
-            <Card onClick={onViewDocuments} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-blue-500">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 group-hover:text-blue-500 group-hover:bg-blue-500/10 transition-all">
-                  <FileStack className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Documentos</h3>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase">Cofre de Arquivos</p>
                 </div>
               </div>
             </Card>

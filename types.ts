@@ -160,7 +160,7 @@ export interface Client {
   created_at: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'MAINTENANCE' | 'DOCUMENTS' | 'FINANCIAL';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'MAINTENANCE' | 'FINANCIAL';
 
 export interface BankAccount {
   id: string;
@@ -291,16 +291,3 @@ export interface MaintenanceLog {
   created_at: string;
 }
 
-export type DocumentType = 'CNH' | 'ANTT' | 'CRLV' | 'EXAMINATION' | 'INSURANCE' | 'OTHER';
-
-export interface Document {
-  id: string;
-  user_id: string;
-  vehicle_id?: string;
-  type: DocumentType;
-  doc_number?: string;
-  expiry_date?: string;
-  image_url?: string;
-  notified: boolean;
-  created_at: string;
-}
