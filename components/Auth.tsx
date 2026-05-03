@@ -206,7 +206,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
     setLoading(true);
 
     try {
-      // 1.5 Resolve Referral Code (Before Signup)
+      // 1.5. Validate CPF uniqueness on backend
+      const { data: cpfExists, error: rpcError } = await supabase.rpc('check_cpf_exists', {
+        p_cpf: formData.cpf
+      });
+      if (cpfExists) {
+        setError('Este CPF já está cadastrado no sistema.');
+        setLoading(false);
+        return;
+      }
+
+      // 1.6 Resolve Referral Code (Before Signup)
       let finalReferrerId = null;
       const params = new URLSearchParams(window.location.search);
       const refCode = params.get('ref');
@@ -235,11 +245,11 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
         }
       }
 
-      // 2. Auth Creation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: window.location.origin,
           data: {
             name: formData.name,
             cpf: formData.cpf,

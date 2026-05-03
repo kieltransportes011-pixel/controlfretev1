@@ -157,6 +157,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         acc.receivedMonth += received;
       }
 
+      // -- ALL TIME CALCULATIONS --
+      acc.allTimeTotal += curr.totalValue;
+
+      if (curr.distribution && Array.isArray(curr.distribution)) {
+        curr.distribution.forEach(dist => {
+          acc.allTimeDistribution[dist.id] = (acc.allTimeDistribution[dist.id] || 0) + dist.value;
+        });
+      } else {
+        acc.allTimeDistribution['company'] = (acc.allTimeDistribution['company'] || 0) + (curr.companyValue || 0);
+        acc.allTimeDistribution['driver'] = (acc.allTimeDistribution['driver'] || 0) + (curr.driverValue || 0);
+        acc.allTimeDistribution['reserve'] = (acc.allTimeDistribution['reserve'] || 0) + (curr.reserveValue || 0);
+      }
+
       return acc;
     }, {
       monthTotal: 0,
@@ -166,11 +179,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       driverMonth: 0,
       reserveMonth: 0,
       receivedMonth: 0,
-      distributionMonth: {} as Record<string, number>
+      distributionMonth: {} as Record<string, number>,
+      allTimeTotal: 0,
+      allTimeDistribution: {} as Record<string, number>
     });
 
     const expenseStats = expenses.reduce((acc, curr) => {
       const date = new Date(curr.date + 'T12:00:00');
+      
+      acc.allTimeTotal += curr.value;
+      const sourceId = curr.source.toLowerCase();
+      acc.allTimeByCategory[sourceId] = (acc.allTimeByCategory[sourceId] || 0) + curr.value;
+
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         acc.total += curr.value;
         if (curr.source === 'COMPANY') acc.company += curr.value;
@@ -178,14 +198,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         if (curr.source === 'RESERVE') acc.reserve += curr.value;
 
         // Map legacy sources to IDs used in distribution
-        const sourceId = curr.source.toLowerCase();
         acc.byCategory[sourceId] = (acc.byCategory[sourceId] || 0) + curr.value;
       }
       return acc;
-    }, { total: 0, company: 0, driver: 0, reserve: 0, byCategory: {} as Record<string, number> });
+    }, { total: 0, company: 0, driver: 0, reserve: 0, byCategory: {} as Record<string, number>, allTimeTotal: 0, allTimeByCategory: {} as Record<string, number> });
 
     const extraStats = extraIncomes.reduce((acc, curr) => {
       const date = new Date(curr.date + 'T12:00:00');
+
+      acc.allTimeTotal += curr.value;
+      const sourceId = curr.source.toLowerCase();
+      acc.allTimeByCategory[sourceId] = (acc.allTimeByCategory[sourceId] || 0) + curr.value;
+
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
         acc.total += curr.value;
         if (curr.source === 'COMPANY') acc.company += curr.value;
@@ -193,13 +217,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         if (curr.source === 'RESERVE') acc.reserve += curr.value;
 
         // Map legacy sources to IDs used in distribution
-        const sourceId = curr.source.toLowerCase();
         acc.byCategory[sourceId] = (acc.byCategory[sourceId] || 0) + curr.value;
       }
       return acc;
-    }, { total: 0, company: 0, driver: 0, reserve: 0, byCategory: {} as Record<string, number> });
+    }, { total: 0, company: 0, driver: 0, reserve: 0, byCategory: {} as Record<string, number>, allTimeTotal: 0, allTimeByCategory: {} as Record<string, number> });
 
-    const netProfit = incomeStats.monthTotal - expenseStats.total + extraStats.total;
+    const netProfit = incomeStats.allTimeTotal - expenseStats.allTimeTotal + extraStats.allTimeTotal;
     const netCompany = incomeStats.companyMonth - expenseStats.company + extraStats.company;
     const netDriver = incomeStats.driverMonth - expenseStats.driver + extraStats.driver;
     const netReserve = incomeStats.reserveMonth - expenseStats.reserve + extraStats.reserve;
@@ -208,12 +231,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
     const netDistribution: Record<string, number> = {};
 
     // Start with all categories from income
-    Object.keys(incomeStats.distributionMonth).forEach(id => {
-      netDistribution[id] = incomeStats.distributionMonth[id] - (expenseStats.byCategory[id] || 0) + (extraStats.byCategory[id] || 0);
+    Object.keys(incomeStats.allTimeDistribution).forEach(id => {
+      netDistribution[id] = incomeStats.allTimeDistribution[id] - (expenseStats.allTimeByCategory[id] || 0) + (extraStats.allTimeByCategory[id] || 0);
     });
 
     return {
-      ...incomeStats,
+      monthTotal: incomeStats.monthTotal,
+      weekTotal: incomeStats.weekTotal,
+      companyMonth: incomeStats.companyMonth,
+      driverMonth: incomeStats.driverMonth,
+      reserveMonth: incomeStats.reserveMonth,
+      receivedMonth: incomeStats.receivedMonth,
+      distributionMonth: incomeStats.distributionMonth,
       expenseMonth: expenseStats.total,
       extraMonth: extraStats.total,
       netProfit,
