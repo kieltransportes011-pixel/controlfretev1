@@ -62,21 +62,48 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email) { setError('Por favor, informe seu e-mail.'); return; }
+    if (!formData.email.includes('@')) { setError('Informe um e-mail válido.'); return; }
+    if (!validateCPF(formData.cpf)) { setError('CPF inválido.'); return; }
+    if (formData.password.length < 6) { setError('A nova senha deve ter no mínimo 6 caracteres.'); return; }
+    if (formData.password !== formData.confirmPassword) { setError('As senhas não coincidem.'); return; }
+
     setLoading(true);
     setError(null);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+      const { data, error } = await supabase.functions.invoke('reset-password-admin', {
+        body: {
+          email: formData.email,
+          cpf: formData.cpf,
+          password: formData.password
+        }
+      });
+
+      if (!error && !data?.error) {
+        alert('Senha redefinida com sucesso! Digite sua nova senha para entrar.');
+        setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+        setView('LOGIN');
+        return;
+      }
+
+      // Se a Edge Function retornar erro de validação (ex: CPF incorreto)
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      // Se falhar o envio para a Edge Function (ex: função não implantada no Supabase), ativa fallback via e-mail
+      console.warn('Edge Function indisponível. Ativando envio por e-mail...', error);
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(formData.email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
-      if (error) throw error;
+      if (resetErr) throw resetErr;
 
-      alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+      alert('Enviamos um e-mail de recuperação para ' + formData.email + '. Verifique sua caixa de entrada ou SPAM.');
       setView('LOGIN');
+
     } catch (err: any) {
-      setError(err.message || 'Erro ao enviar e-mail de recuperação.');
+      setError(err.message || 'Erro ao redefinir senha. Verifique seus dados.');
     } finally {
       setLoading(false);
     }
@@ -430,18 +457,18 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
               </form>
             </div>
           ) : view === 'FORGOT_PASSWORD' ? (
-            <form onSubmit={handleResetPassword} className="space-y-5">
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <button
                 type="button"
                 onClick={() => setView('LOGIN')}
-                className="flex items-center text-slate-400 hover:text-slate-600 text-[10px] font-bold uppercase tracking-widest mb-4 transition-colors"
+                className="flex items-center text-slate-400 hover:text-slate-600 text-[10px] font-bold uppercase tracking-widest mb-2 transition-colors"
               >
                 <ChevronLeft size={14} className="mr-1" /> Voltar para Login
               </button>
 
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Recuperar Senha</h3>
-                <p className="text-slate-500 text-xs">Informe seu e-mail para receber as instruções de redefinição.</p>
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Recuperar Senha</h3>
+                <p className="text-slate-500 text-xs">Confirme seu E-mail e CPF cadastrados para criar uma nova senha instantaneamente.</p>
               </div>
 
               <InputField
@@ -451,8 +478,37 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
                 icon={<Mail size={18} />}
               />
 
-              <Button type="submit" fullWidth disabled={loading} className="py-4">
-                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENVIAR E-MAIL'}
+              <InputField
+                label="CPF"
+                value={formData.cpf}
+                onChange={(v: string) => handleChange('cpf', v)}
+                icon={<FileText size={18} />}
+              />
+
+              <InputField
+                label="Nova Senha"
+                value={formData.password}
+                onChange={(v: string) => handleChange('password', v)}
+                type="password"
+                icon={<Lock size={18} />}
+                isPass
+                passVisible={showPassword}
+                onTogglePass={() => setShowPassword(!showPassword)}
+              />
+
+              <InputField
+                label="Confirmar Nova Senha"
+                value={formData.confirmPassword}
+                onChange={(v: string) => handleChange('confirmPassword', v)}
+                type="password"
+                icon={<Lock size={18} />}
+                isPass
+                passVisible={showConfirmPassword}
+                onTogglePass={() => setShowConfirmPassword(!showConfirmPassword)}
+              />
+
+              <Button type="submit" fullWidth disabled={loading} className="py-4 mt-2">
+                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'REDEFINIR SENHA'}
               </Button>
             </form>
           ) : view === 'UPDATE_PASSWORD' ? (
