@@ -292,7 +292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           </button>
           {!user.isPremium && (
             <button onClick={onUpgrade} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:scale-105 transition-all">
-              <Sparkles className="w-4 h-4" /> Virar PRO (R$ 19,99)
+              <Sparkles className="w-4 h-4" /> Virar PRO (R$ 39,99)
             </button>
           )}
           {user.role === 'admin' && (
@@ -337,7 +337,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             </div>
           </div>
           <button onClick={onUpgrade} className="bg-white text-brand px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
-            Assinar com Desconto (R$ 19,99)
+            Assinar com Desconto (R$ 39,99)
           </button>
         </div>
       )}

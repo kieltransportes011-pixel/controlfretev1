@@ -102,37 +102,49 @@ const Navbar = ({ onLogin, isMenuOpen, setIsMenuOpen, scrollToSection }: any) =>
 
 const Hero = ({ onLogin, onScrollToPlans }: any) => {
     return (
-        <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#050505] pt-28 pb-20">
+        <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#050505] pt-28 pb-20 border-b border-[var(--industrial-border)]">
             {/* Grid Background */}
-            <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#111_1px,transparent_1px),linear-gradient(to_bottom,#111_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+            <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#111_1px,transparent_1px),linear-gradient(to_bottom,#111_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
-            <div className="relative z-10 max-w-7xl mx-auto px-4 w-full grid lg:grid-cols-2 gap-12 items-center">
+            {/* Brutalist Corner Markers */}
+            <CornerMarker className="top-24 left-6 border-t-2 border-l-2" />
+            <CornerMarker className="top-24 right-6 border-t-2 border-r-2" />
+            <CornerMarker className="bottom-6 left-6 border-b-2 border-l-2" />
+            <CornerMarker className="bottom-6 right-6 border-b-2 border-r-2" />
 
-                <div className="flex flex-col items-center lg:items-start text-center lg:text-left order-2 lg:order-1">
+            {/* Massive Background Title */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none select-none overflow-hidden opacity-5 z-0 hidden xl:block">
+                <span className="text-[20rem] font-black tracking-tighter text-white font-mono leading-none">
+                    FRETE
+                </span>
+            </div>
+
+            <div className="relative z-10 max-w-7xl mx-auto px-6 w-full grid lg:grid-cols-[1.2fr_0.8fr] gap-16 items-center">
+                <div className="flex flex-col items-center lg:items-start text-center lg:text-left order-2 lg:order-1 relative z-20">
                     {/* Tech Badge */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, x: -25 }}
+                        animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2 }}
                         className="mb-8 flex items-center gap-3 border border-[var(--industrial-border)] bg-[#0a0a0a] px-4 py-2"
                     >
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <div className="w-2 h-2 bg-[var(--precision-accent)] rounded-full animate-pulse" />
                         <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-mono">
-                            System Operational • V1.1
+                            System Operational • V1.2
                         </span>
                     </motion.div>
 
                     {/* Massive Typography */}
-                    <div className="relative">
+                    <div className="relative mb-6">
                         <motion.h1
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                            className="text-5xl sm:text-6xl md:text-8xl font-black text-white leading-[0.9] tracking-tighter"
+                            className="text-6xl sm:text-7xl md:text-8xl xl:text-[7.5rem] font-black text-white leading-[0.85] tracking-tighter uppercase"
                         >
                             CONTROL
                             <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-800">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--precision-accent)] via-blue-200 to-white">
                                 FRETE
                             </span>
                         </motion.h1>
@@ -142,10 +154,10 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5 }}
-                        className="mt-8 text-gray-400 md:text-xl max-w-xl font-light leading-relaxed"
+                        className="text-gray-400 text-base md:text-lg max-w-lg font-mono tracking-tight leading-relaxed mb-8 border-l-2 border-[var(--precision-accent)] pl-4"
                     >
-                        Ferramenta de precisão para gestão logística. <br className="hidden md:block" />
-                        Elimine a ineficiência. Maximize o lucro.
+                        // SISTEMA LOGÍSTICO INTEGRADO.<br />
+                        Elimine a ineficiência. Maximize o lucro e controle todas as despesas da sua operação.
                     </motion.p>
 
                     {/* PROMO BANNER (FEB ONLY) */}
@@ -154,7 +166,7 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.6 }}
-                            className="mt-6 p-4 border border-orange-500/30 bg-orange-500/10 backdrop-blur-sm max-w-lg relative overflow-hidden group"
+                            className="mt-2 mb-6 p-4 border border-orange-500/30 bg-orange-500/10 backdrop-blur-sm max-w-lg relative overflow-hidden group"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                             <div className="flex items-center gap-3 relative z-10">
@@ -174,11 +186,11 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.7 }}
-                        className="mt-10 flex flex-col sm:flex-row gap-6 w-full sm:w-auto"
+                        className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto"
                     >
                         <button
                             onClick={onLogin}
-                            className="group relative px-8 py-4 bg-[var(--precision-accent)] text-white overflow-hidden"
+                            className="group relative px-8 py-4 bg-[var(--precision-accent)] text-white overflow-hidden shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-shadow"
                         >
                             <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
                             <div className="flex items-center gap-4 relative z-10">
@@ -196,24 +208,24 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                     </motion.div>
                 </div>
 
-                {/* Hero Image - Phone Mockup */}
-                <div className="order-1 lg:order-2 flex justify-center perspective-1000">
+                {/* Hero Image - Phone Mockup (Layered Over Title) */}
+                <div className="order-1 lg:order-2 flex justify-center perspective-1000 relative z-10">
                     <motion.div
                         initial={{ opacity: 0, rotateY: 15, x: 50 }}
-                        animate={{ opacity: 1, rotateY: -5, x: 0 }}
+                        animate={{ opacity: 1, rotateY: -8, x: 0 }}
                         transition={{ duration: 1, delay: 0.4 }}
                         className="relative"
                     >
-                        <PhoneMockup src="/assets/landing/dashboard.jpg" alt="Dashboard Principal" className="shadow-[0_0_80px_-20px_var(--precision-accent)]" />
+                        <PhoneMockup src="/assets/landing/dashboard.jpg" alt="Dashboard Principal" className="shadow-[0_0_80px_-20px_var(--precision-accent)] border-[8px] border-[#161616]" />
 
-                        {/* Floating elements */}
+                        {/* Floating element */}
                         <motion.div
-                            initial={{ opacity: 0, x: -50 }}
+                            initial={{ opacity: 0, x: -30 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 1 }}
-                            className="absolute -bottom-10 -left-12 bg-[#0a0a0a] border border-[var(--industrial-border)] p-4 pr-8 hidden md:block"
+                            className="absolute -bottom-6 -left-12 bg-[#0a0a0a] border border-[var(--industrial-border)] p-4 pr-8 hidden md:block z-30"
                         >
-                            <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Resultado Mensal</div>
+                            <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 font-mono">// Resultado Mensal</div>
                             <div className="text-2xl font-black text-white">+ R$ 10.7k</div>
                             <CornerMarker className="bottom-0 left-0 border-b-2 border-l-2" />
                         </motion.div>
@@ -225,7 +237,7 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
             <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ repeat: Infinity, duration: 2 }}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50"
+                className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-35"
             >
                 <span className="text-[9px] uppercase tracking-[0.3em] text-white rotate-90 origin-left translate-x-3 mb-4">
                     Scroll
@@ -236,7 +248,7 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
     );
 };
 
-const StatBlock = ({ value, label, icon: Icon }: any) => (
+const StatBlock = ({ value, label, icon: Icon }) => (
     <div className="relative group p-8 bg-[#0a0a0a] border border-[var(--industrial-border)] hover:border-gray-600 transition-colors">
         <CornerMarker className="top-0 left-0 border-t-2 border-l-2 w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" />
         <CornerMarker className="bottom-0 right-0 border-b-2 border-r-2 w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -247,47 +259,43 @@ const StatBlock = ({ value, label, icon: Icon }: any) => (
         </div>
 
         <div className="text-3xl font-black text-white mb-2 tracking-tighter">{value}</div>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500">{label}</div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-mono">{label}</div>
     </div>
 );
 
-const FeatureRow = ({ title, desc, icon: Icon, imageSrc, reversed = false }: any) => (
-    <div className={`flex flex-col md:flex-row gap-16 items-center py-20 ${reversed ? 'md:flex-row-reverse' : ''}`}>
-        <div className="w-full md:w-1/2 flex justify-center">
-            <div className="relative">
-                <div className="absolute inset-0 bg-[var(--precision-accent)]/20 blur-[60px] rounded-full" />
-                {imageSrc ? (
-                    <PhoneMockup src={imageSrc} alt={title} className="rotate-3 md:rotate-6 hover:rotate-0 transition-all duration-500" />
-                ) : (
-                    <div className="relative aspect-video bg-[#0a0a0a] border border-[var(--industrial-border)] p-2 w-[320px]">
-                        <div className="w-full h-full bg-[#111] flex items-center justify-center text-gray-700">No Image</div>
-                    </div>
-                )}
-            </div>
-        </div>
-        <div className="w-full md:w-1/2 max-w-lg">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 border border-gray-800 flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-[var(--precision-accent)]" />
-                </div>
-                <div className="h-px w-12 bg-gray-800" />
-            </div>
-            <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-4">{title}</h3>
-            <p className="text-gray-400 leading-relaxed text-lg">{desc}</p>
-        </div>
-    </div>
-);
+// Features data structure for the interactive showcase
+const featuresData = [
+    {
+        title: "Gestão Financeira de Precisão",
+        desc: "Controle total sobre entradas e saídas. Visualize suas pendências de fretes e contas a pagar em um painel unificado e intuitivo.",
+        icon: DollarSign,
+        imageSrc: "/assets/landing/finances.jpg"
+    },
+    {
+        title: "Extrato Detalhado",
+        desc: "Mantenha um histórico completo de todas as suas viagens. Saiba exatamente qual foi o lucro líquido de cada frete descontando despesas e comissões.",
+        icon: Clock,
+        imageSrc: "/assets/landing/history.jpg"
+    },
+    {
+        title: "Login Seguro",
+        desc: "Seus dados são criptografados com padrões militares. Acesso rápido, seguro e disponível 24 horas por dia em qualquer dispositivo.",
+        icon: Lock,
+        imageSrc: "/assets/landing/login.jpg"
+    }
+];
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [spotsRemaining, setSpotsRemaining] = useState(13);
+    const [activeFeature, setActiveFeature] = useState(0);
 
     useEffect(() => {
         const timer = setTimeout(() => setSpotsRemaining(prev => prev > 7 ? prev - 1 : prev), 30000);
         return () => clearTimeout(timer);
     }, []);
 
-    const scrollToPlans = () => document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToPlans = () => document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' });
 
     return (
         <div className="bg-[#050505] min-h-screen text-gray-300 font-sans selection:bg-[var(--precision-accent)] selection:text-white">
@@ -311,55 +319,106 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 </div>
             </div>
 
-            {/* Features (Broken Grid) */}
-            <section id="recursos" className="py-32 px-4 relative overflow-hidden">
+            {/* Features (Interactive Showcase) */}
+            <section id="recursos" className="py-32 px-6 relative overflow-hidden bg-[#050505]">
                 <div className="max-w-7xl mx-auto">
-                    <div className="mb-20 text-center md:text-left">
-                        <span className="text-[var(--precision-accent)] font-mono text-xs uppercase tracking-widest block mb-4">// System Modules</span>
-                        <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter">
-                            Tecnologia de <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-500 to-white">Ponta a Ponta</span>
-                        </h2>
+                    <div className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div>
+                            <span className="text-[var(--precision-accent)] font-mono text-xs uppercase tracking-widest block mb-4">// System Modules</span>
+                            <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+                                Tecnologia de <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-500 to-white">Ponta a Ponta</span>
+                            </h2>
+                        </div>
+                        <p className="text-gray-500 max-w-md font-mono text-xs tracking-tight leading-relaxed">
+                            // Clique nos recursos ao lado para visualizar a interface em tempo real no dispositivo móvel.
+                        </p>
                     </div>
 
-                    <FeatureRow
-                        title="Gestão Financeira de Precisão"
-                        desc="Controle total sobre entradas e saídas. Visualize suas pendências de fretes e contas a pagar em um painel unificado e intuitivo."
-                        icon={DollarSign}
-                        imageSrc="/assets/landing/finances.jpg"
-                    />
+                    <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
+                        {/* Left Side: interactive selection buttons */}
+                        <div className="space-y-4 relative z-10">
+                            {featuresData.map((feat, index) => {
+                                const Icon = feat.icon;
+                                const isActive = activeFeature === index;
+                                return (
+                                    <button
+                                        key={index}
+                                        onClick={() => setActiveFeature(index)}
+                                        className={`w-full text-left p-6 border transition-all duration-300 flex items-start gap-4 rounded-none ${
+                                            isActive 
+                                                ? 'border-[var(--precision-accent)] bg-blue-950/20 shadow-[0_0_30px_-15px_rgba(59,130,246,0.4)]' 
+                                                : 'border-[var(--industrial-border)] bg-transparent hover:border-gray-700'
+                                        }`}
+                                    >
+                                        <div className={`p-3 border transition-colors rounded-none ${
+                                            isActive ? 'border-[var(--precision-accent)] text-[var(--precision-accent)]' : 'border-gray-800 text-gray-500'
+                                        }`}>
+                                            <Icon className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className={`font-black uppercase tracking-tight text-sm ${isActive ? 'text-white' : 'text-gray-400'}`}>
+                                                    {feat.title}
+                                                </h3>
+                                                {isActive && (
+                                                    <span className="text-[10px] font-mono text-[var(--precision-accent)] animate-pulse">// ATIVO</span>
+                                                )}
+                                            </div>
+                                            <p className={`mt-2 text-xs leading-relaxed ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>
+                                                {feat.desc}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
 
-                    <FeatureRow
-                        reversed
-                        title="Extrato Detalhado"
-                        desc="Mantenha um histórico completo de todas as suas viagens. Saiba exatamente qual foi o lucro líquido de cada frete descontando despesas e comissões."
-                        icon={Clock}
-                        imageSrc="/assets/landing/history.jpg"
-                    />
+                        {/* Right Side: Showcase Device Mockup */}
+                        <div className="flex justify-center relative min-h-[460px] items-center">
+                            {/* Glow behind device */}
+                            <div className="absolute w-[350px] h-[350px] bg-[var(--precision-accent)]/10 blur-[90px] rounded-full pointer-events-none" />
 
-
-
-                    <FeatureRow
-                        reversed
-                        title="Login Seguro"
-                        desc="Seus dados são criptografados com padrões militares. Acesso rápido, seguro e disponível 24 horas por dia em qualquer dispositivo."
-                        icon={Lock}
-                        imageSrc="/assets/landing/login.jpg"
-                    />
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={activeFeature}
+                                    initial={{ opacity: 0, scale: 0.95, y: 15, rotateY: 5 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0, rotateY: -3 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -15, rotateY: -8 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="relative z-10"
+                                >
+                                    <PhoneMockup 
+                                        src={featuresData[activeFeature].imageSrc} 
+                                        alt={featuresData[activeFeature].title} 
+                                        className="shadow-[0_0_80px_-20px_var(--precision-accent)] border-[8px] border-[#161616]" 
+                                    />
+                                    <div className="absolute -bottom-4 -right-4 bg-[#0a0a0a] border border-[var(--industrial-border)] px-4 py-2 font-mono text-[9px] text-gray-500 uppercase tracking-widest">
+                                        Módula: {featuresData[activeFeature].title.split(' ')[0]}
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    </div>
                 </div>
             </section>
 
             {/* Plans Section (Industrial Tables) */}
-            <section id="planos" className="py-32 bg-[#080808] border-t border-[var(--industrial-border)]">
-                <div className="max-w-7xl mx-auto px-4">
+            <section id="planos" className="py-32 bg-[#080808] border-t border-[var(--industrial-border)] relative">
+                {/* Visual grid details */}
+                <CornerMarker className="top-6 left-6 border-t-2 border-l-2" />
+                <CornerMarker className="bottom-6 right-6 border-b-2 border-r-2" />
+
+                <div className="max-w-7xl mx-auto px-4 relative z-10">
                     <div className="text-center mb-20">
                         <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">Acesso ao Sistema</h2>
                         <p className="text-gray-500 max-w-xl mx-auto font-light">Selecione o nível de acesso adequado para sua operação.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div className="p-8 border border-[var(--industrial-border)] hover:border-white transition-colors flex flex-col bg-[#050505]">
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6">Nível Básico</div>
+                    <div className="grid md:grid-cols-3 gap-8 items-stretch">
+                        {/* Mensal */}
+                        <div className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Nível Básico</div>
                             <div className="text-4xl font-black text-white mb-2">R$ 9<span className="text-xl">,90</span></div>
                             <div className="text-gray-500 text-sm mb-8">Cobrado mensalmente</div>
                             <ul className="space-y-4 mb-8 flex-1">
@@ -369,18 +428,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                                     </li>
                                 ))}
                             </ul>
-                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors">
+                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors rounded-none">
                                 Assinar Mensal
                             </button>
                         </div>
 
-                        <div className="p-8 border-2 border-[var(--precision-accent)] bg-[#050505] relative transform md:-translate-y-4 shadow-[0_0_50px_-20px_var(--precision-accent)]">
-                            <div className="absolute top-0 right-0 bg-[var(--precision-accent)] text-white text-[10px] font-bold uppercase px-3 py-1">
+                        {/* Anual Pro */}
+                        <div className="p-8 border-2 border-[var(--precision-accent)] bg-[#050505] relative transform md:-translate-y-4 shadow-[0_0_50px_-25px_var(--precision-accent)] hover:shadow-[0_0_50px_-10px_var(--precision-accent)] hover:scale-[1.02] transition-all duration-500 group flex flex-col">
+                            <div className="absolute top-0 right-0 bg-[var(--precision-accent)] text-white text-[10px] font-black uppercase px-3 py-1 tracking-widest">
                                 Oferta Limitada
                             </div>
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-[var(--precision-accent)] mb-6">Anual Pro</div>
-                            <div className="text-5xl font-black text-white mb-2">R$ 19<span className="text-2xl">,99</span></div>
-                            <div className="text-gray-500 text-sm mb-8">Valor promocional (R$ 1,66/mês)</div>
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-[var(--precision-accent)] mb-6 group-hover:tracking-[0.3em] transition-all duration-300 font-mono">// Anual Pro</div>
+                            <div className="text-5xl font-black text-white mb-2">R$ 39<span className="text-2xl">,99</span></div>
+                            <div className="text-gray-500 text-sm mb-8 font-mono">Valor promocional (R$ 3,33/mês)</div>
                             <ul className="space-y-4 mb-8 flex-1">
                                 {['Economia de 70%', 'Prioridade no Suporte', 'Módulo Financeiro', 'Sem anúncios', 'Mentoria em Grupo'].map(i => (
                                     <li key={i} className="flex items-center gap-3 text-sm text-white">
@@ -388,14 +448,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                                     </li>
                                 ))}
                             </ul>
-                            <button onClick={onLogin} className="w-full py-4 bg-[var(--precision-accent)] text-white font-bold uppercase text-xs tracking-widest hover:bg-blue-600 transition-colors">
+                            <button onClick={onLogin} className="w-full py-4 bg-[var(--precision-accent)] text-white font-bold uppercase text-xs tracking-widest hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 rounded-none">
                                 Garantir Oferta
                             </button>
                             <p className="mt-4 text-center text-[10px] text-gray-500 uppercase tracking-widest">Restam {spotsRemaining} vagas</p>
                         </div>
 
-                        <div className="p-8 border border-[var(--industrial-border)] hover:border-white transition-colors flex flex-col bg-[#050505]">
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6">Nível Enterprise</div>
+                        {/* Enterprise / Vitalicio */}
+                        <div className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Nível Enterprise</div>
                             <div className="text-4xl font-black text-white mb-2">R$ 249</div>
                             <div className="text-gray-500 text-sm mb-8">Pagamento único (Vitalício)</div>
                             <ul className="space-y-4 mb-8 flex-1">
@@ -405,7 +466,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                                     </li>
                                 ))}
                             </ul>
-                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors">
+                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors rounded-none">
                                 Comprar Vitalício
                             </button>
                         </div>
@@ -419,7 +480,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     <Truck className="w-4 h-4" />
                     <span className="text-xs font-black tracking-[0.2em] uppercase">Control Frete Systems</span>
                 </div>
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest">
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest font-mono">
                     © {new Date().getFullYear()} Todos os direitos reservados.
                 </p>
             </footer>

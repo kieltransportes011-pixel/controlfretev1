@@ -79,9 +79,9 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
             {/* Anual Promo */}
             <PricingCard
               title="Anual Pro"
-              price="R$ 19,99"
+              price="R$ 39,99"
               period="ano"
-              description="Melhor custo-benefício. Apenas R$ 1,66/mês."
+              description="Melhor custo-benefício. Apenas R$ 3,33/mês."
               features={[
                 "Tudo do Plano Mensal",
                 "Prioridade no Suporte",
