@@ -136,7 +136,7 @@ export const Clients: React.FC<ClientsProps> = ({ clients, onSaveClient, onDelet
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={() => handleOpenModal(client)}
-                                        className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
+                                        className="p-2 text-slate-400 hover:text-brand hover:bg-brand/10 dark:hover:bg-brand-500/20 rounded-lg transition-all"
                                     >
                                         <Pencil className="w-4 h-4" />
                                     </button>

@@ -139,7 +139,7 @@ export const History: React.FC<HistoryProps> = ({
           {isPremium && (
             <button
               onClick={() => setShowClosure(true)}
-              className="flex items-center gap-2 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all border border-blue-100 dark:border-blue-800"
+              className="flex items-center gap-2 bg-brand/10 text-brand dark:bg-brand-500/20 dark:text-brand-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-brand/20 transition-all border border-brand/10 dark:border-brand-500/30"
             >
               <FileText className="w-3.5 h-3.5" />
               Gerar Relatório PDF
@@ -153,25 +153,25 @@ export const History: React.FC<HistoryProps> = ({
         <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setFilter('ALL')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'ALL' ? 'bg-brand text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
           >
             Todos
           </button>
           <button
             onClick={() => setFilter('MONTH')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'MONTH' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'MONTH' ? 'bg-brand text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
           >
             Este Mês
           </button>
           <button
             onClick={() => setFilter('WEEK')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'WEEK' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'WEEK' ? 'bg-brand text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
           >
             Esta Semana
           </button>
           <button
             onClick={() => setFilter('CUSTOM')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'CUSTOM' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === 'CUSTOM' ? 'bg-brand text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
           >
             Personalizado
           </button>
@@ -186,7 +186,7 @@ export const History: React.FC<HistoryProps> = ({
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-white outline-none focus:border-blue-500"
+                className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-white outline-none focus:border-brand"
               />
             </div>
             <div>
@@ -195,7 +195,7 @@ export const History: React.FC<HistoryProps> = ({
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-white outline-none focus:border-blue-500"
+                className="w-full p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-white outline-none focus:border-brand"
               />
             </div>
           </div>
@@ -263,7 +263,7 @@ export const History: React.FC<HistoryProps> = ({
                           {/* Edit Button */}
                           <button
                             onClick={() => onEditFreight(freight)}
-                            className="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-300 hover:text-brand hover:bg-brand/10 dark:hover:bg-brand-500/20 rounded-lg transition-colors"
                             title="Editar"
                           >
                             <Pencil className="w-4 h-4" />
@@ -427,7 +427,7 @@ export const History: React.FC<HistoryProps> = ({
             </div>
             <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">Histórico Antigo Bloqueado</h3>
             <p className="text-xs text-slate-500 mt-1 mb-3">O plano gratuito exibe apenas os últimos 7 dias.</p>
-            <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Desbloquear Agora</span>
+            <span className="text-xs font-black text-brand uppercase tracking-widest">Desbloquear Agora</span>
           </div>
         )}
       </div>

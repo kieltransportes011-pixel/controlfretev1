@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Loader2, Megaphone, ChevronDown, ChevronUp, Clock, AlertTriangle, ShieldAlert, Info } from 'lucide-react';
+import { Loader2, Megaphone, ChevronDown, ChevronUp, Clock, AlertTriangle, ShieldAlert, Info, ArrowLeft } from 'lucide-react';
 import { PlatformNotice, User } from '../types';
 import { useToast } from '../contexts/ToastContext';
 
@@ -80,6 +80,12 @@ export const NoticesCenter: React.FC<NoticesCenterProps> = ({ user, onBack }) =>
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6 pb-24 animate-in fade-in duration-500">
             <div className="flex items-center gap-3 mb-6">
+                <button
+                    onClick={onBack}
+                    className="p-2.5 -ml-1 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors shrink-0"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
                 <div className="p-3 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl shadow-sm">
                     <Megaphone className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>

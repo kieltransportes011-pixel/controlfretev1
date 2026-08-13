@@ -79,7 +79,7 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
 
     return (
         <div className="pb-24 space-y-6 animate-fadeIn">
-            <header className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 -m-4 mb-2 sticky top-0 z-10 border-b border-slate-100 dark:border-slate-800">
+            <header className="flex justify-between items-center pb-1">
                 <div className="flex items-center gap-3">
                     <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-brand transition-colors">
                         <X className="w-6 h-6" />

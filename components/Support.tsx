@@ -119,14 +119,14 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
 
             {view === 'LIST' && (
                 <div className="space-y-6">
-                    <Card className="p-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white border-none shadow-lg">
+                    <Card className="p-6 bg-gradient-to-r from-brand to-brand-700 text-white border-none shadow-lg">
                         <h2 className="text-xl font-bold mb-2">Como podemos ajudar?</h2>
-                        <p className="text-blue-100 mb-6 text-sm">
+                        <p className="text-white/80 mb-6 text-sm">
                             Abra um chamado para resolver problemas técnicos, dúvidas sobre pagamentos ou enviar sugestões.
                         </p>
                         <Button
                             onClick={() => setView('CREATE')}
-                            className="bg-white text-blue-700 hover:bg-blue-50 border-none font-bold shadow-sm w-full sm:w-auto"
+                            className="!bg-white !text-brand hover:!bg-brand-50 border-none font-bold shadow-sm w-full sm:w-auto"
                         >
                             <Plus className="w-5 h-5 mr-2" />
                             Novo Chamado
@@ -166,7 +166,7 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
                                         <h4 className="font-bold text-base-text dark:text-white mb-1 line-clamp-1">{ticket.title}</h4>
                                         <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{ticket.description}</p>
                                         {ticket.admin_reply && (
-                                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2 text-xs text-brand dark:text-brand-300 font-medium">
                                                 <MessageCircle className="w-3 h-3" />
                                                 Respondido pelo suporte
                                             </div>
@@ -259,15 +259,15 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
                         </div>
 
                         {selectedTicket.admin_reply ? (
-                            <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                                <h3 className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                            <div className="bg-brand/5 dark:bg-brand-500/10 p-5 rounded-xl border border-brand/10 dark:border-brand-500/30">
+                                <h3 className="text-sm font-bold text-brand-800 dark:text-brand-300 mb-2 flex items-center gap-2">
                                     <MessageCircle className="w-4 h-4" />
                                     Resposta do Suporte
                                 </h3>
                                 <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                                     {selectedTicket.admin_reply}
                                 </p>
-                                <p className="text-[10px] text-blue-400 mt-2 text-right">
+                                <p className="text-[10px] text-brand-400 mt-2 text-right">
                                     Atualizado em: {new Date(selectedTicket.updated_at).toLocaleString()}
                                 </p>
                             </div>

@@ -24,7 +24,8 @@ import {
   ArrowUpRight,
   Loader2,
   Clock,
-  Briefcase
+  Briefcase,
+  Landmark
 } from 'lucide-react';
 import { CardSkeleton } from './Skeleton';
 import { useSubscription } from '../hooks/useSubscription';
@@ -54,12 +55,14 @@ interface DashboardProps {
   onViewClients: () => void;
   onViewFleet: () => void;
   onViewMaintenance: () => void;
+  onViewFinancial: () => void;
+  onOpenAdmin: () => void;
   onAddExtraIncome: (ei: Omit<ExtraIncome, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
   onDeleteExtraIncome: (id: string) => Promise<void>;
   loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewFinancial, onOpenAdmin, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -274,7 +277,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
   return (
     <div className="pb-24 space-y-6 animate-fadeIn">
       {/* Header */}
-      <header className="flex justify-between items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 -m-4 mb-2 sticky top-0 z-10 border-b border-slate-100 dark:border-slate-800">
+      <header className="flex justify-between items-center pb-1">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-brand rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20">
             <Zap className="w-6 h-6 fill-current" />
@@ -297,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           )}
           {user.role === 'admin' && (
             <button
-              onClick={() => window.location.href = '/admin'}
+              onClick={onOpenAdmin}
               className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest border border-slate-700 hover:border-red-500 hover:text-red-500 transition-all shadow-lg"
             >
               ADMIN PANEL
@@ -392,6 +395,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               <div>
                 <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Simular Lucro</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase">Calculadora Avançada</p>
+              </div>
+            </div>
+          </Card>
+          <Card onClick={onViewFinancial} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-emerald-500 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">
+                <Landmark className="w-5 h-5 bg-transparent" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Contas Bancárias</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Saldos e Contas</p>
               </div>
             </div>
           </Card>

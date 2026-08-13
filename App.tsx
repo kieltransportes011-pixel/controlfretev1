@@ -799,6 +799,8 @@ Obs: ${of.description || 'Sem observações'}`;
                   if (!isActive) return handleOpenUpgrade('FEATURE');
                   setView('MAINTENANCE');
                 }}
+                onViewFinancial={() => setView('FINANCIAL')}
+                onOpenAdmin={() => setView('ADMIN')}
                 onAddExtraIncome={async (ei) => {
                   if (!currentUser) return;
                   const { error } = await supabase.from('entradas_extras').insert([{

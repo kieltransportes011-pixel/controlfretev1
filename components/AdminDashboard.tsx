@@ -154,6 +154,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 .order('created_at', { ascending: false });
             setNotices(noticesData || []);
 
+            // 3.1 Fetch Admin Logs
+            const { data: logsData } = await supabase
+                .from('admin_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(100);
+            setLogs(logsData || []);
+
             // 4. Calculate Stats
             const now = new Date();
             const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
@@ -306,7 +314,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         <StatBox label="Total Users" value={stats.totalUsers} icon={Users} trend="+12%" />
                         <StatBox label="Active Pro" value={stats.activeProUsers} icon={Shield} color="text-orange-500" />
                         <StatBox label="Tickets Open" value={stats.openTickets} icon={MessageCircle} color={stats.openTickets > 0 ? "text-red-500" : "text-gray-500"} />
-                        <StatBox label="System Load" value="12ms" icon={Zap} unit="LATENCY" />
+                        <StatBox label="New Today" value={stats.newUsersToday} icon={Zap} unit="USERS" />
                     </div>
 
                     {/* --- TAB CONTENT: USERS --- */}
@@ -434,6 +442,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         <p className="text-gray-500 text-xs leading-relaxed">{notice.content}</p>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- TAB CONTENT: LOGS --- */}
+                    {activeTab === 'LOGS' && (
+                        <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
+                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
+                                <div className="flex items-center gap-2 text-orange-500">
+                                    <Activity className="w-5 h-5" />
+                                    <h2 className="text-sm font-bold uppercase tracking-widest text-white">Audit Trail</h2>
+                                </div>
+                                <span className="text-[10px] text-gray-600 font-mono">{logs.length} ENTRIES</span>
+                            </div>
+
+                            <div className="border border-white/10 rounded-sm overflow-hidden bg-[#0A0A0A] divide-y divide-white/5">
+                                {logs.map(log => (
+                                    <div key={log.id} className="px-6 py-4 flex items-start gap-4 hover:bg-white/5 transition-colors">
+                                        <span className={`shrink-0 mt-0.5 text-[9px] font-bold px-2 py-1 border uppercase ${log.target_type === 'user' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                            log.target_type === 'support_ticket' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                                'bg-white/5 text-gray-400 border-white/10'
+                                            }`}>
+                                            {log.target_type}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-white text-xs font-bold uppercase">{log.action}</div>
+                                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">{log.description}</div>
+                                        </div>
+                                        <span className="shrink-0 text-[10px] text-gray-600 font-mono">{formatDate(log.created_at)}</span>
+                                    </div>
+                                ))}
+
+                                {logs.length === 0 && (
+                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                        No audit entries recorded.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

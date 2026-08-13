@@ -364,7 +364,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
 
   if (view === 'SUCCESS') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-900 animate-fadeIn text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fadeIn text-center">
         <div className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 p-4 rounded-full mb-6">
           <CheckCircle size={48} />
         </div>
@@ -384,14 +384,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md glass rounded-2xl overflow-hidden fintech-shadow animate-scaleUp">
 
         {/* Header */}
-        <div className="bg-brand p-8 text-center text-white">
-          <img src="/logo-official.png" className="h-12 mx-auto mb-4 drop-shadow-md brightness-0 invert" alt="Logo" />
-          <h1 className="text-2xl font-bold tracking-tight uppercase">Control Frete</h1>
-          <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">
+        <div className="bg-brand p-8 text-center text-white relative overflow-hidden">
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+          <img src="/logo-official.png" className="h-12 mx-auto mb-4 drop-shadow-md brightness-0 invert relative" alt="Logo" />
+          <h1 className="text-2xl font-bold tracking-tight uppercase relative">Control Frete</h1>
+          <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1 relative">
             {view === 'LOGIN' ? 'Login Seguro' : 'Criar Nova Conta'}
           </p>
         </div>
@@ -461,9 +462,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
                         account_status: 'active'
                       });
                     }}
-                    className="w-full py-3 bg-slate-800 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-colors"
+                    className="w-full py-2.5 border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:border-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                   >
-                    Entrar como Teste (Localhost)
+                    ⚙ Entrar como Teste (Localhost)
                   </button>
                 )}
 

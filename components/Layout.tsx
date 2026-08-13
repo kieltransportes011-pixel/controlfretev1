@@ -38,38 +38,33 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Bottom Navigation */}
       {shouldShowNav && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border-t border-slate-100 dark:border-slate-700 px-2 py-3 flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.08)] transition-colors duration-200">
-          <button
-            onClick={() => navigate('/')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${getIsActive('/') ? 'text-blue-600 dark:text-blue-400 scale-105' : 'text-slate-400 hover:text-blue-500 dark:hover:text-blue-400'}`}
-          >
-            <LayoutGrid className="w-5 h-5" strokeWidth={getIsActive('/') ? 2.5 : 2} />
-            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Início</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/receivables')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${getIsActive('/receivables') ? 'text-emerald-600 dark:text-emerald-400 scale-105' : 'text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400'}`}
-          >
-            <Wallet className="w-5 h-5" strokeWidth={getIsActive('/receivables') ? 2.5 : 2} />
-            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Contas</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/history')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${getIsActive('/history') ? 'text-orange-600 dark:text-orange-400 scale-105' : 'text-slate-400 hover:text-orange-500 dark:hover:text-orange-400'}`}
-          >
-            <List className="w-5 h-5" strokeWidth={getIsActive('/history') ? 2.5 : 2} />
-            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Histórico</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/settings')}
-            className={`flex flex-col items-center gap-1 transition-all flex-1 ${getIsActive('/settings') ? 'text-slate-800 dark:text-white scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
-          >
-            <Settings className="w-5 h-5" strokeWidth={getIsActive('/settings') ? 2.5 : 2} />
-            <span className="text-[9px] font-roboto font-medium uppercase tracking-wider">Ajustes</span>
-          </button>
+        <nav className="fixed bottom-0 left-0 right-0 glass border-t px-2 py-2.5 flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto transition-colors duration-200">
+          {[
+            { to: '/', icon: LayoutGrid, label: 'Início' },
+            { to: '/receivables', icon: Wallet, label: 'Contas' },
+            { to: '/history', icon: List, label: 'Histórico' },
+            { to: '/settings', icon: Settings, label: 'Ajustes' },
+          ].map(({ to, icon: Icon, label }) => {
+            const active = getIsActive(to);
+            return (
+              <button
+                key={to}
+                onClick={() => navigate(to)}
+                className="relative flex flex-col items-center gap-1 flex-1 py-1 group"
+              >
+                {active && (
+                  <span className="absolute -top-2.5 h-1 w-6 rounded-full bg-brand dark:bg-brand-400" />
+                )}
+                <Icon
+                  className={`w-5 h-5 transition-all ${active ? 'text-brand dark:text-brand-400 scale-110' : 'text-slate-400 group-hover:text-brand/70 dark:group-hover:text-brand-400/70'}`}
+                  strokeWidth={active ? 2.5 : 2}
+                />
+                <span className={`text-[9px] font-roboto font-medium uppercase tracking-wider transition-colors ${active ? 'text-brand dark:text-brand-400' : 'text-slate-400'}`}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </nav>
       )}
     </div>

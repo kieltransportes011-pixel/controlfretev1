@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Truck,
@@ -14,8 +14,7 @@ import {
     Cpu,
     Database,
     Activity,
-    DollarSign,
-    Zap
+    DollarSign
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -160,27 +159,6 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                         Elimine a ineficiência. Maximize o lucro e controle todas as despesas da sua operação.
                     </motion.p>
 
-                    {/* PROMO BANNER (FEB ONLY) */}
-                    {new Date().getMonth() === 1 && new Date().getFullYear() === 2026 && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.6 }}
-                            className="mt-2 mb-6 p-4 border border-orange-500/30 bg-orange-500/10 backdrop-blur-sm max-w-lg relative overflow-hidden group"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                            <div className="flex items-center gap-3 relative z-10">
-                                <Zap className="w-5 h-5 text-orange-500 animate-pulse" />
-                                <div>
-                                    <div className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-1">Oferta de Fevereiro</div>
-                                    <div className="text-sm font-bold text-white">
-                                        Novos cadastros ganham <span className="text-orange-500">15 DIAS PRO GRÁTIS</span>!
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-
                     {/* Industrial Buttons */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -248,8 +226,14 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
     );
 };
 
-const StatBlock = ({ value, label, icon: Icon }) => (
-    <div className="relative group p-8 bg-[#0a0a0a] border border-[var(--industrial-border)] hover:border-gray-600 transition-colors">
+const StatBlock = ({ value, label, icon: Icon, index = 0 }: { value: string; label: string; icon: any; index?: number }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.5, delay: index * 0.1 }}
+        className="relative group p-8 bg-[#0a0a0a] border border-[var(--industrial-border)] hover:border-gray-600 transition-colors"
+    >
         <CornerMarker className="top-0 left-0 border-t-2 border-l-2 w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" />
         <CornerMarker className="bottom-0 right-0 border-b-2 border-r-2 w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -260,7 +244,7 @@ const StatBlock = ({ value, label, icon: Icon }) => (
 
         <div className="text-3xl font-black text-white mb-2 tracking-tighter">{value}</div>
         <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-mono">{label}</div>
-    </div>
+    </motion.div>
 );
 
 // Features data structure for the interactive showcase
@@ -287,13 +271,7 @@ const featuresData = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [spotsRemaining, setSpotsRemaining] = useState(13);
     const [activeFeature, setActiveFeature] = useState(0);
-
-    useEffect(() => {
-        const timer = setTimeout(() => setSpotsRemaining(prev => prev > 7 ? prev - 1 : prev), 30000);
-        return () => clearTimeout(timer);
-    }, []);
 
     const scrollToPlans = () => document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' });
 
@@ -312,17 +290,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
             {/* Stats Band */}
             <div className="border-y border-[var(--industrial-border)] bg-[#080808]">
                 <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-[var(--industrial-border)]">
-                    <StatBlock value="+5k" label="Motoristas" icon={Users} />
-                    <StatBlock value="99.9%" label="Uptime" icon={Cpu} />
-                    <StatBlock value="+15k" label="Viagens" icon={CheckCircle} />
-                    <StatBlock value="24/7" label="Segurança" icon={Shield} />
+                    <StatBlock value="Ilimitado" label="Fretes Registrados" icon={Users} index={0} />
+                    <StatBlock value="99.9%" label="Uptime" icon={Cpu} index={1} />
+                    <StatBlock value="Simples" label="Fácil de Usar" icon={CheckCircle} index={2} />
+                    <StatBlock value="24/7" label="Segurança" icon={Shield} index={3} />
                 </div>
             </div>
 
             {/* Features (Interactive Showcase) */}
             <section id="recursos" className="py-32 px-6 relative overflow-hidden bg-[#050505]">
                 <div className="max-w-7xl mx-auto">
-                    <div className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-80px" }}
+                        transition={{ duration: 0.6 }}
+                        className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-6"
+                    >
                         <div>
                             <span className="text-[var(--precision-accent)] font-mono text-xs uppercase tracking-widest block mb-4">// System Modules</span>
                             <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
@@ -333,7 +317,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                         <p className="text-gray-500 max-w-md font-mono text-xs tracking-tight leading-relaxed">
                             // Clique nos recursos ao lado para visualizar a interface em tempo real no dispositivo móvel.
                         </p>
-                    </div>
+                    </motion.div>
 
                     <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
                         {/* Left Side: interactive selection buttons */}
@@ -410,14 +394,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <CornerMarker className="bottom-6 right-6 border-b-2 border-r-2" />
 
                 <div className="max-w-7xl mx-auto px-4 relative z-10">
-                    <div className="text-center mb-20">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-80px" }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-20"
+                    >
                         <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">Acesso ao Sistema</h2>
                         <p className="text-gray-500 max-w-xl mx-auto font-light">Selecione o nível de acesso adequado para sua operação.</p>
-                    </div>
+                    </motion.div>
 
                     <div className="grid md:grid-cols-3 gap-8 items-stretch">
                         {/* Mensal */}
-                        <div className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-80px" }}
+                            transition={{ duration: 0.5 }}
+                            className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300"
+                        >
                             <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Nível Básico</div>
                             <div className="text-4xl font-black text-white mb-2">R$ 9<span className="text-xl">,90</span></div>
                             <div className="text-gray-500 text-sm mb-8">Cobrado mensalmente</div>
@@ -431,10 +427,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors rounded-none">
                                 Assinar Mensal
                             </button>
-                        </div>
+                        </motion.div>
 
                         {/* Anual Pro */}
-                        <div className="p-8 border-2 border-[var(--precision-accent)] bg-[#050505] relative transform md:-translate-y-4 shadow-[0_0_50px_-25px_var(--precision-accent)] hover:shadow-[0_0_50px_-10px_var(--precision-accent)] hover:scale-[1.02] transition-all duration-500 group flex flex-col">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-80px" }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            className="p-8 border-2 border-[var(--precision-accent)] bg-[#050505] relative transform md:-translate-y-4 shadow-[0_0_50px_-25px_var(--precision-accent)] hover:shadow-[0_0_50px_-10px_var(--precision-accent)] hover:scale-[1.02] transition-all duration-500 group flex flex-col"
+                        >
                             <div className="absolute top-0 right-0 bg-[var(--precision-accent)] text-white text-[10px] font-black uppercase px-3 py-1 tracking-widest">
                                 Oferta Limitada
                             </div>
@@ -451,11 +453,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             <button onClick={onLogin} className="w-full py-4 bg-[var(--precision-accent)] text-white font-bold uppercase text-xs tracking-widest hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 rounded-none">
                                 Garantir Oferta
                             </button>
-                            <p className="mt-4 text-center text-[10px] text-gray-500 uppercase tracking-widest">Restam {spotsRemaining} vagas</p>
-                        </div>
+                        </motion.div>
 
                         {/* Enterprise / Vitalicio */}
-                        <div className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-80px" }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300"
+                        >
                             <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Nível Enterprise</div>
                             <div className="text-4xl font-black text-white mb-2">R$ 249</div>
                             <div className="text-gray-500 text-sm mb-8">Pagamento único (Vitalício)</div>
@@ -469,7 +476,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors rounded-none">
                                 Comprar Vitalício
                             </button>
-                        </div>
+                        </motion.div>
                     </div>
                 </div>
             </section>

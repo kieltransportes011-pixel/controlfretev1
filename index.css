@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @layer base {
   :root {
     /* Base Typography & Backgrounds */
@@ -62,17 +58,25 @@
   }
 }
 
-@layer utilities {
+/*
+ * These live in `components`, not `utilities`, on purpose. Tailwind's
+ * built-in layer order is base -> components -> utilities, so anything
+ * declared here (like the base border-color below) always loses to a
+ * one-off utility a caller passes in (e.g. `border-l-brand`), instead of
+ * silently overriding it. Keeping accent/status colors on individual
+ * cards working depends on this ordering.
+ */
+@layer components {
   .glass {
     @apply backdrop-blur-xl border shadow-sm;
     background-color: var(--glass-bg);
     border-color: var(--glass-border);
   }
-  
+
   .glass-card {
     @apply glass rounded-2xl transition-all duration-300;
   }
-  
+
   .glass-card:hover {
     @apply shadow-lg -translate-y-1;
     border-color: var(--precision-accent);
@@ -81,7 +85,7 @@
   .fintech-shadow {
     box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
   }
-  
+
   .dark .fintech-shadow {
     box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
   }
@@ -89,7 +93,9 @@
   .text-glow {
     text-shadow: 0 0 20px var(--precision-glow);
   }
+}
 
+@layer utilities {
   .animate-scaleUp {
     animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }

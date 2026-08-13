@@ -613,7 +613,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         <Card className="p-4 bg-[#F5F7FA] dark:bg-slate-900 border-none">
           <button
             onClick={() => onNavigate('SUPPORT')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            className="w-full bg-brand hover:bg-brand-hover text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
           >
             <MessageCircle className="w-5 h-5" />
             Abrir Chamado de Suporte
