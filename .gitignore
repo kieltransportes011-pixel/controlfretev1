@@ -124,3 +124,9 @@ dist-ssr
 # System Files
 .DS_Store
 Thumbs.db
+
+# Android/Play Store signing credentials — never commit these, anywhere in the repo.
+*.jks
+*.keystore
+key.properties
+keystore.properties

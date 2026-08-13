@@ -1,7 +1,8 @@
 {
+    "cleanUrls": true,
     "rewrites": [
         {
-            "source": "/(.*)",
+            "source": "/((?!ofreteja|privacy|kieltransportes|assets|logo|pwa-icon|manifest|sw\\.js|registerSW\\.js|workbox).*)",
             "destination": "/index.html"
         }
     ]

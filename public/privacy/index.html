@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Política de Privacidade — Control Frete</title>
+<meta name="robots" content="index, follow" />
+<style>
+  :root {
+    --brand: #0F2A44;
+    --brand-secondary: #2F80ED;
+    --bg: #F4F6F8;
+    --card: #FFFFFF;
+    --text: #1F2933;
+    --subtext: #6B7280;
+    --border: #E2E8F0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+  }
+  header {
+    background: var(--brand);
+    color: #fff;
+    padding: 32px 20px;
+    text-align: center;
+  }
+  header img { height: 40px; margin-bottom: 12px; }
+  header h1 { font-size: 1.4rem; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
+  header p { margin: 6px 0 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(15,42,68,0.04);
+  }
+  h2 {
+    font-size: 1.05rem;
+    color: var(--brand);
+    margin: 0 0 12px;
+    font-weight: 800;
+  }
+  p, li { color: var(--text); font-size: 0.95rem; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin-bottom: 6px; }
+  .subtext { color: var(--subtext); font-size: 0.85rem; }
+  .updated {
+    text-align: center;
+    color: var(--subtext);
+    font-size: 0.8rem;
+    margin-bottom: 24px;
+  }
+  a { color: var(--brand-secondary); }
+  .contact {
+    background: #F0F5FA;
+    border: 1px solid #DCE8F5;
+  }
+  footer {
+    text-align: center;
+    color: var(--subtext);
+    font-size: 0.78rem;
+    padding: 24px 20px 40px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Control Frete</h1>
+  <p>Política de Privacidade</p>
+</header>
+
+<main>
+  <p class="updated">Última atualização: 13 de agosto de 2026</p>
+
+  <div class="card">
+    <h2>1. Quem somos</h2>
+    <p>O Control Frete é um aplicativo de gestão financeira e operacional para motoristas autônomos e pequenas transportadoras. Esta política explica quais dados coletamos, por que coletamos, como protegemos e quais direitos você tem sobre eles, em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Dados que coletamos</h2>
+    <p>Para criar sua conta e operar o aplicativo, coletamos:</p>
+    <ul>
+      <li><strong>Dados de cadastro:</strong> nome, e-mail, CPF e senha (criptografada).</li>
+      <li><strong>Dados financeiros que você registra:</strong> fretes, despesas, contas a pagar/receber, contas bancárias e metas — inseridos por você para o funcionamento do app.</li>
+      <li><strong>Dados de pagamento:</strong> ao assinar um plano pago, os dados do cartão/PIX são processados diretamente pelo Mercado Pago ou Stripe — o Control Frete não armazena números de cartão.</li>
+      <li><strong>Dados técnicos:</strong> registros de atividade da conta (login, alterações de plano) usados para segurança e suporte.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3. Como usamos seus dados</h2>
+    <ul>
+      <li>Fazer o aplicativo funcionar: calcular seus resultados, lembrar de vencimentos, gerar relatórios.</li>
+      <li>Processar pagamentos de assinatura.</li>
+      <li>Comunicar avisos importantes sobre sua conta ou o serviço.</li>
+      <li>Prevenir fraude e manter a segurança da plataforma.</li>
+    </ul>
+    <p><strong>Não vendemos seus dados a terceiros, em nenhuma hipótese.</strong></p>
+  </div>
+
+  <div class="card">
+    <h2>4. Seus dados financeiros são só seus</h2>
+    <p>A equipe do Control Frete — inclusive o suporte administrativo — <strong>não tem acesso aos seus fretes, despesas ou relatórios financeiros</strong> no uso normal da plataforma. O acesso administrativo é tecnicamente restrito a dados de conta (nome, e-mail, status de assinatura, chamados de suporte) — não aos lançamentos financeiros que você registra.</p>
+  </div>
+
+  <div class="card">
+    <h2>5. Com quem compartilhamos dados</h2>
+    <p>Usamos os seguintes serviços para operar o aplicativo, cada um com acesso apenas ao necessário para sua função:</p>
+    <ul>
+      <li><strong>Supabase</strong> — hospedagem do banco de dados e autenticação.</li>
+      <li><strong>Mercado Pago / Stripe</strong> — processamento de pagamentos de assinatura.</li>
+      <li><strong>Google</strong> — login opcional via conta Google (OAuth).</li>
+    </ul>
+    <p class="subtext">Nenhum desses serviços tem permissão para usar seus dados para fins próprios de marketing.</p>
+  </div>
+
+  <div class="card">
+    <h2>6. Segurança</h2>
+    <p>Os dados trafegam sempre por conexão criptografada (HTTPS/TLS). O acesso ao banco de dados é controlado por políticas de segurança em nível de linha (RLS), que garantem que cada usuário só acessa seus próprios registros.</p>
+  </div>
+
+  <div class="card">
+    <h2>7. Seus direitos (LGPD)</h2>
+    <p>Você pode, a qualquer momento:</p>
+    <ul>
+      <li>Confirmar quais dados temos sobre você e acessá-los.</li>
+      <li>Corrigir dados incompletos, imprecisos ou desatualizados.</li>
+      <li>Solicitar a exclusão da sua conta e dos dados associados.</li>
+      <li>Solicitar a portabilidade dos seus dados para outro serviço.</li>
+      <li>Revogar seu consentimento e se opor a tratamentos específicos.</li>
+    </ul>
+    <p>Para exercer qualquer um desses direitos, entre em contato pelo canal abaixo.</p>
+  </div>
+
+  <div class="card">
+    <h2>8. Retenção e exclusão</h2>
+    <p>Mantemos seus dados enquanto sua conta estiver ativa. Ao solicitar a exclusão da conta, os dados pessoais são removidos, exceto quando a lei exigir retenção por período determinado (ex: registros fiscais de pagamento).</p>
+  </div>
+
+  <div class="card">
+    <h2>9. Menores de idade</h2>
+    <p>O Control Frete não é direcionado a menores de 18 anos e não coletamos intencionalmente dados de crianças ou adolescentes.</p>
+  </div>
+
+  <div class="card">
+    <h2>10. Alterações a esta política</h2>
+    <p>Podemos atualizar esta política periodicamente. Mudanças relevantes serão comunicadas dentro do aplicativo antes de entrarem em vigor.</p>
+  </div>
+
+  <div class="card contact">
+    <h2>11. Contato</h2>
+    <p>Dúvidas sobre privacidade ou solicitações relacionadas aos seus dados pessoais:</p>
+    <p><strong>E-mail:</strong> <a href="mailto:contato.controlfrete@gmail.com">contato.controlfrete@gmail.com</a></p>
+  </div>
+</main>
+
+<footer>
+  © 2026 Control Frete. Todos os direitos reservados.
+</footer>
+
+</body>
+</html>

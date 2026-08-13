@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { User } from '../types';
 import { Card } from './Card';
-import { Shield, Crown } from 'lucide-react';
+import { Shield, Crown, ExternalLink } from 'lucide-react';
 import { supabase } from '../supabase';
 import { PricingCard } from './PricingCard';
 
@@ -10,6 +11,12 @@ interface PaywallProps {
   onPaymentSuccess: () => void;
   onCancel?: () => void;
 }
+
+// Google Play policy requires digital subscriptions purchased from inside an
+// Android app to go through Google Play Billing. We don't integrate that, so
+// on native Android the in-app checkout is replaced with a link to the
+// website instead — the app itself never initiates a purchase.
+const IS_NATIVE_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
 export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
   const [loading, setLoading] = useState(false);
@@ -58,6 +65,21 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
           </p>
         </div>
 
+        {IS_NATIVE_ANDROID ? (
+          <div className="p-8 md:p-12 text-center">
+            <p className="text-slate-600 dark:text-slate-300 max-w-md mx-auto mb-6 leading-relaxed">
+              Para assinar ou gerenciar seu plano PRO, acesse o Control Frete pelo navegador do seu celular ou computador. Sua conta e seus dados continuam os mesmos.
+            </p>
+            <a
+              href="https://www.controlfrete.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wide text-sm transition-colors"
+            >
+              Acessar controlfrete.com.br <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        ) : (
         <div className="p-4 md:p-8">
           <div className="grid md:grid-cols-3 gap-6 items-center">
             {/* Mensal */}
@@ -120,13 +142,16 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
             </div>
           </div>
         </div>
+        )}
 
+        {!IS_NATIVE_ANDROID && (
         <div className="p-4 text-center bg-slate-100 dark:bg-slate-900 rounded-b-2xl border-t border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold uppercase">
             <Shield className="w-3 h-3" />
             Pagamento 100% Seguro via Mercado Pago
           </div>
         </div>
+        )}
       </Card>
     </div>
   );
