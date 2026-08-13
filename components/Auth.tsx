@@ -64,24 +64,23 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
     e.preventDefault();
     if (!formData.email.includes('@')) { setError('Informe um e-mail válido.'); return; }
     if (!validateCPF(formData.cpf)) { setError('CPF inválido.'); return; }
-    if (formData.password.length < 6) { setError('A nova senha deve ter no mínimo 6 caracteres.'); return; }
-    if (formData.password !== formData.confirmPassword) { setError('As senhas não coincidem.'); return; }
 
     setLoading(true);
     setError(null);
 
     try {
+      // E-mail + CPF só confirmam que a conta existe. A troca de senha em si
+      // só acontece depois que a pessoa clica no link enviado para o e-mail
+      // cadastrado (fluxo tratado em UPDATE_PASSWORD via handleUpdatePassword).
       const { data, error } = await supabase.functions.invoke('reset-password-admin', {
         body: {
           email: formData.email,
-          cpf: formData.cpf,
-          password: formData.password
+          cpf: formData.cpf
         }
       });
 
       if (!error && !data?.error) {
-        alert('Senha redefinida com sucesso! Digite sua nova senha para entrar.');
-        setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+        alert('Enviamos um link de redefinição de senha para ' + formData.email + '. Verifique sua caixa de entrada (e o SPAM).');
         setView('LOGIN');
         return;
       }
@@ -103,7 +102,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
       setView('LOGIN');
 
     } catch (err: any) {
-      setError(err.message || 'Erro ao redefinir senha. Verifique seus dados.');
+      setError(err.message || 'Erro ao solicitar redefinição de senha. Verifique seus dados.');
     } finally {
       setLoading(false);
     }
@@ -213,7 +212,16 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
       }
     } catch (err: any) {
       console.error(err);
-      setError('E-mail ou senha incorretos.');
+      // Supabase retorna "Email not confirmed" quando a conta existe mas o
+      // e-mail nunca foi confirmado. Sem essa checagem, isso caía no mesmo
+      // "E-mail ou senha incorretos" de sempre — a pessoa achava que tinha
+      // digitado a senha errada, quando na verdade só faltava confirmar o
+      // e-mail. Manda direto pra tela de confirmação, com o botão de reenvio.
+      if (err?.message?.toLowerCase().includes('email not confirmed')) {
+        setView('CONFIRM_EMAIL');
+      } else {
+        setError('E-mail ou senha incorretos.');
+      }
     } finally {
       setLoading(false);
     }
@@ -437,6 +445,28 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
                   {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENTRAR'}
                 </Button>
 
+                {import.meta.env.DEV && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onLogin({
+                        id: 'dev-mode-user',
+                        email: 'dev@localhost',
+                        name: 'Usuário de Teste (Dev)',
+                        cpf: '000.000.000-00',
+                        password: '',
+                        createdAt: new Date().toISOString(),
+                        isPremium: true,
+                        plano: 'pro',
+                        account_status: 'active'
+                      });
+                    }}
+                    className="w-full py-3 bg-slate-800 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-colors"
+                  >
+                    Entrar como Teste (Localhost)
+                  </button>
+                )}
+
                 <div className="flex flex-col items-center gap-3 pt-2">
                   <button
                     type="button"
@@ -468,7 +498,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
 
               <div className="text-center mb-4">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Recuperar Senha</h3>
-                <p className="text-slate-500 text-xs">Confirme seu E-mail e CPF cadastrados para criar uma nova senha instantaneamente.</p>
+                <p className="text-slate-500 text-xs">Confirme seu E-mail e CPF cadastrados. Vamos enviar um link de redefinição de senha para o seu e-mail.</p>
               </div>
 
               <InputField
@@ -485,30 +515,8 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
                 icon={<FileText size={18} />}
               />
 
-              <InputField
-                label="Nova Senha"
-                value={formData.password}
-                onChange={(v: string) => handleChange('password', v)}
-                type="password"
-                icon={<Lock size={18} />}
-                isPass
-                passVisible={showPassword}
-                onTogglePass={() => setShowPassword(!showPassword)}
-              />
-
-              <InputField
-                label="Confirmar Nova Senha"
-                value={formData.confirmPassword}
-                onChange={(v: string) => handleChange('confirmPassword', v)}
-                type="password"
-                icon={<Lock size={18} />}
-                isPass
-                passVisible={showConfirmPassword}
-                onTogglePass={() => setShowConfirmPassword(!showConfirmPassword)}
-              />
-
               <Button type="submit" fullWidth disabled={loading} className="py-4 mt-2">
-                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'REDEFINIR SENHA'}
+                {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'ENVIAR LINK DE REDEFINIÇÃO'}
               </Button>
             </form>
           ) : view === 'UPDATE_PASSWORD' ? (

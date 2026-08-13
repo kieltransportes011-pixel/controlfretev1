@@ -2,78 +2,139 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: 'Inter', system-ui, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  /* Industrial Theme */
-  --industrial-black: #050505;
-  --industrial-surface: #0f0f0f;
-  --industrial-border: #262626;
-  --precision-accent: #3b82f6;
-  /* Default Blue */
+@layer base {
+  :root {
+    /* Base Typography & Backgrounds */
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    
+    /* Light Mode - Premium Gradients & Borders */
+    --industrial-border: #e2e8f0;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    
+    /* Branding Colors */
+    --precision-accent: #2563eb;
+    --precision-glow: rgba(37, 99, 235, 0.2);
+    --success-accent: #10b981;
+    --warning-accent: #f59e0b;
+    --danger-accent: #ef4444;
+  }
+
+  .dark {
+    --bg-main: #020617;
+    --bg-card: #0f172a;
+
+    /* Dark Mode - Industrial Fintech */
+    --industrial-black: #000000;
+    --industrial-surface: #0a0a0a;
+    --industrial-border: #1e293b;
+    
+    --glass-bg: rgba(15, 23, 42, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
+    --precision-accent: #3b82f6;
+    --precision-glow: rgba(59, 130, 246, 0.25);
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: var(--bg-main);
+    background-image: 
+      radial-gradient(circle at top right, var(--precision-glow), transparent 40%),
+      radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05), transparent 40%);
+    background-attachment: fixed;
+    color: #1e293b;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .dark body {
+    color: #f1f5f9;
+  }
 }
 
-.dark {
-  --bg-main: #020617;
-  --bg-card: #0f172a;
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-xl border shadow-sm;
+    background-color: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+  
+  .glass-card {
+    @apply glass rounded-2xl transition-all duration-300;
+  }
+  
+  .glass-card:hover {
+    @apply shadow-lg -translate-y-1;
+    border-color: var(--precision-accent);
+  }
 
-  /* Dark Mode Overrides if needed, but Industrial is dark by default usually */
-  --industrial-black: #000000;
-  --industrial-surface: #0a0a0a;
-  --industrial-border: #333333;
-}
+  .fintech-shadow {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+  }
+  
+  .dark .fintech-shadow {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+  }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: var(--bg-main);
-  transition: background-color 0.3s ease;
-}
+  .text-glow {
+    text-shadow: 0 0 20px var(--precision-glow);
+  }
 
-.glass {
-  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-slate-800/20;
-}
+  .animate-scaleUp {
+    animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 
-.fintech-shadow {
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-}
+  .skeleton {
+    @apply animate-pulse bg-slate-200 dark:bg-slate-800 rounded-lg;
+  }
 
-.skeleton {
-  @apply animate-pulse bg-slate-200 dark:bg-slate-800 rounded-lg;
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    @apply bg-slate-100 dark:bg-slate-800/50;
+  }
+
+  .skeleton-shimmer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.5) 60%,
+        rgba(255, 255, 255, 0));
+    animation: shimmer 2s infinite;
+  }
+  
+  .dark .skeleton-shimmer::after {
+    background-image: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.02) 20%,
+        rgba(255, 255, 255, 0.05) 60%,
+        rgba(255, 255, 255, 0));
+  }
 }
 
 @keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
-.skeleton-shimmer {
-  position: relative;
-  overflow: hidden;
-}
-
-.skeleton-shimmer::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(90deg,
-      rgba(255, 255, 255, 0) 0,
-      rgba(255, 255, 255, 0.1) 20%,
-      rgba(255, 255, 255, 0.3) 60%,
-      rgba(255, 255, 255, 0));
-  animation: shimmer 2s infinite;
+@keyframes scaleUp {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }

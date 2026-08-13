@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { Loader2, Megaphone, ChevronDown, ChevronUp, Clock, AlertTriangle, ShieldAlert, Info } from 'lucide-react';
 import { PlatformNotice, User } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 interface NoticesCenterProps {
     user: User;
@@ -14,6 +15,7 @@ export const NoticesCenter: React.FC<NoticesCenterProps> = ({ user, onBack }) =>
     const [readNoticeIds, setReadNoticeIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [expandedNoticeId, setExpandedNoticeId] = useState<string | null>(null);
+    const { error: showError } = useToast();
 
     useEffect(() => {
         fetchNotices();
@@ -42,6 +44,7 @@ export const NoticesCenter: React.FC<NoticesCenterProps> = ({ user, onBack }) =>
             setNotices(noticesData || []);
         } catch (err) {
             console.error(err);
+            showError('Não foi possível carregar os avisos.');
         } finally {
             setLoading(false);
         }

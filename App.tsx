@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -46,7 +47,73 @@ const SAFE_DEFAULT_SETTINGS: AppSettings = {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [view, setView] = useState<ViewState>('DASHBOARD');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getPathFromView = (v: ViewState) => {
+    const map: Record<ViewState, string> = {
+      DASHBOARD: '/',
+      RECEIVABLES: '/receivables',
+      HISTORY: '/history',
+      SETTINGS: '/settings',
+      ADD_FREIGHT: '/add-freight',
+      ADD_EXPENSE: '/add-expense',
+      GOALS: '/goals',
+      PAYMENT: '/payment',
+      CALCULATOR: '/calculator',
+      AGENDA: '/agenda',
+      SUPPORT: '/support',
+      FREIGHT_INTEGRATION: '/freight-integration',
+      CLIENTS: '/clients',
+      FLEET: '/fleet',
+      VEHICLE_DETAILS: '/fleet/vehicle',
+      MAINTENANCE: '/maintenance',
+      FINANCIAL: '/financial',
+      NOTICES: '/notices',
+      ADMIN: '/admin'
+    };
+    return map[v] || '/';
+  };
+
+  const getViewFromPath = (path: string): ViewState => {
+    const map: Record<string, ViewState> = {
+      '/': 'DASHBOARD',
+      '/receivables': 'RECEIVABLES',
+      '/history': 'HISTORY',
+      '/settings': 'SETTINGS',
+      '/add-freight': 'ADD_FREIGHT',
+      '/add-expense': 'ADD_EXPENSE',
+      '/goals': 'GOALS',
+      '/payment': 'PAYMENT',
+      '/calculator': 'CALCULATOR',
+      '/agenda': 'AGENDA',
+      '/support': 'SUPPORT',
+      '/freight-integration': 'FREIGHT_INTEGRATION',
+      '/clients': 'CLIENTS',
+      '/fleet': 'FLEET',
+      '/fleet/vehicle': 'VEHICLE_DETAILS',
+      '/maintenance': 'MAINTENANCE',
+      '/financial': 'FINANCIAL',
+      '/notices': 'NOTICES',
+      '/admin': 'ADMIN'
+    };
+    return map[path] || 'DASHBOARD';
+  };
+
+  const view = getViewFromPath(location.pathname);
+  const setView = (v: ViewState) => {
+    if (v === 'FREIGHT_INTEGRATION') {
+      setShowFreightNotice(true);
+      return;
+    }
+    const proFeatures: ViewState[] = ['AGENDA', 'GOALS', 'SUPPORT'];
+    if (proFeatures.includes(v) && !isActive) {
+      handleOpenUpgrade('FEATURE');
+      return;
+    }
+    if (v !== 'ADD_FREIGHT') setFormData(undefined);
+    navigate(getPathFromView(v));
+  };
   const [freights, setFreights] = useState<Freight[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -101,6 +168,15 @@ export default function App() {
 
   // Subscription Hook
   const { isActive, isExpired, daysRemaining, isTrial } = useSubscription(currentUser);
+
+  // Guard for direct URL access to Pro features
+  useEffect(() => {
+    const proFeatures: ViewState[] = ['AGENDA', 'GOALS', 'SUPPORT'];
+    if (proFeatures.includes(view) && !isActive && !initializing) {
+      handleOpenUpgrade('FEATURE');
+      navigate('/');
+    }
+  }, [view, isActive, initializing, navigate]);
 
   // Initial Auth Check
   useEffect(() => {
@@ -664,7 +740,6 @@ Obs: ${of.description || 'Sem observações'}`;
   // Blocking Paywall removed to comply with "No forced redirect" rule.
 
   if (view === 'PAYMENT') {
-    console.log("App: Switching to PAYMENT view", { hasUser: !!currentUser });
     return <Paywall
       user={currentUser}
       onPaymentSuccess={() => {
@@ -687,27 +762,7 @@ Obs: ${of.description || 'Sem observações'}`;
 
   return (
     <ToastProvider>
-      <Layout currentView={view} onNavigate={(v) => {
-        // Intercept Freight Integration for temporary notice
-        if (v === 'FREIGHT_INTEGRATION') {
-          setShowFreightNotice(true);
-          return;
-        }
-
-        // Pro Features Guard
-
-        const proFeatures: ViewState[] = ['AGENDA', 'GOALS', 'SUPPORT'];
-        const hasProAccess = isActive; // isActive is true if Pro OR Trial
-
-        if (proFeatures.includes(v) && !hasProAccess) {
-          handleOpenUpgrade('FEATURE');
-          return;
-        }
-
-        setView(v);
-        if (v !== 'ADD_FREIGHT') setFormData(undefined);
-        if (window.location.hash) window.history.replaceState(null, '', ' ');
-      }}>
+      <Layout>
         <AnimatePresence mode="wait">
           {syncing && (
             <div className="fixed top-2 right-2 z-50 bg-brand/10 backdrop-blur-sm p-1.5 rounded-full flex items-center gap-1.5 border border-brand/20">

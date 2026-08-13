@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { Loader2, ShieldCheck, User, Shield, Server, Clock } from 'lucide-react';
 import { AccountActivityLog } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 interface ActivityHistoryProps {
     userId: string;
@@ -11,6 +12,7 @@ interface ActivityHistoryProps {
 export const ActivityHistory: React.FC<ActivityHistoryProps> = ({ userId }) => {
     const [logs, setLogs] = useState<AccountActivityLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const { error: showError } = useToast();
 
     useEffect(() => {
         fetchLogs();
@@ -30,6 +32,7 @@ export const ActivityHistory: React.FC<ActivityHistoryProps> = ({ userId }) => {
             setLogs(data || []);
         } catch (err) {
             console.error(err);
+            showError('Não foi possível carregar o histórico de atividade.');
         } finally {
             setLoading(false);
         }

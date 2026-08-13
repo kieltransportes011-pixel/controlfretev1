@@ -49,8 +49,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [isSavingTicket, setIsSavingTicket] = useState(false);
 
     const handleSaveTicketResponse = async () => {
-        console.log("Attempting to save ticket response...", { editingTicket, isSavingTicket });
-
         if (!editingTicket) {
             console.error("No editingTicket found!");
             return;
@@ -58,13 +56,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
         setIsSavingTicket(true);
         try {
-            console.log("Sending update to Supabase...", {
-                id: editingTicket.id,
-                reply: ticketReply,
-                status: ticketStatus
-            });
-
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('support_tickets')
                 .update({
                     admin_reply: ticketReply,
@@ -72,14 +64,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', editingTicket.id)
-                .select(); // Add select to see returned data
+                .select();
 
             if (error) {
                 console.error("Supabase Error:", error);
                 throw error;
             }
-
-            console.log("Update successful:", data);
 
             await fetchDashboardData();
             setEditingTicket(null);

@@ -4,6 +4,7 @@ import { User, SupportTicket } from '../types';
 import { Button } from './Button';
 import { Card } from './Card';
 import { MessageCircle, Plus, ArrowLeft, Loader2, Send, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 interface SupportProps {
     user: User;
@@ -17,6 +18,7 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+    const { error: showError } = useToast();
 
     // Form State
     const [title, setTitle] = useState('');
@@ -41,6 +43,7 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
             setTickets(data || []);
         } catch (error) {
             console.error('Error fetching tickets:', error);
+            showError('Não foi possível carregar seus chamados.');
         } finally {
             setLoading(false);
         }

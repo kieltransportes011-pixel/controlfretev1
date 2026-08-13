@@ -25,7 +25,7 @@ export function useBankAccounts(user: User) {
             setAccounts(data || []);
         } catch (err: any) {
             console.error('Error fetching bank accounts:', err);
-            // error('Erro ao carregar contas bancárias.'); // Optional: silent fail on init
+            error('Erro ao carregar contas bancárias.');
         } finally {
             setLoading(false);
         }

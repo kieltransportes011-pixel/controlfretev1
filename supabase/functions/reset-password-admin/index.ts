@@ -13,10 +13,10 @@ serve(async (req) => {
     }
 
     try {
-        const { email, cpf, password } = await req.json();
+        const { email, cpf } = await req.json();
 
-        if (!email || !cpf || !password) {
-            throw new Error('E-mail, CPF e Senha são obrigatórios.');
+        if (!email || !cpf) {
+            throw new Error('E-mail e CPF são obrigatórios.');
         }
 
         const supabase = createClient(
@@ -24,10 +24,14 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        // 1. Validate CPF + Email in profiles
+        // 1. Validate CPF + Email in profiles. This only confirms the account
+        // exists — it never authorizes a password change by itself. Email+CPF
+        // alone used to be enough to set a new password directly, which meant
+        // anyone who knew (or guessed/leaked) a user's CPF could take over
+        // their account. Now this just gates who gets a recovery email sent.
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, email')
             .eq('email', email)
             .eq('cpf', cpf)
             .single();
@@ -36,16 +40,18 @@ serve(async (req) => {
             throw new Error('Dados de validação incorretos (E-mail ou CPF).');
         }
 
-        // 2. Update user password via Admin API
-        const { error: authError } = await supabase.auth.admin.updateUserById(
-            profile.id,
-            { password: password }
-        );
+        // 2. Send the standard Supabase recovery email (via the configured
+        // SMTP). The actual password change only happens after the user
+        // clicks the link and lands on the UPDATE_PASSWORD flow.
+        const origin = req.headers.get('origin') || 'https://www.controlfrete.com.br';
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(profile.email, {
+            redirectTo: `${origin}/reset-password`,
+        });
 
-        if (authError) throw authError;
+        if (resetError) throw resetError;
 
         return new Response(
-            JSON.stringify({ message: "Senha atualizada com sucesso" }),
+            JSON.stringify({ message: "Link de redefinição enviado por e-mail" }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
 

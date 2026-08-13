@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AppSettings, User, ViewState, PercentageCategory } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -631,6 +631,44 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         </h2>
         <Card className="p-0 border-none bg-transparent shadow-none">
           <ActivityHistory userId={user.id} />
+        </Card>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <Smartphone className="w-4 h-4" />
+          Instalar Aplicativo (Celular)
+        </h2>
+        <Card className="p-5 space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+            O Control Frete pode ser instalado diretamente na tela inicial do seu celular para acesso rápido e experiência de aplicativo nativo.
+          </p>
+          
+          <div className="space-y-3">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-2">
+                🍎 iPhone (iOS - Safari)
+              </h3>
+              <ol className="text-xs text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside ml-1">
+                <li>Abra o site no navegador <strong>Safari</strong>.</li>
+                <li>Toque no botão de <strong>Compartilhar</strong> <Share className="inline w-3 h-3 mx-1" /> na barra inferior.</li>
+                <li>Role para baixo e selecie <strong>"Adicionar à Tela de Início"</strong> <PlusSquare className="inline w-3 h-3 mx-1" />.</li>
+                <li>Confirme clicando em <strong>Adicionar</strong> no canto superior direito.</li>
+              </ol>
+            </div>
+            
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-2">
+                🤖 Android (Chrome)
+              </h3>
+              <ol className="text-xs text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside ml-1">
+                <li>Abra o site no navegador <strong>Google Chrome</strong>.</li>
+                <li>Toque nos <strong>Três Pontinhos (Menu)</strong> no canto superior direito.</li>
+                <li>Selecione <strong>"Adicionar à tela inicial"</strong> ou <strong>"Instalar aplicativo"</strong>.</li>
+                <li>Confirme clicando em <strong>Adicionar</strong>.</li>
+              </ol>
+            </div>
+          </div>
         </Card>
       </section>
 
