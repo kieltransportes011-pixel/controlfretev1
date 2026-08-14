@@ -10,13 +10,17 @@ function formatDateBR(dateStr: string): string {
 }
 
 Deno.serve(async (req) => {
-  // Só o próprio pg_cron chama essa função (com a service role key), então
-  // qualquer chamador sem essa credencial é rejeitado.
+  // Só o próprio pg_cron chama essa função. A checagem usa uma secret key
+  // dedicada ("controlfrete_1_0", guardada no Vault) em vez da SUPABASE_SERVICE_ROLE_KEY
+  // "default" — essa última é usada por outras funções e não deve ser
+  // reaproveitada aqui como credencial de autenticação de entrada.
   const authHeader = req.headers.get('Authorization') ?? '';
   const bearerToken = authHeader.replace('Bearer ', '');
+  const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');
+  const cronAuthKey = secretKeys['controlfrete_1_0'];
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-  if (bearerToken !== serviceRoleKey) {
+  if (!cronAuthKey || bearerToken !== cronAuthKey) {
     return new Response(JSON.stringify({ error: 'Não autorizado.' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
