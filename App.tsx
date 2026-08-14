@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { Browser } from '@capacitor/browser';
 import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -67,6 +68,43 @@ export default function App() {
         window.history.back();
       } else {
         CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      listenerPromise.then(listener => listener.remove());
+    };
+  }, []);
+
+  // Captura o retorno do login do Google, aberto numa aba in-app e
+  // redirecionado de volta via com.controlfrete.app://login-callback
+  // (disparado em Auth.tsx/handleGoogleLogin). Suporta tanto o fluxo PKCE
+  // (?code=) quanto o implícito (#access_token=), conforme o que o Supabase
+  // client devolver.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listenerPromise = CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
+      if (!url.includes('login-callback')) return;
+
+      try {
+        const urlObj = new URL(url);
+        const code = urlObj.searchParams.get('code');
+
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        } else {
+          const hashParams = new URLSearchParams(url.split('#')[1] || '');
+          const access_token = hashParams.get('access_token');
+          const refresh_token = hashParams.get('refresh_token');
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao concluir login com Google:', err);
+      } finally {
+        await Browser.close().catch(() => {});
       }
     });
 
@@ -154,7 +192,9 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
-  const [showLanding, setShowLanding] = useState(true);
+  // No app nativo o usuário já decidiu instalar — pular a landing page
+  // comercial e ir direto pro login, igual todo app faz.
+  const [showLanding, setShowLanding] = useState(!Capacitor.isNativePlatform());
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [upgradeModal, setUpgradeModal] = useState({
@@ -579,6 +619,7 @@ Obs: ${of.description || 'Sem observações'}`;
         description: detailedDesc,
         origin: `${of.origin_address}, ${of.origin_number}`,
         destination: `${of.delivery_address}, ${of.delivery_number}`,
+        distance_km: of.distance_km ?? null,
         payment_method: 'OUTRO'
       }]);
 
@@ -914,6 +955,7 @@ Obs: ${of.description || 'Sem observações'}`;
                         due_date: f.dueDate,
                         origin: f.origin,
                         destination: f.destination,
+                        distance_km: f.distance_km ?? null,
                         description: f.description,
                         payment_method: f.paymentMethod,
                         client_doc: f.clientDoc,
@@ -937,6 +979,7 @@ Obs: ${of.description || 'Sem observações'}`;
                         due_date: f.dueDate,
                         origin: f.origin,
                         destination: f.destination,
+                        distance_km: f.distance_km ?? null,
                         description: f.description,
                         payment_method: f.paymentMethod,
                         client_doc: f.clientDoc,

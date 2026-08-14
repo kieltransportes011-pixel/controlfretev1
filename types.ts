@@ -30,6 +30,7 @@ export interface Freight {
   // Advanced Receipt Details
   origin?: string;
   destination?: string;
+  distance_km?: number;
   description?: string;
   paymentMethod?: string;
   clientDoc?: string;

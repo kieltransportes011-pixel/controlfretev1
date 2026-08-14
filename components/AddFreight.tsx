@@ -5,8 +5,9 @@ import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
 import { CalendarPicker } from './CalendarPicker';
-import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle, FileText, Search, User as UserIcon, MapPin, Landmark } from 'lucide-react';
+import { ChevronLeft, Calculator, CalendarClock, CheckCircle, AlertTriangle, FileText, Search, User as UserIcon, MapPin, Landmark, Route, Loader2 } from 'lucide-react';
 import { useBankAccounts } from '../hooks/useBankAccounts';
+import { supabase } from '../supabase';
 
 interface AddFreightProps {
   user: User;
@@ -40,9 +41,29 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
   // Advanced Details for Receipt
   const [origin, setOrigin] = useState(initialData?.origin || '');
   const [destination, setDestination] = useState(initialData?.destination || '');
+  const [distanceKm, setDistanceKm] = useState(initialData?.distance_km ? String(initialData.distance_km) : '');
+  const [calculatingDistance, setCalculatingDistance] = useState(false);
+  const [distanceError, setDistanceError] = useState<string | null>(null);
   const [description, setDescription] = useState(initialData?.description || '');
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'PIX');
   const [clientDoc, setClientDoc] = useState(initialData?.clientDoc || '');
+
+  const handleCalculateDistance = async () => {
+    if (!origin || !destination) return;
+    setCalculatingDistance(true);
+    setDistanceError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('calculate-route-distance', {
+        body: { origin, destination },
+      });
+      if (error || data?.error) throw new Error(data?.error || error.message);
+      setDistanceKm(String(data.distance_km));
+    } catch (err: any) {
+      setDistanceError(err.message || 'Não foi possível calcular a distância.');
+    } finally {
+      setCalculatingDistance(false);
+    }
+  };
 
   // Bank Account
   const { accounts } = useBankAccounts(user);
@@ -159,6 +180,7 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
       client,
       origin,
       destination,
+      distance_km: distanceKm ? parseFloat(distanceKm) : undefined,
       description,
       status,
       paymentMethod,
@@ -403,6 +425,32 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
                 />
               </div>
             </div>
+
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Distância (km)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={distanceKm}
+                  onChange={(e) => setDistanceKm(e.target.value)}
+                  placeholder="0,0"
+                  className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleCalculateDistance}
+                disabled={!origin || !destination || calculatingDistance}
+                className="p-3 bg-brand/10 text-brand rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand/20 transition-colors shrink-0"
+                title="Calcular distância automaticamente"
+              >
+                {calculatingDistance ? <Loader2 className="w-5 h-5 animate-spin" /> : <Route className="w-5 h-5" />}
+              </button>
+            </div>
+            {distanceError && (
+              <p className="text-xs text-accent-error -mt-2">{distanceError}</p>
+            )}
 
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1 uppercase">Descrição da Carga / Serviço</label>

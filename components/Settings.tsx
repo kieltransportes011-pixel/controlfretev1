@@ -679,6 +679,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
         </h2>
         <div className="text-center">
           <p className="text-xs text-slate-400 dark:text-slate-600">Control Frete v1.0</p>
+          <p className="text-[10px] text-slate-300 dark:text-slate-700 mt-1">Desenvolvido por Kiel Tech Studio</p>
         </div>
       </section>
     </div>

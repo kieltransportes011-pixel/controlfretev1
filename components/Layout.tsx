@@ -38,7 +38,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Bottom Navigation */}
       {shouldShowNav && (
-        <nav className="fixed bottom-0 left-0 right-0 glass border-t px-2 py-2.5 flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto transition-colors duration-200">
+        <nav className="fixed bottom-0 left-0 right-0 glass border-t px-2 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto transition-colors duration-200">
           {[
             { to: '/', icon: LayoutGrid, label: 'Início' },
             { to: '/receivables', icon: Wallet, label: 'Contas' },

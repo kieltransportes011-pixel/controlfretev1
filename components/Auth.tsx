@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { User } from '../types';
 import { Button } from './Button';
 import { validateCPF, maskCPF } from '../utils';
@@ -59,6 +61,18 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
     password: '',
     confirmPassword: ''
   });
+
+  // Se o usuário fechar a aba de login do Google sem concluir, não deixa o
+  // spinner girando pra sempre.
+  React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listenerPromise = Browser.addListener('browserFinished', () => {
+      setLoading(false);
+    });
+    return () => {
+      listenerPromise.then(listener => listener.remove());
+    };
+  }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -346,13 +360,33 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
+      if (Capacitor.isNativePlatform()) {
+        // WebViews embutidas são bloqueadas pelo Google pra login OAuth, então
+        // abrimos numa aba de navegador in-app (Custom Tab) e voltamos pro app
+        // via link profundo (com.controlfrete.app://login-callback), capturado
+        // em App.tsx pelo listener appUrlOpen.
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: 'com.controlfrete.app://login-callback',
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          await Browser.open({ url: data.url });
         }
-      });
-      if (error) throw error;
+        // O loading fica ativo até o listener appUrlOpen completar a sessão
+        // (que muda currentUser e desmonta essa tela) ou o usuário cancelar.
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/`,
+          }
+        });
+        if (error) throw error;
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Erro ao iniciar login com Google.');
