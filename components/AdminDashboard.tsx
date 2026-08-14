@@ -71,6 +71,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 throw error;
             }
 
+            // Push notification é "melhor esforço": se falhar, não deve travar
+            // o fluxo de resposta do ticket (que já foi salva com sucesso).
+            supabase.functions.invoke('send-push-notification', {
+                body: {
+                    user_id: editingTicket.user_id,
+                    title: 'Seu chamado foi respondido',
+                    body: editingTicket.title,
+                },
+            }).catch((pushError) => {
+                console.error('Push notification error:', pushError);
+            });
+
             await fetchDashboardData();
             setEditingTicket(null);
             alert("Resposta enviada com sucesso!");

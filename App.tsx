@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -18,6 +21,7 @@ import { PaymentSuccessModal } from './components/PaymentSuccessModal';
 import { supabase } from './supabase';
 import { Loader2, ShieldAlert, Cloud, DollarSign } from 'lucide-react';
 import { useSubscription } from './hooks/useSubscription';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { WorkCalendar } from './components/WorkCalendar';
 import { LandingPage } from './components/LandingPage';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -49,6 +53,27 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Hardware/gesture back button (Android). Without this, Capacitor's
+  // WebView has no built-in back behavior — the first back press would just
+  // exit the app from anywhere, including deep inside a screen. This mirrors
+  // Android's own guidance: go back through history, and only exit once
+  // there's nothing left to go back to.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listenerPromise = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      listenerPromise.then(listener => listener.remove());
+    };
+  }, []);
 
   const getPathFromView = (v: ViewState) => {
     const map: Record<ViewState, string> = {
@@ -168,6 +193,7 @@ export default function App() {
 
   // Subscription Hook
   const { isActive, isExpired, daysRemaining, isTrial } = useSubscription(currentUser);
+  usePushNotifications(currentUser?.id);
 
   // Guard for direct URL access to Pro features
   useEffect(() => {
@@ -476,10 +502,22 @@ export default function App() {
 
   // Dark Mode
   useEffect(() => {
-    if (settings.theme === 'dark') {
+    const isDark = settings.theme === 'dark';
+    if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+
+    // Keep the native status bar in sync with the app's own theme instead of
+    // leaving it on whatever default color/style Android picked — otherwise
+    // it clashes with the app's header no matter which theme is active.
+    if (Capacitor.isNativePlatform()) {
+      // Style.Dark = dark icons (for light backgrounds), Style.Light = light
+      // icons (for dark backgrounds) — named after the icon color, not the
+      // background, which is easy to flip by mistake.
+      StatusBar.setStyle({ style: isDark ? Style.Light : Style.Dark }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: isDark ? '#0f172a' : '#ffffff' }).catch(() => {});
     }
   }, [settings.theme]);
 

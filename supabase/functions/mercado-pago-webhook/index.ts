@@ -120,6 +120,24 @@ serve(async (req) => {
                         console.log(`SUCCESS: User ${userId} upgraded to PRO ANUAL (Payment ${paymentId}).`);
                     }
 
+                    // 3b. Push notification — melhor esforço, não deve travar o webhook se falhar.
+                    try {
+                        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`, {
+                            method: 'POST',
+                            headers: {
+                                Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                user_id: userId,
+                                title: 'Pagamento confirmado!',
+                                body: 'Sua assinatura PRO foi ativada. Aproveite todos os recursos.',
+                            }),
+                        });
+                    } catch (pushError) {
+                        console.error('Push notification error:', pushError);
+                    }
+
                     // 4. Referral Commission Processing
                     try {
                         // Fetch Refferer ID

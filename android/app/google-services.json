@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "740070336268",
+    "project_id": "control-frete",
+    "storage_bucket": "control-frete.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:740070336268:android:8d72a7b55cfd5e9feb4b29",
+        "android_client_info": {
+          "package_name": "com.controlfrete.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCH9yixXBJic9PWjtjKKXxnbjswHszv2Fc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
