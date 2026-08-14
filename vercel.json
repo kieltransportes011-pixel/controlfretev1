@@ -2,7 +2,7 @@
     "cleanUrls": true,
     "rewrites": [
         {
-            "source": "/((?!ofreteja|privacy|kieltransportes|assets|logo|pwa-icon|manifest|sw\\.js|registerSW\\.js|workbox).*)",
+            "source": "/((?!ofreteja|privacy|delete-account|kieltransportes|assets|logo|pwa-icon|manifest|sw\\.js|registerSW\\.js|workbox).*)",
             "destination": "/index.html"
         }
     ]
