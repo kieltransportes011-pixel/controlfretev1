@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ViewState, PercentageCategory } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare, Coins, Gift } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -79,6 +79,59 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
     };
     checkUnread();
   }, [user.id]);
+
+  // CF Coins
+  const [cfBalance, setCfBalance] = useState<number | null>(null);
+  const [cfProfileClaimed, setCfProfileClaimed] = useState(!!user.cf_profile_bonus_claimed);
+  const [claimingProfileBonus, setClaimingProfileBonus] = useState(false);
+  const [redeemingTrial, setRedeemingTrial] = useState(false);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      const { data } = await supabase.from('cf_wallet').select('balance').eq('user_id', user.id).maybeSingle();
+      setCfBalance(data?.balance ?? 0);
+    };
+    fetchWallet();
+  }, [user.id]);
+
+  const handleClaimProfileBonus = async () => {
+    setClaimingProfileBonus(true);
+    try {
+      const { data, error } = await supabase.rpc('claim_profile_bonus');
+      if (error) throw error;
+      if (data?.claimed) {
+        setCfBalance((b) => (b ?? 0) + data.amount);
+        setCfProfileClaimed(true);
+        toastSuccess(`+${data.amount} CF Coins! Perfil completo.`);
+      } else if (data?.reason === 'incomplete_profile') {
+        toastError('Preencha nome, CPF/CNPJ, telefone e cidade do emissor pra resgatar.');
+      } else {
+        toastError('Esse bônus já foi resgatado.');
+      }
+    } catch (err: any) {
+      toastError(err.message || 'Erro ao resgatar bônus.');
+    } finally {
+      setClaimingProfileBonus(false);
+    }
+  };
+
+  const handleRedeemTrial = async () => {
+    setRedeemingTrial(true);
+    try {
+      const { data, error } = await supabase.rpc('redeem_trial_extension');
+      if (error) throw error;
+      if (data?.redeemed) {
+        setCfBalance((b) => (b ?? 0) - 20);
+        toastSuccess('+3 dias de teste PRO liberados!');
+      } else {
+        toastError(`Saldo insuficiente (precisa de 20 CF, você tem ${data?.balance ?? 0}).`);
+      }
+    } catch (err: any) {
+      toastError(err.message || 'Erro ao resgatar.');
+    } finally {
+      setRedeemingTrial(false);
+    }
+  };
 
   // Profile Photo Logic
   const changesUsed = user.profile_photo_changes_used || 0;
@@ -669,6 +722,57 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
               </ol>
             </div>
           </div>
+        </Card>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <Coins className="w-4 h-4" />
+          CF Coins
+        </h2>
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <Coins className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Seu saldo</p>
+                <p className="text-xl font-bold text-slate-800 dark:text-white">
+                  {cfBalance === null ? '...' : cfBalance} <span className="text-xs font-normal text-slate-400">CF</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {!cfProfileClaimed && (
+            <button
+              onClick={handleClaimProfileBonus}
+              disabled={claimingProfileBonus}
+              className="w-full flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl text-left hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors disabled:opacity-50"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                <Gift className="w-4 h-4" />
+                Complete seu perfil e ganhe +5 CF
+              </span>
+              {claimingProfileBonus ? <Loader2 className="w-4 h-4 animate-spin text-amber-500" /> : <ArrowRight className="w-4 h-4 text-amber-500" />}
+            </button>
+          )}
+
+          <button
+            onClick={handleRedeemTrial}
+            disabled={redeemingTrial || (cfBalance ?? 0) < 20}
+            className="w-full flex items-center justify-between p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
+          >
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              Trocar 20 CF por +3 dias de teste PRO
+            </span>
+            {redeemingTrial ? <Loader2 className="w-4 h-4 animate-spin text-brand" /> : <ArrowRight className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          <p className="text-[10px] text-slate-400 text-center">
+            Você também ganha CF Coins quando alguém se cadastra usando seu link de indicação.
+          </p>
         </Card>
       </section>
 

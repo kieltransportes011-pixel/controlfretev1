@@ -109,6 +109,7 @@ export interface User {
   role?: 'user' | 'admin';
   account_status?: 'active' | 'suspended' | 'banned';
   privacy_accepted?: boolean;
+  cf_profile_bonus_claimed?: boolean;
   privacy_accepted_at?: string; // ISO Date string
   referrer_id?: string;
   referral_code?: string;
