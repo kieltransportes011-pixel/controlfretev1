@@ -8,7 +8,7 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') || 'APP_USR-5220193210096311-122719-be527becb762558ba471f0fcdaa4fdd5-2034012095';
+const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!;
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
