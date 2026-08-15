@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ViewState, PercentageCategory } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare, Coins, Gift } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare, Coins, Gift, Copy } from 'lucide-react';
 import { supabase } from '../supabase';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -112,6 +112,35 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
       toastError(err.message || 'Erro ao resgatar bônus.');
     } finally {
       setClaimingProfileBonus(false);
+    }
+  };
+
+  const referralLink = user.referral_code
+    ? `${window.location.origin}/?ref=${user.referral_code}`
+    : '';
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopyReferralLink = async () => {
+    if (!referralLink) return;
+    await navigator.clipboard.writeText(referralLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const handleShareReferralLink = async () => {
+    if (!referralLink) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Control Frete',
+          text: 'Use o Control Frete pra organizar seus fretes e despesas. Cadastre-se pelo meu link:',
+          url: referralLink,
+        });
+      } catch {
+        // Usuário cancelou o compartilhamento — não é erro.
+      }
+    } else {
+      handleCopyReferralLink();
     }
   };
 
@@ -724,6 +753,36 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
           </div>
         </Card>
       </section>
+
+      {referralLink && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Indique e Ganhe
+          </h2>
+          <Card className="space-y-3">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Compartilhe seu link. Você ganha <strong>10 CF</strong> a cada pessoa que se cadastrar por ele.
+            </p>
+            <div className="flex items-center gap-2 p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="flex-1 text-xs text-slate-600 dark:text-slate-300 truncate font-mono">
+                {referralLink}
+              </span>
+              <button
+                onClick={handleCopyReferralLink}
+                className="p-2 text-slate-400 hover:text-brand transition-colors shrink-0"
+                title="Copiar link"
+              >
+                {linkCopied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <Button fullWidth onClick={handleShareReferralLink} className="!py-2.5">
+              <Share className="w-4 h-4 mr-2" />
+              Compartilhar Link
+            </Button>
+          </Card>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
