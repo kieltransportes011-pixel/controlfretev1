@@ -37,9 +37,10 @@ serve(async (req) => {
         }
 
         // 2. Initialize Admin Client (Service Role)
+        const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+            secretKeys['controlfrete_1_0'] ?? ''
         )
 
         const { action, targetId, payload } = await req.json()

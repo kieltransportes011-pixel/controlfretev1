@@ -19,9 +19,10 @@ serve(async (req) => {
             throw new Error('E-mail e CPF são obrigatórios.');
         }
 
+        const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');
         const supabase = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+            secretKeys['controlfrete_1_0'] ?? ''
         );
 
         // 1. Validate CPF + Email in profiles. This only confirms the account

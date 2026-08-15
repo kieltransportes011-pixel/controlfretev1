@@ -45,10 +45,12 @@ serve(async (req) => {
                     return new Response(JSON.stringify({ received: true }), { headers: corsHeaders });
                 }
 
-                // Initialize Supabase Admin Client
+                // Initialize Supabase Admin Client (secret key dedicada, não a "default")
+                const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');
+                const dedicatedKey = secretKeys['controlfrete_1_0'] ?? '';
                 const supabase = createClient(
                     Deno.env.get('SUPABASE_URL') ?? '',
-                    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+                    dedicatedKey
                 );
 
                 // 1. Idempotency Check & History Log
@@ -125,7 +127,7 @@ serve(async (req) => {
                         await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`, {
                             method: 'POST',
                             headers: {
-                                Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                                Authorization: `Bearer ${dedicatedKey}`,
                                 'Content-Type': 'application/json',
                             },
                             body: JSON.stringify({

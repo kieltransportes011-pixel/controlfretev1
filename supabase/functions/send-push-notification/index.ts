@@ -111,7 +111,9 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization') ?? '';
     const bearerToken = authHeader.replace('Bearer ', '');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const isServiceRole = bearerToken === serviceRoleKey;
+    const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');
+    const cronAuthKey = secretKeys['controlfrete_1_0'];
+    const isServiceRole = bearerToken === serviceRoleKey || (!!cronAuthKey && bearerToken === cronAuthKey);
 
     if (!isServiceRole) {
       const anonClient = createClient(
@@ -156,7 +158,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      serviceRoleKey
+      cronAuthKey || serviceRoleKey
     );
 
     const { data: tokens, error: tokensError } = await supabase

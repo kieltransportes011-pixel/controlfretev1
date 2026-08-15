@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
   const bearerToken = authHeader.replace('Bearer ', '');
   const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');
   const cronAuthKey = secretKeys['controlfrete_1_0'];
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   if (!cronAuthKey || bearerToken !== cronAuthKey) {
     return new Response(JSON.stringify({ error: 'Não autorizado.' }), {
@@ -28,7 +27,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey);
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, cronAuthKey);
 
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
@@ -70,7 +69,7 @@ Deno.serve(async (req) => {
       const res = await fetch(functionUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
+          Authorization: `Bearer ${cronAuthKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ user_id: userId, title, body }),
