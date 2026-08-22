@@ -237,18 +237,18 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
                     placeholder="Ex: Pedágio, Chapa..."
                     value={item.label}
                     onChange={(e) => updateExtraItem(item.id, 'label', e.target.value)}
-                    className="flex-1 px-4 py-3 text-xs font-medium bg-transparent border-none outline-none text-slate-700 dark:text-white"
+                    className="flex-1 min-w-0 px-4 py-3 text-xs font-medium bg-transparent border-none outline-none text-slate-700 dark:text-white"
                   />
-                  <div className="w-[1px] h-6 bg-slate-100 dark:bg-slate-700 self-center"></div>
-                  <div className="relative w-32">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300">R$</span>
+                  <div className="w-[1px] h-6 bg-slate-100 dark:bg-slate-700 self-center shrink-0"></div>
+                  <div className="relative w-28 shrink-0">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300">R$</span>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0,00"
                       value={item.value}
                       onChange={(e) => updateExtraItem(item.id, 'value', e.target.value)}
-                      className="w-full pl-8 pr-4 py-3 text-sm font-bold bg-transparent border-none outline-none text-brand-secondary tabular-nums"
+                      className="w-full pl-7 pr-2 py-3 text-sm font-bold bg-transparent border-none outline-none text-brand-secondary tabular-nums"
                     />
                   </div>
                 </div>
