@@ -10,9 +10,7 @@ import {
     Menu,
     X,
     Clock,
-    Crosshair,
     Cpu,
-    Database,
     Activity,
     DollarSign
 } from 'lucide-react';
@@ -262,10 +260,10 @@ const featuresData = [
         imageSrc: "/assets/landing/history.jpg"
     },
     {
-        title: "Login Seguro",
-        desc: "Seus dados são criptografados com padrões militares. Acesso rápido, seguro e disponível 24 horas por dia em qualquer dispositivo.",
-        icon: Lock,
-        imageSrc: "/assets/landing/login.jpg"
+        title: "Gestão de Frota Completa",
+        desc: "Cadastre seus veículos e acompanhe quilometragem e histórico de manutenções — tudo em um só lugar, sem depender de planilhas soltas.",
+        icon: Truck,
+        imageSrc: "/assets/landing/frota.jpg"
     }
 ];
 
