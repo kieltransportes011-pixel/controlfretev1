@@ -177,6 +177,13 @@ export default function App() {
     if (v !== 'ADD_FREIGHT') setFormData(undefined);
     navigate(getPathFromView(v));
   };
+
+  // Sem isso, trocar de tela mantém a rolagem onde estava — numa SPA, isso
+  // pode deixar o cabeçalho da tela nova escondido atrás da barra fixa do
+  // topo quando se navega de uma tela longa (rolada) para uma bem mais curta.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   const [freights, setFreights] = useState<Freight[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
