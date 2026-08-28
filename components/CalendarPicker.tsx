@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { formatMonthYear, getCalendarDays } from '../utils';
 
@@ -12,6 +13,30 @@ interface CalendarPickerProps {
 export const CalendarPicker: React.FC<CalendarPickerProps> = ({ selectedDate, onChange, className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [dropdownRect, setDropdownRect] = useState({ top: 0, left: 0, width: 0 });
+
+  // O dropdown é renderizado num portal (fora dos cards com backdrop-blur),
+  // porque backdrop-blur cria um novo contexto de empilhamento no CSS — isso
+  // prendia o z-index do calendário dentro do próprio card, deixando o card
+  // seguinte desenhar por cima dele. Por estar num portal, recalculamos a
+  // posição manualmente com base no botão que o abre.
+  const updateDropdownPosition = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setDropdownRect({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updateDropdownPosition();
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    window.addEventListener('resize', updateDropdownPosition);
+    return () => {
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+      window.removeEventListener('resize', updateDropdownPosition);
+    };
+  }, [isOpen]);
 
   // Initialize view date from selected date
   useEffect(() => {
@@ -53,6 +78,7 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({ selectedDate, on
     <div className={`relative ${className}`}>
       {/* Trigger Button */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-3 p-3 bg-[#F5F7FA] rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-slate-700 transition-all"
@@ -61,9 +87,11 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({ selectedDate, on
         <span className="font-medium">{formatDateDisplay(selectedDate)}</span>
       </button>
 
-      {/* Dropdown Calendar */}
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-4 animate-fadeIn">
+      {/* Dropdown Calendar — em portal, posicionado via coordenadas fixas */}
+      {isOpen && createPortal(
+        <div
+          style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
+          className="bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-4 animate-fadeIn">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <button type="button" onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 rounded-full text-slate-600">
@@ -107,11 +135,13 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({ selectedDate, on
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-      
-      {isOpen && (
-        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>,
+        document.body
       )}
     </div>
   );
