@@ -9,6 +9,7 @@ import {
     Crosshair, Signal
 } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice } from '../types';
+import { formatCurrency } from '../utils';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -41,10 +42,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [logs, setLogs] = useState<AdminLog[]>([]);
     const [notices, setNotices] = useState<PlatformNotice[]>([]);
     const [commissions, setCommissions] = useState<any[]>([]);
+    const [payments, setPayments] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
     // Edit States
     const [editingUser, setEditingUser] = useState<any | null>(null);
+    const [userAction, setUserAction] = useState<string | null>(null);
+    const [selectedPlan, setSelectedPlan] = useState<'free' | 'pro'>('free');
+    const [adminNotesInput, setAdminNotesInput] = useState('');
     const [editingTicket, setEditingTicket] = useState<SupportTicket | null>(null);
     const [ticketReply, setTicketReply] = useState('');
     const [ticketStatus, setTicketStatus] = useState<string>('open');
@@ -178,6 +183,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 .limit(100);
             setLogs(logsData || []);
 
+            // 3.2 Fetch Payments (Revenue)
+            const { data: paymentsData } = await supabase
+                .from('payment_history')
+                .select('*')
+                .order('processed_at', { ascending: false })
+                .limit(200);
+            setPayments(paymentsData || []);
+
+            // 3.3 Fetch Referral Commissions
+            const { data: commissionsData } = await supabase
+                .from('referral_commissions')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(200);
+            setCommissions(commissionsData || []);
+
             // 4. Calculate Stats
             const now = new Date();
             const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
@@ -237,11 +258,91 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         }
     };
 
+    const callAdminAction = async (action: string, targetId: string, payload?: any) => {
+        setUserAction(action);
+        try {
+            const { data, error } = await supabase.functions.invoke('admin-actions', {
+                body: { action, targetId, payload }
+            });
+            if (error || data?.error) throw new Error(data?.error || error?.message || 'Erro desconhecido');
+            toastSuccess(data.message || 'Ação executada com sucesso.');
+            await fetchDashboardData();
+            return true;
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro: ${e.message}`);
+            return false;
+        } finally {
+            setUserAction(null);
+        }
+    };
+
+    const handleBanToggle = async (user: any) => {
+        const isBanned = user.account_status === 'banned';
+        const confirmed = await confirmDialog({
+            message: isBanned
+                ? `Reativar a conta de ${user.name}?`
+                : `Banir ${user.name}? A pessoa não vai conseguir mais acessar o app.`,
+            danger: !isBanned
+        });
+        if (!confirmed) return;
+        const ok = await callAdminAction(isBanned ? 'unban_user' : 'ban_user', user.id);
+        if (ok) setEditingUser((prev: any) => prev ? { ...prev, account_status: isBanned ? 'active' : 'banned' } : prev);
+    };
+
+    const handleUpdatePlan = async (user: any) => {
+        const ok = await callAdminAction('update_plan', user.id, { plano: selectedPlan });
+        if (ok) setEditingUser(null);
+    };
+
+    const handleSaveAdminNotes = async (user: any) => {
+        await callAdminAction('update_admin_notes', user.id, { notes: adminNotesInput });
+    };
+
+    const handleForceLogout = async (user: any) => {
+        const confirmed = await confirmDialog(`Forçar logout de todas as sessões de ${user.name}?`);
+        if (!confirmed) return;
+        await callAdminAction('force_logout', user.id);
+    };
+
+    const handleSendPasswordReset = async (user: any) => {
+        const confirmed = await confirmDialog(`Enviar e-mail de redefinição de senha para ${user.email}?`);
+        if (!confirmed) return;
+        await callAdminAction('send_password_reset', user.id);
+    };
+
     const handleDeleteNotice = async (id: string) => {
         if (!(await confirmDialog({ message: "Deletar aviso?", danger: true }))) return;
         await supabase.from('platform_notices').delete().eq('id', id);
         fetchDashboardData();
     };
+
+    const userLookup = React.useMemo(() => {
+        const map = new Map<string, any>();
+        users.forEach(u => map.set(u.id, u));
+        return map;
+    }, [users]);
+
+    const revenueStats = React.useMemo(() => {
+        const approved = payments.filter(p => p.status === 'approved');
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const thisMonth = approved.filter(p => p.processed_at >= startOfMonth);
+        return {
+            totalAllTime: approved.reduce((sum, p) => sum + Number(p.amount || 0), 0),
+            totalThisMonth: thisMonth.reduce((sum, p) => sum + Number(p.amount || 0), 0),
+            countThisMonth: thisMonth.length
+        };
+    }, [payments]);
+
+    const commissionStats = React.useMemo(() => {
+        const pending = commissions.filter(c => c.status === 'pending');
+        const paid = commissions.filter(c => c.status === 'paid');
+        return {
+            pendingTotal: pending.reduce((sum, c) => sum + Number(c.amount || 0), 0),
+            paidTotal: paid.reduce((sum, c) => sum + Number(c.amount || 0), 0),
+        };
+    }, [commissions]);
 
     const filteredUsers = users.filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -278,6 +379,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {[
                         { id: 'USERS', label: 'Operadores', icon: Users },
                         { id: 'SUPPORT', label: 'Comunicação', icon: MessageCircle, badge: stats.openTickets > 0 ? stats.openTickets : null },
+                        { id: 'REVENUE', label: 'Receita', icon: DollarSign },
+                        { id: 'REFERRALS', label: 'Indicações', icon: TrendingUp },
                         { id: 'NOTICES', label: 'Broadcast', icon: Megaphone },
                         { id: 'LOGS', label: 'System Logs', icon: Activity },
                     ].map(item => (
@@ -365,7 +468,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
                                         {filteredUsers.map(user => (
-                                            <tr key={user.id} className="hover:bg-white/5 transition-colors group">
+                                            <tr
+                                                key={user.id}
+                                                className="hover:bg-white/5 transition-colors group cursor-pointer"
+                                                onClick={() => {
+                                                    setEditingUser(user);
+                                                    setSelectedPlan(user.is_premium ? 'pro' : 'free');
+                                                    setAdminNotesInput(user.admin_notes || '');
+                                                }}
+                                            >
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 group-hover:border-orange-500/50 transition-colors">
@@ -426,6 +537,94 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- TAB CONTENT: REVENUE --- */}
+                    {activeTab === 'REVENUE' && (
+                        <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <StatBox label="Receita Total" value={formatCurrency(revenueStats.totalAllTime)} icon={DollarSign} color="text-green-500" />
+                                <StatBox label="Receita Este Mês" value={formatCurrency(revenueStats.totalThisMonth)} icon={Calendar} color="text-orange-500" />
+                                <StatBox label="Pagamentos Este Mês" value={revenueStats.countThisMonth} icon={TrendingUp} />
+                            </div>
+
+                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
+                                <div className="flex items-center gap-2 text-green-500">
+                                    <DollarSign className="w-5 h-5" />
+                                    <h2 className="text-sm font-bold uppercase tracking-widest text-white">Transaction Ledger</h2>
+                                </div>
+                                <span className="text-[10px] text-gray-600 font-mono">{payments.length} REGISTROS</span>
+                            </div>
+
+                            <div className="border border-white/10 rounded-sm overflow-hidden bg-[#0A0A0A] divide-y divide-white/5">
+                                {payments.map(p => {
+                                    const u = userLookup.get(p.user_id);
+                                    return (
+                                        <div key={p.payment_id} className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+                                            <div>
+                                                <div className="text-white text-xs font-bold">{u?.name || 'Usuário desconhecido'}</div>
+                                                <div className="text-[10px] text-gray-500 font-mono">{u?.email || p.user_id} • {p.payment_method}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-white text-sm font-mono font-bold">{formatCurrency(p.amount)}</div>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase ${p.status === 'approved' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
+                                                    {p.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {payments.length === 0 && (
+                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                        Nenhum pagamento registrado.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- TAB CONTENT: REFERRALS --- */}
+                    {activeTab === 'REFERRALS' && (
+                        <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <StatBox label="Comissões Pendentes" value={formatCurrency(commissionStats.pendingTotal)} icon={Clock} color="text-orange-500" />
+                                <StatBox label="Comissões Pagas" value={formatCurrency(commissionStats.paidTotal)} icon={CheckCircle} color="text-green-500" />
+                            </div>
+
+                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
+                                <div className="flex items-center gap-2 text-orange-500">
+                                    <TrendingUp className="w-5 h-5" />
+                                    <h2 className="text-sm font-bold uppercase tracking-widest text-white">Referral Network</h2>
+                                </div>
+                                <span className="text-[10px] text-gray-600 font-mono">{commissions.length} REGISTROS</span>
+                            </div>
+
+                            <div className="border border-white/10 rounded-sm overflow-hidden bg-[#0A0A0A] divide-y divide-white/5">
+                                {commissions.map(c => {
+                                    const referrer = userLookup.get(c.referrer_id);
+                                    const referred = userLookup.get(c.referred_id);
+                                    return (
+                                        <div key={c.id} className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+                                            <div>
+                                                <div className="text-white text-xs font-bold">{referrer?.name || 'Desconhecido'} <span className="text-gray-500">indicou</span> {referred?.name || 'Desconhecido'}</div>
+                                                <div className="text-[10px] text-gray-500 font-mono">{c.commission_percentage}% de {formatCurrency(c.base_amount)}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-white text-sm font-mono font-bold">{formatCurrency(c.amount)}</div>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase ${c.status === 'paid' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'}`}>
+                                                    {c.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {commissions.length === 0 && (
+                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                        Nenhuma comissão de indicação registrada.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -607,6 +806,95 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <button onClick={() => setEditingNotice(null)} className="px-4 py-2 text-xs uppercase font-bold text-gray-500 hover:text-white">Abort</button>
                                 <button onClick={handleSaveNotice} className="px-4 py-2 bg-orange-600 text-black text-xs uppercase font-bold hover:bg-orange-500">
                                     {isSavingNotice ? 'Saving...' : 'Deploy Broadcast'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* USER EDITOR */}
+            {editingUser && (
+                <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#0f0f0f] border border-white/10 w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-white font-bold uppercase tracking-widest flex items-center gap-2">
+                                <Users className="w-4 h-4 text-orange-500" /> Operator Profile
+                            </h3>
+                            <button onClick={() => setEditingUser(null)} className="text-gray-500 hover:text-white">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="bg-black p-4 border border-white/5 mb-4">
+                            <div className="text-white font-bold text-sm">{editingUser.name}</div>
+                            <div className="text-[10px] text-gray-500 font-mono">{editingUser.email}</div>
+                            <div className="flex gap-4 mt-3 text-[10px] text-gray-400 font-mono">
+                                <span>OPS: {editingUser.total_freights ?? 0}</span>
+                                <span>DESDE: {formatDate(editingUser.created_at)}</span>
+                                <span className={editingUser.account_status === 'banned' ? 'text-red-500' : 'text-green-500'}>
+                                    {editingUser.account_status === 'banned' ? 'BANIDO' : 'ATIVO'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-gray-500">Plano</label>
+                                <div className="flex gap-2 mt-1">
+                                    <select
+                                        value={selectedPlan}
+                                        onChange={e => setSelectedPlan(e.target.value as 'free' | 'pro')}
+                                        className="bg-black border border-white/10 text-xs text-white p-2 outline-none flex-1"
+                                    >
+                                        <option value="free">FREE</option>
+                                        <option value="pro">PRO</option>
+                                    </select>
+                                    <button
+                                        onClick={() => handleUpdatePlan(editingUser)}
+                                        disabled={!!userAction}
+                                        className="px-4 py-2 bg-orange-600 text-black text-xs uppercase font-bold hover:bg-orange-500 disabled:opacity-50"
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-gray-500">Notas Administrativas (internas)</label>
+                                <textarea
+                                    value={adminNotesInput}
+                                    onChange={e => setAdminNotesInput(e.target.value)}
+                                    onBlur={() => handleSaveAdminNotes(editingUser)}
+                                    className="w-full h-20 bg-black border border-white/10 p-3 text-xs text-white outline-none focus:border-orange-500 mt-1"
+                                    placeholder="Ex: cliente reclamou de cobrança duplicada em..."
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-2">
+                                <button
+                                    onClick={() => handleBanToggle(editingUser)}
+                                    disabled={!!userAction}
+                                    className={`px-3 py-2 text-xs uppercase font-bold border transition-colors disabled:opacity-50 ${editingUser.account_status === 'banned'
+                                        ? 'border-green-500/30 text-green-500 hover:bg-green-500/10'
+                                        : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
+                                        }`}
+                                >
+                                    {editingUser.account_status === 'banned' ? 'Reativar Conta' : 'Banir Usuário'}
+                                </button>
+                                <button
+                                    onClick={() => handleForceLogout(editingUser)}
+                                    disabled={!!userAction}
+                                    className="px-3 py-2 text-xs uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-50"
+                                >
+                                    Forçar Logout
+                                </button>
+                                <button
+                                    onClick={() => handleSendPasswordReset(editingUser)}
+                                    disabled={!!userAction}
+                                    className="col-span-2 px-3 py-2 text-xs uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-50"
+                                >
+                                    Enviar Redefinição de Senha
                                 </button>
                             </div>
                         </div>

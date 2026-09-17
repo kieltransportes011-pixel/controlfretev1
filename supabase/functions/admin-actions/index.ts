@@ -100,17 +100,68 @@ serve(async (req) => {
                 result.message = 'Nova senha definida com sucesso.'
                 break
 
+            case 'ban_user':
+                const { error: banError } = await supabaseAdmin.from('profiles')
+                    .update({ account_status: 'banned' })
+                    .eq('id', targetId)
+                if (banError) throw banError
+
+                logActionDescription = `Baniu o usuário${payload?.reason ? `: ${payload.reason}` : ''}`
+                result.message = 'Usuário banido com sucesso.'
+                break
+
+            case 'unban_user':
+                const { error: unbanError } = await supabaseAdmin.from('profiles')
+                    .update({ account_status: 'active' })
+                    .eq('id', targetId)
+                if (unbanError) throw unbanError
+
+                logActionDescription = 'Reativou a conta do usuário'
+                result.message = 'Usuário reativado com sucesso.'
+                break
+
+            case 'update_plan':
+                if (!payload?.plano) throw new Error('Plano required')
+
+                const isPro = payload.plano === 'pro'
+                const { error: planError } = await supabaseAdmin.from('profiles')
+                    .update({
+                        plano: payload.plano,
+                        is_premium: isPro,
+                        status_assinatura: isPro ? 'ativa' : 'cancelada',
+                        premium_until: isPro ? (payload.premiumUntil || null) : null
+                    })
+                    .eq('id', targetId)
+                if (planError) throw planError
+
+                logActionDescription = `Alterou plano manualmente para ${payload.plano.toUpperCase()}`
+                result.message = 'Plano atualizado com sucesso.'
+                break
+
+            case 'update_admin_notes':
+                const { error: notesError } = await supabaseAdmin.from('profiles')
+                    .update({ admin_notes: payload?.notes ?? '' })
+                    .eq('id', targetId)
+                if (notesError) throw notesError
+
+                logActionDescription = 'Atualizou notas administrativas'
+                result.message = 'Notas salvas com sucesso.'
+                break
+
             default:
                 throw new Error('Invalid action')
         }
 
         // 4. Logs
-        // Log Activity for User (Visible in Account History)
-        await supabaseAdmin.from('account_activity_logs').insert([{
-            user_id: targetId,
-            action: `Recuperação Admin: ${logActionDescription}`,
-            actor: 'admin'
-        }])
+        // Log Activity for User (Visible in Account History) — notas administrativas
+        // são internas, não aparecem pro usuário.
+        if (action !== 'update_admin_notes') {
+            await supabaseAdmin.from('account_activity_logs').insert([{
+                user_id: targetId,
+                action: logActionDescription,
+                actor: 'admin'
+            }])
+        }
 
         // Log Admin Action (Audit)
         await supabaseAdmin.from('admin_logs').insert([{
