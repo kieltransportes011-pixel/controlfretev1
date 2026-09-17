@@ -18,7 +18,7 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
-    const { error: showError } = useToast();
+    const { error: showError, success: showSuccess } = useToast();
 
     // Form State
     const [title, setTitle] = useState('');
@@ -52,7 +52,7 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim() || !description.trim()) {
-            alert('Preencha todos os campos obrigatórios.');
+            showError('Preencha todos os campos obrigatórios.');
             return;
         }
 
@@ -71,7 +71,7 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
 
             if (error) throw error;
 
-            alert('Solicitação enviada com sucesso! Nosso suporte irá analisar.');
+            showSuccess('Solicitação enviada com sucesso! Nosso suporte irá analisar.');
             setTitle('');
             setDescription('');
             setCategory('Dúvida');
@@ -79,7 +79,7 @@ export const Support: React.FC<SupportProps> = ({ user, onBack }) => {
             fetchTickets();
         } catch (error: any) {
             console.error('Error creating ticket:', error);
-            alert('Erro ao enviar solicitação: ' + error.message);
+            showError('Erro ao enviar solicitação: ' + error.message);
         } finally {
             setSending(false);
         }

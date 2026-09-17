@@ -9,6 +9,8 @@ import {
     Crosshair, Signal
 } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice } from '../types';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface AdminDashboardProps {
     onBack: () => void;
@@ -30,6 +32,8 @@ interface AdminStats {
 type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
+    const { success: toastSuccess, error: toastError } = useToast();
+    const confirmDialog = useConfirm();
     const [activeTab, setActiveTab] = useState<TabView>('USERS');
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<any[]>([]);
@@ -85,10 +89,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             await fetchDashboardData();
             setEditingTicket(null);
-            alert("Resposta enviada com sucesso!");
+            toastSuccess("Resposta enviada com sucesso!");
         } catch (error: any) {
             console.error('Error updating ticket logic:', error);
-            alert(`Erro ao responder ticket: ${error.message || 'Erro desconhecido'}`);
+            toastError(`Erro ao responder ticket: ${error.message || 'Erro desconhecido'}`);
         } finally {
             setIsSavingTicket(false);
         }
@@ -227,14 +231,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             setEditingNotice(null);
         } catch (e: any) {
             console.error(e);
-            alert(`Erro ao salvar aviso: ${e.message}`);
+            toastError(`Erro ao salvar aviso: ${e.message}`);
         } finally {
             setIsSavingNotice(false);
         }
     };
 
     const handleDeleteNotice = async (id: string) => {
-        if (!confirm("Deletar aviso?")) return;
+        if (!(await confirmDialog({ message: "Deletar aviso?", danger: true }))) return;
         await supabase.from('platform_notices').delete().eq('id', id);
         fetchDashboardData();
     };

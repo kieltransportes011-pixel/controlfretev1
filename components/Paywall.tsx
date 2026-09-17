@@ -5,6 +5,7 @@ import { Card } from './Card';
 import { Shield, Crown, ExternalLink } from 'lucide-react';
 import { supabase } from '../supabase';
 import { PricingCard } from './PricingCard';
+import { useToast } from '../contexts/ToastContext';
 
 interface PaywallProps {
   user: User;
@@ -19,6 +20,7 @@ interface PaywallProps {
 const IS_NATIVE_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
 export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
+  const { error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
 
   const handleCheckout = async (planType: string = 'annual_promo') => {
@@ -36,7 +38,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
 
     } catch (err: any) {
       console.error('Erro ao iniciar checkout:', err);
-      alert(`Erro: ${err.message || 'Falha ao conectar com Mercado Pago'}`);
+      toastError(`Erro: ${err.message || 'Falha ao conectar com Mercado Pago'}`);
       setLoading(false);
     }
   };

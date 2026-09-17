@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Vehicle } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Truck, Plus, ChevronRight, Search, Hash, Calendar, Fuel, Trash2, Edit3, X } from 'lucide-react';
+import { Truck, Plus, ChevronRight, Search, Hash, Calendar, Fuel, Trash2, Edit3, X, Loader2 } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface FleetProps {
     vehicles: Vehicle[];
@@ -14,9 +16,12 @@ interface FleetProps {
 }
 
 export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehicle, onDeleteVehicle, onViewDetails, onBack }) => {
+    const { error: toastError } = useToast();
+    const confirmDialog = useConfirm();
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form State
     const [plate, setPlate] = useState('');
@@ -44,9 +49,10 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!plate || !model) {
-            alert('Placa e Modelo são obrigatórios.');
+            toastError('Placa e Modelo são obrigatórios.');
             return;
         }
+        if (isSubmitting) return;
 
         const vehicleData = {
             plate: plate.toUpperCase(),
@@ -56,6 +62,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
             current_km: km ? parseFloat(km) : 0,
         };
 
+        setIsSubmitting(true);
         try {
             if (editingVehicle) {
                 await onEditVehicle({ ...editingVehicle, ...vehicleData });
@@ -65,7 +72,9 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
             resetForm();
         } catch (error) {
             console.error(error);
-            alert('Erro ao salvar veículo.');
+            toastError('Erro ao salvar veículo.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -181,8 +190,8 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
                                 </div>
                             </div>
 
-                            <Button fullWidth type="submit" className="h-12">
-                                {editingVehicle ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR VEÍCULO'}
+                            <Button fullWidth type="submit" className="h-12" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (editingVehicle ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR VEÍCULO')}
                             </Button>
                         </form>
                     </Card>
@@ -227,7 +236,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
                                     <Edit3 className="w-4 h-4" />
                                 </button>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm('Excluir veículo?')) onDeleteVehicle(vehicle.id); }}
+                                    onClick={async (e) => { e.stopPropagation(); if (await confirmDialog({ message: 'Excluir veículo?', danger: true })) onDeleteVehicle(vehicle.id); }}
                                     className="p-2 text-slate-300 hover:text-accent-error hover:bg-red-50 rounded-lg transition-all"
                                 >
                                     <Trash2 className="w-4 h-4" />

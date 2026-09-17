@@ -3,6 +3,8 @@ import { Freight, AccountPayable } from '../types';
 import { formatCurrency, formatDate } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 import {
   CalendarClock,
   CheckCircle,
@@ -45,6 +47,8 @@ export const Schedule: React.FC<ScheduleProps> = ({
   onUpdateAccountPayable,
   onToggleAccountPayableStatus
 }) => {
+  const { error: toastError } = useToast();
+  const confirmDialog = useConfirm();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'RECEIVABLES' | 'PAYABLES'>('RECEIVABLES');
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('ALL');
@@ -174,13 +178,13 @@ export const Schedule: React.FC<ScheduleProps> = ({
   }, [sortedBills, searchTerm, activeFilter]);
 
   const handleConfirm = async (id: string, value: number) => {
-    if (window.confirm(`Confirmar recebimento de ${formatCurrency(value)}?`)) {
+    if (await confirmDialog(`Confirmar recebimento de ${formatCurrency(value)}?`)) {
       try {
         setConfirmingId(id);
         await onReceivePayment(id);
       } catch (error) {
         console.error("Erro ao confirmar:", error);
-        alert("Não foi possível confirmar. Tente novamente.");
+        toastError("Não foi possível confirmar. Tente novamente.");
       } finally {
         setConfirmingId(null);
       }

@@ -4,6 +4,7 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare, Coins, Gift, Copy } from 'lucide-react';
 import { supabase } from '../supabase';
+import { maskPhone } from '../utils';
 
 import { useSubscription } from '../hooks/useSubscription';
 import { ActivityHistory } from './ActivityHistory';
@@ -564,7 +565,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
             <input
               type="text"
               value={issuerPhone}
-              onChange={(e) => setIssuerPhone(e.target.value)}
+              onChange={(e) => setIssuerPhone(maskPhone(e.target.value))}
               placeholder="(00) 00000-0000"
               className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white"
             />

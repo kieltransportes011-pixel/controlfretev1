@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
 import { CalendarPicker } from './CalendarPicker';
+import { useConfirm } from '../contexts/ConfirmContext';
 import {
   Target,
   TrendingUp,
@@ -30,6 +31,7 @@ interface MonthlyGoalProps {
 }
 
 export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, onUpdateSettings, onBack }) => {
+  const confirmDialog = useConfirm();
   const [goalInput, setGoalInput] = useState<string>(settings.monthlyGoal?.toString() || '');
   const [deadlineInput, setDeadlineInput] = useState<string>(settings.monthlyGoalDeadline || '');
   const [isSaved, setIsSaved] = useState(false);
@@ -130,8 +132,8 @@ export const MonthlyGoal: React.FC<MonthlyGoalProps> = ({ freights, settings, on
     setTimeout(() => setIsSaved(false), 2000);
   };
 
-  const handleDeleteHistory = (monthKey: string) => {
-    if (window.confirm('Deseja excluir este registro do histórico de metas?')) {
+  const handleDeleteHistory = async (monthKey: string) => {
+    if (await confirmDialog({ message: 'Deseja excluir este registro do histórico de metas?', danger: true })) {
       const newHistory = (settings.goalHistory || []).filter(h => h.month !== monthKey);
       onUpdateSettings({ ...settings, goalHistory: newHistory });
     }

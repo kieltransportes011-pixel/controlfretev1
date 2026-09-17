@@ -3,7 +3,9 @@ import { MaintenanceLog, Vehicle, MaintenanceCategory } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
 import { formatCurrency, formatDate } from '../utils';
-import { Wrench, Plus, X, Calendar, Hash, Tag, ChevronDown, Filter, Trash2, AlertCircle, Truck } from 'lucide-react';
+import { Wrench, Plus, X, Calendar, Hash, Tag, ChevronDown, Filter, Trash2, AlertCircle, Truck, Loader2 } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface MaintenanceProps {
     logs: MaintenanceLog[];
@@ -32,8 +34,11 @@ const CATEGORY_COLORS: Record<MaintenanceCategory, string> = {
 };
 
 export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, onAddLog, onDeleteLog, onBack }) => {
+    const { error: toastError } = useToast();
+    const confirmDialog = useConfirm();
     const [showForm, setShowForm] = useState(false);
     const [filterVehicle, setFilterVehicle] = useState('ALL');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form State
     const [vehicleId, setVehicleId] = useState(vehicles[0]?.id || '');
@@ -50,10 +55,12 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!vehicleId || !description || !cost) {
-            alert('Preencha os campos obrigatórios (Veículo, Descrição, Valor)');
+            toastError('Preencha os campos obrigatórios (Veículo, Descrição, Valor)');
             return;
         }
+        if (isSubmitting) return;
 
+        setIsSubmitting(true);
         try {
             await onAddLog({
                 vehicle_id: vehicleId,
@@ -73,7 +80,9 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
             setNextDate('');
         } catch (error) {
             console.error(error);
-            alert('Erro ao salvar manutenção');
+            toastError('Erro ao salvar manutenção');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -186,7 +195,7 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
                             )}
 
                             <button
-                                onClick={() => { if (confirm('Excluir log de manutenção?')) onDeleteLog(log.id); }}
+                                onClick={async () => { if (await confirmDialog({ message: 'Excluir log de manutenção?', danger: true })) onDeleteLog(log.id); }}
                                 className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-accent-error transition-all"
                             >
                                 <Trash2 className="w-4 h-4" />
@@ -314,8 +323,8 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
                                 </div>
                             </div>
 
-                            <Button fullWidth type="submit" className="h-14 bg-orange-500 hover:bg-orange-600 shadow-orange-500/20">
-                                SALVAR REGISTRO
+                            <Button fullWidth type="submit" className="h-14 bg-orange-500 hover:bg-orange-600 shadow-orange-500/20" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'SALVAR REGISTRO'}
                             </Button>
                         </form>
                     </Card>

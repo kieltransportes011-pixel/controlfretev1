@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Check, Lock, ExternalLink } from 'lucide-react';
 import { supabase } from '../supabase';
+import { useToast } from '../contexts/ToastContext';
 
 interface PrivacyModalProps {
     userId: string;
@@ -8,6 +9,7 @@ interface PrivacyModalProps {
 }
 
 export const PrivacyModal: React.FC<PrivacyModalProps> = ({ userId, onAccept }) => {
+    const { error: toastError } = useToast();
     const [loading, setLoading] = useState(false);
 
     const handleAccept = async () => {
@@ -27,7 +29,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ userId, onAccept }) 
             onAccept();
         } catch (error) {
             console.error("Erro ao aceitar privacidade:", error);
-            alert("Erro ao processar. Tente novamente.");
+            toastError("Erro ao processar. Tente novamente.");
         } finally {
             setLoading(false);
         }

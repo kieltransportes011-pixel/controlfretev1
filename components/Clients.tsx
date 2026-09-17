@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Client, ViewState } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Users, Search, Plus, MapPin, Phone, Mail, FileText, Pencil, Trash2, X, ChevronLeft } from 'lucide-react';
+import { Users, Search, Plus, MapPin, Phone, Mail, FileText, Pencil, Trash2, X, ChevronLeft, Loader2 } from 'lucide-react';
+import { maskPhone } from '../utils';
 
 interface ClientsProps {
     clients: Client[];
@@ -16,6 +17,7 @@ export const Clients: React.FC<ClientsProps> = ({ clients, onSaveClient, onDelet
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -67,13 +69,18 @@ export const Clients: React.FC<ClientsProps> = ({ clients, onSaveClient, onDelet
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name) return;
+        if (!formData.name || isSubmitting) return;
 
-        await onSaveClient({
-            id: editingClient?.id,
-            ...formData
-        });
-        setIsModalOpen(false);
+        setIsSubmitting(true);
+        try {
+            await onSaveClient({
+                id: editingClient?.id,
+                ...formData
+            });
+            setIsModalOpen(false);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -217,7 +224,7 @@ export const Clients: React.FC<ClientsProps> = ({ clients, onSaveClient, onDelet
                                         <input
                                             type="text"
                                             value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            onChange={(e) => setFormData({ ...formData, phone: maskPhone(e.target.value) })}
                                             className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
                                             placeholder="(00) 00000-0000"
                                         />
@@ -294,8 +301,8 @@ export const Clients: React.FC<ClientsProps> = ({ clients, onSaveClient, onDelet
                             </div>
 
                             <div className="pt-6">
-                                <Button type="submit" fullWidth>
-                                    {editingClient ? 'Salvar Alterações' : 'Cadastrar Cliente'}
+                                <Button type="submit" fullWidth disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (editingClient ? 'Salvar Alterações' : 'Cadastrar Cliente')}
                                 </Button>
                             </div>
                         </form>

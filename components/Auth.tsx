@@ -6,6 +6,7 @@ import { Button } from './Button';
 import { validateCPF, maskCPF } from '../utils';
 import { Mail, Lock, User as UserIcon, Eye, EyeOff, FileText, ArrowRight, Loader2, CheckCircle, ChevronLeft } from 'lucide-react';
 import { supabase } from '../supabase';
+import { useToast } from '../contexts/ToastContext';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -45,6 +46,7 @@ const InputField = ({
 );
 
 export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGIN' }) => {
+  const { success: toastSuccess } = useToast();
   const [view, setView] = useState<AuthView>(initialView);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
       });
 
       if (!error && !data?.error) {
-        alert('Enviamos um link de redefinição de senha para ' + formData.email + '. Verifique sua caixa de entrada (e o SPAM).');
+        toastSuccess('Enviamos um link de redefinição de senha para ' + formData.email + '. Verifique sua caixa de entrada (e o SPAM).');
         setView('LOGIN');
         return;
       }
@@ -112,7 +114,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
 
       if (resetErr) throw resetErr;
 
-      alert('Enviamos um e-mail de recuperação para ' + formData.email + '. Verifique sua caixa de entrada ou SPAM.');
+      toastSuccess('Enviamos um e-mail de recuperação para ' + formData.email + '. Verifique sua caixa de entrada ou SPAM.');
       setView('LOGIN');
 
     } catch (err: any) {
@@ -137,7 +139,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
 
       if (error) throw error;
 
-      alert('Senha atualizada com sucesso!');
+      toastSuccess('Senha atualizada com sucesso!');
       setView('LOGIN');
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar senha.');
@@ -158,7 +160,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
         }
       });
       if (error) throw error;
-      alert('Link de confirmação reenviado!');
+      toastSuccess('Link de confirmação reenviado!');
     } catch (err: any) {
       setError(err.message || 'Erro ao reenviar confirmação.');
     } finally {

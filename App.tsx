@@ -38,7 +38,8 @@ import { Clients } from './components/Clients';
 import { Fleet } from './components/Fleet';
 import { MaintenanceLogs } from './components/MaintenanceLogs';
 import { Skeleton, CardSkeleton, ListSkeleton } from './components/Skeleton';
-import { ToastProvider } from './contexts/ToastContext';
+import { useToast } from './contexts/ToastContext';
+import { useConfirm } from './contexts/ConfirmContext';
 import { BankAccounts } from './components/Financial/BankAccounts';
 import { UpdateModal } from './components/UpdateModal';
 
@@ -54,6 +55,8 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { success: toastSuccess, error: toastError } = useToast();
+  const confirmDialog = useConfirm();
 
   // Hardware/gesture back button (Android). Without this, Capacitor's
   // WebView has no built-in back behavior — the first back press would just
@@ -357,7 +360,7 @@ export default function App() {
   // Security Check: Ban Enforcement
   useEffect(() => {
     if (currentUser && (currentUser as any).account_status === 'banned') {
-      alert("Sua conta foi suspensa. Entre em contato com o suporte.");
+      toastError("Sua conta foi suspensa. Entre em contato com o suporte.");
       supabase.auth.signOut();
       setCurrentUser(null);
       setShowLanding(true);
@@ -641,10 +644,10 @@ Obs: ${of.description || 'Sem observações'}`;
       if (updateError) throw updateError;
 
       await fetchData();
-      alert("Frete aprovado e importado para o ControlFrete.");
+      toastSuccess("Frete aprovado e importado para o ControlFrete.");
     } catch (error: any) {
       console.error("Erro na aprovação:", error);
-      alert("Erro ao aprovar: " + error.message);
+      toastError("Erro ao aprovar: " + error.message);
     } finally {
       setSyncing(false);
     }
@@ -667,10 +670,10 @@ Obs: ${of.description || 'Sem observações'}`;
 
       if (error) throw error;
       await fetchData();
-      alert("Solicitação reprovada.");
+      toastSuccess("Solicitação reprovada.");
     } catch (error: any) {
       console.error("Erro ao reprovar:", error);
-      alert("Erro ao reprovar: " + error.message);
+      toastError("Erro ao reprovar: " + error.message);
     } finally {
       setSyncing(false);
     }
@@ -678,7 +681,7 @@ Obs: ${of.description || 'Sem observações'}`;
 
   const handleCancelOFreteja = async (of: OFretejaFreight) => {
     if (!currentUser) return;
-    if (!confirm("Deseja realmente cancelar esta solicitação?")) return;
+    if (!(await confirmDialog({ message: "Deseja realmente cancelar esta solicitação?", danger: true }))) return;
 
     try {
       setSyncing(true);
@@ -691,7 +694,7 @@ Obs: ${of.description || 'Sem observações'}`;
       await fetchData();
     } catch (error: any) {
       console.error("Erro ao cancelar:", error);
-      alert("Erro ao cancelar: " + error.message);
+      toastError("Erro ao cancelar: " + error.message);
     } finally {
       setSyncing(false);
     }
@@ -749,7 +752,7 @@ Obs: ${of.description || 'Sem observações'}`;
       fetchData();
     } catch (error: any) {
       console.error("Erro ao salvar cliente:", error);
-      alert("Erro ao salvar cliente: " + (error.message || "Tente novamente."));
+      toastError("Erro ao salvar cliente: " + (error.message || "Tente novamente."));
     }
   };
 
@@ -764,7 +767,7 @@ Obs: ${of.description || 'Sem observações'}`;
       fetchData();
     } catch (error: any) {
       console.error("Erro ao excluir cliente:", error);
-      alert("Erro ao excluir cliente: " + (error.message || "Tente novamente."));
+      toastError("Erro ao excluir cliente: " + (error.message || "Tente novamente."));
     }
   };
 
@@ -847,7 +850,7 @@ Obs: ${of.description || 'Sem observações'}`;
   }
 
   return (
-    <ToastProvider>
+    <>
       <Layout>
         <AnimatePresence mode="wait">
           {syncing && (
@@ -1003,7 +1006,7 @@ Obs: ${of.description || 'Sem observações'}`;
                     if (error.message && error.message.includes('Limite do Plano Gratuito')) {
                       handleOpenUpgrade('LIMIT');
                     } else {
-                      alert("Erro ao salvar: " + (error.message || "Tente novamente."));
+                      toastError("Erro ao salvar: " + (error.message || "Tente novamente."));
                     }
                   }
                 }}
@@ -1084,7 +1087,7 @@ Obs: ${of.description || 'Sem observações'}`;
                     }
                   } catch (error) {
                     console.error("Erro ao salvar recebimento:", error);
-                    alert("Erro ao salvar no banco de dados.");
+                    toastError("Erro ao salvar no banco de dados.");
                   }
                 }}
                 accountsPayable={accountsPayable}
@@ -1353,7 +1356,7 @@ Obs: ${of.description || 'Sem observações'}`;
           <FreightNoticeModal onClose={() => setShowFreightNotice(false)} />
         )}
       </Layout>
-    </ToastProvider>
+    </>
 
   );
 };

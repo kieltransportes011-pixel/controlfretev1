@@ -3,6 +3,7 @@ import { Freight } from '../types';
 import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
+import { useToast } from '../contexts/ToastContext';
 import {
   ChevronLeft,
   Copy,
@@ -30,6 +31,7 @@ interface FreightCalculatorProps {
 }
 
 export const FreightCalculator: React.FC<FreightCalculatorProps> = ({ onCancel, onRegister }) => {
+  const { success: toastSuccess } = useToast();
   // Dados Principais
   const [distance, setDistance] = useState<string>('');
   const [pricePerKm, setPricePerKm] = useState<string>('');
@@ -118,7 +120,7 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
     `.trim();
 
     navigator.clipboard.writeText(text);
-    alert("Copiado para a área de transferência!");
+    toastSuccess("Copiado para a área de transferência!");
   };
 
   const handleShareWhatsapp = () => {

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { Loader2, ShieldAlert, CheckCircle, AlertTriangle } from 'lucide-react';
 import { PlatformNotice, User } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 interface MandatoryNoticeModalProps {
     user: User;
@@ -10,6 +11,7 @@ interface MandatoryNoticeModalProps {
 }
 
 export const MandatoryNoticeModal: React.FC<MandatoryNoticeModalProps> = ({ user, onAllRead }) => {
+    const { error: toastError } = useToast();
     const [currentNotice, setCurrentNotice] = useState<PlatformNotice | null>(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
@@ -78,7 +80,7 @@ export const MandatoryNoticeModal: React.FC<MandatoryNoticeModalProps> = ({ user
 
         } catch (err) {
             console.error("Error accepting notice", err);
-            alert("Erro ao confirmar leitura. Tente novamente.");
+            toastError("Erro ao confirmar leitura. Tente novamente.");
         } finally {
             setProcessing(false);
         }
