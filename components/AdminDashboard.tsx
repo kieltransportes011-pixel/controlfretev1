@@ -136,30 +136,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            // 1. Fetch Users
+            // 1. Fetch Users (uma única consulta no banco, já com a contagem de
+            // fretes via LEFT JOIN — evita 1 consulta extra por usuário e não
+            // traz CPF/dados sensíveis que essa tela nem usa).
             const { data: usersData, error: usersError } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .rpc('get_admin_users_with_freight_counts');
 
             if (usersError) throw usersError;
 
-            // 1.1 Enrich Users (Mocked for speed, ideally proper join or RPC)
-            const enrichedUsers = await Promise.all((usersData || []).map(async (u) => {
-                // Optimization: separate query for counts might be heavy for many users, 
-                // but acceptable for v1 admin dashboard
-                const { count } = await supabase
-                    .from('freights')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('user_id', u.id);
-
-                return {
-                    ...u,
-                    total_freights: count || 0
-                };
-            }));
-
-            setUsers(enrichedUsers);
+            setUsers(usersData || []);
 
             // 2. Fetch Tickets
             const { data: ticketsData } = await supabase
@@ -201,13 +186,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             // 4. Calculate Stats
             const now = new Date();
-            const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+            const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+            const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
             setStats({
                 totalUsers: usersData?.length || 0,
                 newUsersToday: usersData?.filter(u => u.created_at >= startOfDay).length || 0,
-                newUsersWeek: 0, // Todo
-                newUsersMonth: 0, // Todo
+                newUsersWeek: usersData?.filter(u => u.created_at >= startOfWeek).length || 0,
+                newUsersMonth: usersData?.filter(u => u.created_at >= startOfMonth).length || 0,
                 activeProUsers: usersData?.filter(u => u.is_premium).length || 0,
                 bannedUsers: usersData?.filter(u => u.account_status === 'banned').length || 0,
                 openTickets: ticketsData?.filter(t => t.status === 'open').length || 0,
@@ -430,7 +417,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                     {/* KPI GRID */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <StatBox label="Total Users" value={stats.totalUsers} icon={Users} trend="+12%" />
+                        <StatBox label="Total Users" value={stats.totalUsers} icon={Users} trend={stats.newUsersWeek > 0 ? `+${stats.newUsersWeek} na semana` : undefined} />
                         <StatBox label="Active Pro" value={stats.activeProUsers} icon={Shield} color="text-orange-500" />
                         <StatBox label="Tickets Open" value={stats.openTickets} icon={MessageCircle} color={stats.openTickets > 0 ? "text-red-500" : "text-gray-500"} />
                         <StatBox label="New Today" value={stats.newUsersToday} icon={Zap} unit="USERS" />
@@ -924,7 +911,7 @@ const StatBox = ({ label, value, icon: Icon, trend, unit, color = "text-white" }
                 {value}
                 {unit && <span className="text-[10px] text-gray-600 mb-1">{unit}</span>}
             </div>
-            {trend && <div className="text-[10px] text-green-500 font-bold mt-1">{trend} trend</div>}
+            {trend && <div className="text-[10px] text-green-500 font-bold mt-1">{trend}</div>}
         </div>
     </div>
 );
