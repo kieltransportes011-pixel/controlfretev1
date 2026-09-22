@@ -44,6 +44,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [commissions, setCommissions] = useState<any[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [usersPage, setUsersPage] = useState(1);
+    const [ticketStatusFilter, setTicketStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
 
     // Edit States
     const [editingUser, setEditingUser] = useState<any | null>(null);
@@ -336,6 +338,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const USERS_PAGE_SIZE = 20;
+    const usersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+    const paginatedUsers = filteredUsers.slice((usersPage - 1) * USERS_PAGE_SIZE, usersPage * USERS_PAGE_SIZE);
+
+    React.useEffect(() => {
+        setUsersPage(1);
+    }, [searchTerm]);
+
+    const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1 };
+
+    const sortedFilteredTickets = tickets
+        .filter(t => ticketStatusFilter === 'all' || t.status === ticketStatusFilter)
+        .slice()
+        .sort((a, b) => {
+            const weightDiff = (PRIORITY_WEIGHT[b.priority] || 0) - (PRIORITY_WEIGHT[a.priority] || 0);
+            if (weightDiff !== 0) return weightDiff;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
     if (loading) {
         return (
             <div className="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-50 text-white font-mono">
@@ -450,11 +471,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             <th className="px-6 py-4">Identity</th>
                                             <th className="px-6 py-4">Access Level</th>
                                             <th className="px-6 py-4">Status</th>
+                                            <th className="px-6 py-4 text-right">CF Coins</th>
                                             <th className="px-6 py-4 text-right">Activity</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
-                                        {filteredUsers.map(user => (
+                                        {paginatedUsers.map(user => (
                                             <tr
                                                 key={user.id}
                                                 className="hover:bg-white/5 transition-colors group cursor-pointer"
@@ -489,6 +511,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                         {user.account_status?.toUpperCase() || 'ACTIVE'}
                                                     </span>
                                                 </td>
+                                                <td className="px-6 py-4 text-right font-mono text-yellow-500">
+                                                    {user.cf_coins_balance ?? 0}
+                                                </td>
                                                 <td className="px-6 py-4 text-right font-mono text-gray-500">
                                                     {user.total_freights} <span className="text-[9px]">OPS</span>
                                                 </td>
@@ -497,6 +522,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     </tbody>
                                 </table>
                             </div>
+
+                            {usersTotalPages > 1 && (
+                                <div className="flex justify-between items-center px-2">
+                                    <span className="text-[10px] text-gray-600 font-mono">
+                                        {filteredUsers.length} OPERATORS • PAGE {usersPage}/{usersTotalPages}
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                                            disabled={usersPage === 1}
+                                            className="px-3 py-1.5 text-[10px] uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            Anterior
+                                        </button>
+                                        <button
+                                            onClick={() => setUsersPage(p => Math.min(usersTotalPages, p + 1))}
+                                            disabled={usersPage === usersTotalPages}
+                                            className="px-3 py-1.5 text-[10px] uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            Próxima
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -508,9 +557,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <Signal className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Incoming Transmissions</h2>
                                 </div>
+                                <div className="flex gap-1">
+                                    {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map(s => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setTicketStatusFilter(s)}
+                                            className={`px-3 py-1.5 text-[10px] uppercase font-bold border transition-colors ${ticketStatusFilter === s
+                                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                                : 'border-white/10 text-gray-500 hover:text-white'
+                                                }`}
+                                        >
+                                            {s === 'all' ? 'Todos' : s.replace('_', ' ')}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <div className="grid gap-2">
-                                {tickets.map(ticket => (
+                                {sortedFilteredTickets.map(ticket => (
                                     <div key={ticket.id} className="bg-[#0A0A0A] border border-white/10 p-4 flex justify-between items-center hover:border-blue-500/50 transition-colors cursor-pointer group" onClick={() => { setEditingTicket(ticket); setTicketReply(ticket.admin_reply || ''); setTicketStatus(ticket.status); }}>
                                         <div className="flex gap-4 items-center">
                                             <div className={`w-2 h-2 rounded-full ${ticket.status === 'open' ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
@@ -519,11 +582,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                 <div className="text-[10px] text-gray-500 font-mono">{ticket.category} • ID: {ticket.id.slice(0, 8)}</div>
                                             </div>
                                         </div>
-                                        <div className="text-[10px] bg-white/5 px-2 py-1 rounded-sm border border-white/10 text-gray-400">
-                                            {formatDate(ticket.created_at)}
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] font-bold px-2 py-1 border uppercase ${ticket.priority === 'high' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                ticket.priority === 'medium' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                                    'bg-white/5 text-gray-500 border-white/10'
+                                                }`}>
+                                                {ticket.priority}
+                                            </span>
+                                            <div className="text-[10px] bg-white/5 px-2 py-1 rounded-sm border border-white/10 text-gray-400">
+                                                {formatDate(ticket.created_at)}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
+                                {sortedFilteredTickets.length === 0 && (
+                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                        Nenhum chamado com esse filtro.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -816,8 +892,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         <div className="bg-black p-4 border border-white/5 mb-4">
                             <div className="text-white font-bold text-sm">{editingUser.name}</div>
                             <div className="text-[10px] text-gray-500 font-mono">{editingUser.email}</div>
-                            <div className="flex gap-4 mt-3 text-[10px] text-gray-400 font-mono">
+                            <div className="flex gap-4 mt-3 text-[10px] text-gray-400 font-mono flex-wrap">
                                 <span>OPS: {editingUser.total_freights ?? 0}</span>
+                                <span className="text-yellow-500">CF COINS: {editingUser.cf_coins_balance ?? 0}</span>
                                 <span>DESDE: {formatDate(editingUser.created_at)}</span>
                                 <span className={editingUser.account_status === 'banned' ? 'text-red-500' : 'text-green-500'}>
                                     {editingUser.account_status === 'banned' ? 'BANIDO' : 'ATIVO'}
