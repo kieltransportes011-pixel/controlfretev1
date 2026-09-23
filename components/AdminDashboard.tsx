@@ -58,6 +58,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [editingNotice, setEditingNotice] = useState<Partial<PlatformNotice> | null>(null);
     const [isSavingNotice, setIsSavingNotice] = useState(false);
     const [isSavingTicket, setIsSavingTicket] = useState(false);
+    const [broadcastTitle, setBroadcastTitle] = useState('');
+    const [broadcastBody, setBroadcastBody] = useState('');
+    const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
 
     const handleSaveTicketResponse = async () => {
         if (!editingTicket) {
@@ -306,6 +309,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         fetchDashboardData();
     };
 
+    const handleSendBroadcastPush = async () => {
+        if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
+        const confirmed = await confirmDialog({
+            message: `Enviar essa notificação push para TODOS os usuários com o app instalado? Essa ação não pode ser desfeita.`,
+            danger: true
+        });
+        if (!confirmed) return;
+
+        setIsSendingBroadcast(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('send-push-notification', {
+                body: { broadcast: true, title: broadcastTitle.trim(), body: broadcastBody.trim() }
+            });
+            if (error || data?.error) throw new Error(data?.error || error?.message || 'Erro desconhecido');
+            toastSuccess(`Push enviado: ${data.sent} de ${data.total} dispositivo(s).`);
+            setBroadcastTitle('');
+            setBroadcastBody('');
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro ao enviar push: ${e.message}`);
+        } finally {
+            setIsSendingBroadcast(false);
+        }
+    };
+
+    const handleExportUsersCSV = () => {
+        const headers = ['Nome', 'Email', 'Plano', 'Status Assinatura', 'Status Conta', 'Fretes', 'CF Coins', 'Criado em'];
+        const rows = filteredUsers.map(u => [
+            u.name, u.email, u.plano, u.status_assinatura, u.account_status,
+            u.total_freights ?? 0, u.cf_coins_balance ?? 0, u.created_at
+        ]);
+        const csv = [headers, ...rows]
+            .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `controlfrete_usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    };
+
     const userLookup = React.useMemo(() => {
         const map = new Map<string, any>();
         users.forEach(u => map.set(u.id, u));
@@ -452,15 +500,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <Crosshair className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Database Registry</h2>
                                 </div>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
-                                    <input
-                                        type="text"
-                                        placeholder="SEARCH_QUERY..."
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                        className="bg-black border border-white/10 pl-10 pr-4 py-2 w-64 text-xs text-white focus:border-orange-500 focus:ring-0 outline-none transition-colors"
-                                    />
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleExportUsersCSV}
+                                        className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase font-bold border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+                                    >
+                                        <FileText className="w-3.5 h-3.5" /> Exportar CSV
+                                    </button>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
+                                        <input
+                                            type="text"
+                                            placeholder="SEARCH_QUERY..."
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                            className="bg-black border border-white/10 pl-10 pr-4 py-2 w-64 text-xs text-white focus:border-orange-500 focus:ring-0 outline-none transition-colors"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -695,6 +751,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {/* --- TAB CONTENT: NOTICES --- */}
                     {activeTab === 'NOTICES' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
+                            <div className="bg-[#0A0A0A] border border-orange-500/20 p-6">
+                                <div className="flex items-center gap-2 text-orange-500 mb-4">
+                                    <Zap className="w-4 h-4" />
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-white">Push Manual (Todos os Usuários)</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    <input
+                                        type="text"
+                                        className="w-full bg-black border border-white/10 p-3 text-sm text-white outline-none focus:border-orange-500"
+                                        placeholder="Título da notificação"
+                                        value={broadcastTitle}
+                                        onChange={e => setBroadcastTitle(e.target.value)}
+                                        maxLength={80}
+                                    />
+                                    <textarea
+                                        className="w-full h-20 bg-black border border-white/10 p-3 text-xs text-white outline-none focus:border-orange-500"
+                                        placeholder="Mensagem..."
+                                        value={broadcastBody}
+                                        onChange={e => setBroadcastBody(e.target.value)}
+                                        maxLength={180}
+                                    />
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={handleSendBroadcastPush}
+                                            disabled={isSendingBroadcast || !broadcastTitle.trim() || !broadcastBody.trim()}
+                                            className="px-4 py-2 bg-orange-600 text-black text-xs uppercase font-bold hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isSendingBroadcast ? 'Enviando...' : 'Enviar Push para Todos'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-lg font-bold text-white uppercase tracking-tighter">System Broadcasts</h2>
                                 <button

@@ -144,11 +144,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { user_id, title, body, data } = await req.json();
+    const { user_id, user_ids, broadcast, title, body, data } = await req.json();
 
-    if (!user_id || !title || !body) {
-      throw new Error('user_id, title e body são obrigatórios.');
+    if (!title || !body) {
+      throw new Error('title e body são obrigatórios.');
     }
+    if (!user_id && !broadcast && (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0)) {
+      throw new Error('Informe user_id, user_ids ou broadcast.');
+    }
+    // Broadcast é uma ação de admin (o próprio check de role acima já barra
+    // qualquer chamador não-admin/não-serviço antes de chegar aqui).
 
     const serviceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
     if (!serviceAccountRaw) {
@@ -161,16 +166,21 @@ Deno.serve(async (req) => {
       cronAuthKey || serviceRoleKey
     );
 
-    const { data: tokens, error: tokensError } = await supabase
-      .from('push_tokens')
-      .select('token')
-      .eq('user_id', user_id);
+    let tokensQuery = supabase.from('push_tokens').select('token, user_id');
+    if (broadcast) {
+      // sem filtro: todos os dispositivos registrados
+    } else if (user_ids) {
+      tokensQuery = tokensQuery.in('user_id', user_ids);
+    } else {
+      tokensQuery = tokensQuery.eq('user_id', user_id);
+    }
+    const { data: tokens, error: tokensError } = await tokensQuery;
 
     if (tokensError) throw tokensError;
 
     if (!tokens || tokens.length === 0) {
       return new Response(
-        JSON.stringify({ sent: 0, message: 'Usuário sem dispositivos registrados para push.' }),
+        JSON.stringify({ sent: 0, total: 0, message: 'Nenhum dispositivo registrado para push.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -193,8 +203,16 @@ Deno.serve(async (req) => {
       await supabase.from('push_tokens').delete().in('token', deadTokens);
     }
 
+    const sent = results.filter((r) => r.ok).length;
     return new Response(
-      JSON.stringify({ sent: results.filter((r) => r.ok).length, results }),
+      // Pra um único destinatário mantém "results" detalhado (usado pelo fluxo
+      // de resposta de ticket); em broadcast/multi só o resumo, pra não gerar
+      // uma resposta gigante com centenas de resultados por token.
+      JSON.stringify(
+        broadcast || user_ids
+          ? { sent, total: tokens.length }
+          : { sent, results }
+      ),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
