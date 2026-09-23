@@ -403,29 +403,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     if (loading) {
         return (
-            <div className="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-50 text-white font-mono">
-                <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-                <p className="animate-pulse tracking-widest text-xs">SYSTEM_INITIALIZING...</p>
+            <div className="fixed inset-0 bg-[#0A1929] flex flex-col items-center justify-center z-50 text-white">
+                <Loader2 className="w-12 h-12 text-blue-400 animate-spin mb-4" />
+                <p className="animate-pulse tracking-widest text-xs font-mono text-slate-400">SYSTEM_INITIALIZING...</p>
             </div>
         );
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-[#050505] text-gray-300 font-mono flex overflow-hidden selection:bg-orange-500/30">
+        <div className="fixed inset-0 z-50 bg-[#0A1929] text-slate-300 flex overflow-hidden selection:bg-blue-500/30">
             {/* --- SIDEBAR --- */}
-            <aside className="w-64 border-r border-white/10 bg-[#080808] flex flex-col">
+            <aside className="w-64 border-r border-white/10 bg-[#0F2A44] flex flex-col">
                 <div className="h-16 flex items-center px-6 border-b border-white/10 gap-3">
-                    <div className="w-8 h-8 bg-orange-600 flex items-center justify-center rounded-sm">
-                        <Terminal className="w-5 h-5 text-black" />
+                    <div className="w-8 h-8 bg-blue-600 flex items-center justify-center rounded-md">
+                        <Terminal className="w-5 h-5 text-white" />
                     </div>
                     <div>
                         <h1 className="text-sm font-bold text-white tracking-widest leading-none">CONTROL</h1>
-                        <span className="text-[10px] text-orange-500 tracking-[0.2em] leading-none">OVERSEER</span>
+                        <span className="text-[10px] text-blue-400 tracking-[0.2em] leading-none">OVERSEER</span>
                     </div>
                 </div>
 
                 <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
-                    <div className="px-4 py-2 text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <div className="px-4 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
                         <Cpu className="w-3 h-3" /> Modules
                     </div>
                     {[
@@ -439,13 +439,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id as TabView)}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-sm transition-all border-l-2 ${activeTab === item.id
-                                ? 'bg-white/5 border-orange-500 text-white shadow-[inset_10px_0_20px_-10px_rgba(255,69,0,0.1)]'
-                                : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5'
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition-all border-l-2 ${activeTab === item.id
+                                ? 'bg-white/5 border-blue-500 text-white shadow-[inset_10px_0_20px_-10px_rgba(47,128,237,0.15)]'
+                                : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
-                                <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-orange-500' : ''}`} />
+                                <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-blue-400' : ''}`} />
                                 <span className="text-xs font-bold uppercase tracking-wider">{item.label}</span>
                             </div>
                             {item.badge && (
@@ -458,7 +458,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 </nav>
 
                 <div className="p-4 border-t border-white/10">
-                    <button onClick={onBack} className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-950/20 transition-all border border-transparent hover:border-red-900/30 rounded-sm group">
+                    <button onClick={onBack} className="w-full flex items-center gap-2 px-4 py-3 text-red-400 hover:bg-red-950/20 transition-all border border-transparent hover:border-red-900/30 rounded-md group">
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                         <span className="text-xs font-bold uppercase tracking-widest">Desconectar</span>
                     </button>
@@ -466,13 +466,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             </aside>
 
             {/* --- MAIN CONTENT --- */}
-            <main className="flex-1 flex flex-col relative bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-100">
+            <main className="flex-1 flex flex-col relative bg-[#0A1929]">
 
                 {/* Header */}
-                <header className="h-16 border-b border-white/10 bg-[#080808]/90 backdrop-blur flex items-center justify-between px-8">
+                <header className="h-16 border-b border-white/10 bg-[#0F2A44]/60 backdrop-blur flex items-center justify-between px-8">
                     <div className="flex items-center gap-4">
                         <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                             System Status: <span className="text-white">ONLINE</span>
                         </span>
                     </div>
@@ -483,42 +483,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {/* KPI GRID */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                         <StatBox label="Total Users" value={stats.totalUsers} icon={Users} trend={stats.newUsersWeek > 0 ? `+${stats.newUsersWeek} na semana` : undefined} />
-                        <StatBox label="Active Pro" value={stats.activeProUsers} icon={Shield} color="text-orange-500" />
-                        <StatBox label="Tickets Open" value={stats.openTickets} icon={MessageCircle} color={stats.openTickets > 0 ? "text-red-500" : "text-gray-500"} />
+                        <StatBox label="Active Pro" value={stats.activeProUsers} icon={Shield} color="text-blue-400" />
+                        <StatBox label="Tickets Open" value={stats.openTickets} icon={MessageCircle} color={stats.openTickets > 0 ? "text-red-400" : "text-slate-400"} />
                         <StatBox label="New Today" value={stats.newUsersToday} icon={Zap} unit="USERS" />
                     </div>
 
                     {/* --- TAB CONTENT: USERS --- */}
                     {activeTab === 'USERS' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
-                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
-                                <div className="flex items-center gap-2 text-orange-500">
+                            <div className="flex justify-between items-center bg-[#12283F] p-4 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-2 text-blue-400">
                                     <Crosshair className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Database Registry</h2>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={handleExportUsersCSV}
-                                        className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase font-bold border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+                                        className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase font-bold border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors rounded-md"
                                     >
                                         <FileText className="w-3.5 h-3.5" /> Exportar CSV
                                     </button>
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
+                                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
                                         <input
                                             type="text"
                                             placeholder="SEARCH_QUERY..."
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
-                                            className="bg-black border border-white/10 pl-10 pr-4 py-2 w-64 text-xs text-white focus:border-orange-500 focus:ring-0 outline-none transition-colors"
+                                            className="bg-[#0B1F33] border border-white/10 pl-10 pr-4 py-2 w-64 text-xs text-white focus:border-blue-500 focus:ring-0 outline-none transition-colors rounded-md"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="border border-white/10 rounded-sm overflow-hidden bg-[#0A0A0A]">
+                            <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F]">
                                 <table className="w-full text-xs text-left">
-                                    <thead className="bg-black text-gray-500 uppercase font-bold border-b border-white/10">
+                                    <thead className="bg-[#0B1F33] text-slate-400 uppercase font-bold border-b border-white/10">
                                         <tr>
                                             <th className="px-6 py-4">Identity</th>
                                             <th className="px-6 py-4">Access Level</th>
@@ -540,33 +540,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             >
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 group-hover:border-orange-500/50 transition-colors">
+                                                        <div className="w-8 h-8 bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 group-hover:border-blue-500/50 transition-colors rounded-md">
                                                             {user.name?.[0]}
                                                         </div>
                                                         <div>
                                                             <div className="font-bold text-white uppercase">{user.name}</div>
-                                                            <div className="text-[10px] text-gray-600">{user.email}</div>
+                                                            <div className="text-[10px] text-slate-500">{user.email}</div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {user.is_premium ? (
-                                                        <span className="text-[10px] font-bold bg-orange-500/10 text-orange-500 px-2 py-1 border border-orange-500/20">PRO_LICENSE</span>
+                                                        <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-2 py-1 border border-blue-500/20 rounded-sm">PRO_LICENSE</span>
                                                     ) : (
-                                                        <span className="text-[10px] font-bold text-gray-500">STANDARD</span>
+                                                        <span className="text-[10px] font-bold text-slate-500">STANDARD</span>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`text-[10px] font-bold px-2 py-1 border ${user.account_status === 'banned' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                        'bg-green-500/10 text-green-500 border-green-500/20'
+                                                    <span className={`text-[10px] font-bold px-2 py-1 border rounded-sm ${user.account_status === 'banned' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                                        'bg-green-500/10 text-green-400 border-green-500/20'
                                                         }`}>
                                                         {user.account_status?.toUpperCase() || 'ACTIVE'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-mono text-yellow-500">
+                                                <td className="px-6 py-4 text-right font-mono text-amber-400">
                                                     {user.cf_coins_balance ?? 0}
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-mono text-gray-500">
+                                                <td className="px-6 py-4 text-right font-mono text-slate-400">
                                                     {user.total_freights} <span className="text-[9px]">OPS</span>
                                                 </td>
                                             </tr>
@@ -577,21 +577,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                             {usersTotalPages > 1 && (
                                 <div className="flex justify-between items-center px-2">
-                                    <span className="text-[10px] text-gray-600 font-mono">
+                                    <span className="text-[10px] text-slate-500 font-mono">
                                         {filteredUsers.length} OPERATORS • PAGE {usersPage}/{usersTotalPages}
                                     </span>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => setUsersPage(p => Math.max(1, p - 1))}
                                             disabled={usersPage === 1}
-                                            className="px-3 py-1.5 text-[10px] uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            className="px-3 py-1.5 text-[10px] uppercase font-bold border border-white/10 text-slate-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed rounded-md"
                                         >
                                             Anterior
                                         </button>
                                         <button
                                             onClick={() => setUsersPage(p => Math.min(usersTotalPages, p + 1))}
                                             disabled={usersPage === usersTotalPages}
-                                            className="px-3 py-1.5 text-[10px] uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            className="px-3 py-1.5 text-[10px] uppercase font-bold border border-white/10 text-slate-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed rounded-md"
                                         >
                                             Próxima
                                         </button>
@@ -604,8 +604,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {/* --- TAB CONTENT: SUPPORT --- */}
                     {activeTab === 'SUPPORT' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
-                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
-                                <div className="flex items-center gap-2 text-blue-500">
+                            <div className="flex justify-between items-center bg-[#12283F] p-4 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-2 text-blue-400">
                                     <Signal className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Incoming Transmissions</h2>
                                 </div>
@@ -614,9 +614,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         <button
                                             key={s}
                                             onClick={() => setTicketStatusFilter(s)}
-                                            className={`px-3 py-1.5 text-[10px] uppercase font-bold border transition-colors ${ticketStatusFilter === s
+                                            className={`px-3 py-1.5 text-[10px] uppercase font-bold border transition-colors rounded-md ${ticketStatusFilter === s
                                                 ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                                                : 'border-white/10 text-gray-500 hover:text-white'
+                                                : 'border-white/10 text-slate-400 hover:text-white'
                                                 }`}
                                         >
                                             {s === 'all' ? 'Todos' : s.replace('_', ' ')}
@@ -626,29 +626,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             </div>
                             <div className="grid gap-2">
                                 {sortedFilteredTickets.map(ticket => (
-                                    <div key={ticket.id} className="bg-[#0A0A0A] border border-white/10 p-4 flex justify-between items-center hover:border-blue-500/50 transition-colors cursor-pointer group" onClick={() => { setEditingTicket(ticket); setTicketReply(ticket.admin_reply || ''); setTicketStatus(ticket.status); }}>
+                                    <div key={ticket.id} className="bg-[#12283F] border border-white/10 p-4 flex justify-between items-center hover:border-blue-500/50 transition-colors cursor-pointer group rounded-md" onClick={() => { setEditingTicket(ticket); setTicketReply(ticket.admin_reply || ''); setTicketStatus(ticket.status); }}>
                                         <div className="flex gap-4 items-center">
-                                            <div className={`w-2 h-2 rounded-full ${ticket.status === 'open' ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                                            <div className={`w-2 h-2 rounded-full ${ticket.status === 'open' ? 'bg-red-400 animate-pulse' : 'bg-green-400'}`} />
                                             <div>
                                                 <div className="text-white font-bold text-sm uppercase group-hover:text-blue-400 transition-colors">{ticket.title}</div>
-                                                <div className="text-[10px] text-gray-500 font-mono">{ticket.category} • ID: {ticket.id.slice(0, 8)}</div>
+                                                <div className="text-[10px] text-slate-500 font-mono">{ticket.category} • ID: {ticket.id.slice(0, 8)}</div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-[9px] font-bold px-2 py-1 border uppercase ${ticket.priority === 'high' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                ticket.priority === 'medium' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
-                                                    'bg-white/5 text-gray-500 border-white/10'
+                                            <span className={`text-[9px] font-bold px-2 py-1 border uppercase rounded-sm ${ticket.priority === 'high' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                                ticket.priority === 'medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                    'bg-white/5 text-slate-400 border-white/10'
                                                 }`}>
                                                 {ticket.priority}
                                             </span>
-                                            <div className="text-[10px] bg-white/5 px-2 py-1 rounded-sm border border-white/10 text-gray-400">
+                                            <div className="text-[10px] bg-white/5 px-2 py-1 rounded-sm border border-white/10 text-slate-400">
                                                 {formatDate(ticket.created_at)}
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                                 {sortedFilteredTickets.length === 0 && (
-                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                    <div className="px-6 py-16 text-center text-slate-500 text-xs uppercase tracking-widest">
                                         Nenhum chamado com esse filtro.
                                     </div>
                                 )}
@@ -660,31 +660,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {activeTab === 'REVENUE' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                <StatBox label="Receita Total" value={formatCurrency(revenueStats.totalAllTime)} icon={DollarSign} color="text-green-500" />
-                                <StatBox label="Receita Este Mês" value={formatCurrency(revenueStats.totalThisMonth)} icon={Calendar} color="text-orange-500" />
+                                <StatBox label="Receita Total" value={formatCurrency(revenueStats.totalAllTime)} icon={DollarSign} color="text-green-400" />
+                                <StatBox label="Receita Este Mês" value={formatCurrency(revenueStats.totalThisMonth)} icon={Calendar} color="text-blue-400" />
                                 <StatBox label="Pagamentos Este Mês" value={revenueStats.countThisMonth} icon={TrendingUp} />
                             </div>
 
-                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
-                                <div className="flex items-center gap-2 text-green-500">
+                            <div className="flex justify-between items-center bg-[#12283F] p-4 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-2 text-green-400">
                                     <DollarSign className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Transaction Ledger</h2>
                                 </div>
-                                <span className="text-[10px] text-gray-600 font-mono">{payments.length} REGISTROS</span>
+                                <span className="text-[10px] text-slate-500 font-mono">{payments.length} REGISTROS</span>
                             </div>
 
-                            <div className="border border-white/10 rounded-sm overflow-hidden bg-[#0A0A0A] divide-y divide-white/5">
+                            <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F] divide-y divide-white/5">
                                 {payments.map(p => {
                                     const u = userLookup.get(p.user_id);
                                     return (
                                         <div key={p.payment_id} className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
                                             <div>
                                                 <div className="text-white text-xs font-bold">{u?.name || 'Usuário desconhecido'}</div>
-                                                <div className="text-[10px] text-gray-500 font-mono">{u?.email || p.user_id} • {p.payment_method}</div>
+                                                <div className="text-[10px] text-slate-500 font-mono">{u?.email || p.user_id} • {p.payment_method}</div>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-white text-sm font-mono font-bold">{formatCurrency(p.amount)}</div>
-                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase ${p.status === 'approved' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase rounded-sm ${p.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/5 text-slate-400 border-white/10'}`}>
                                                     {p.status}
                                                 </span>
                                             </div>
@@ -692,7 +692,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     );
                                 })}
                                 {payments.length === 0 && (
-                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                    <div className="px-6 py-16 text-center text-slate-500 text-xs uppercase tracking-widest">
                                         Nenhum pagamento registrado.
                                     </div>
                                 )}
@@ -704,31 +704,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {activeTab === 'REFERRALS' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <StatBox label="Comissões Pendentes" value={formatCurrency(commissionStats.pendingTotal)} icon={Clock} color="text-orange-500" />
-                                <StatBox label="Comissões Pagas" value={formatCurrency(commissionStats.paidTotal)} icon={CheckCircle} color="text-green-500" />
+                                <StatBox label="Comissões Pendentes" value={formatCurrency(commissionStats.pendingTotal)} icon={Clock} color="text-amber-400" />
+                                <StatBox label="Comissões Pagas" value={formatCurrency(commissionStats.paidTotal)} icon={CheckCircle} color="text-green-400" />
                             </div>
 
-                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
-                                <div className="flex items-center gap-2 text-orange-500">
+                            <div className="flex justify-between items-center bg-[#12283F] p-4 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-2 text-blue-400">
                                     <TrendingUp className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Referral Network</h2>
                                 </div>
-                                <span className="text-[10px] text-gray-600 font-mono">{commissions.length} REGISTROS</span>
+                                <span className="text-[10px] text-slate-500 font-mono">{commissions.length} REGISTROS</span>
                             </div>
 
-                            <div className="border border-white/10 rounded-sm overflow-hidden bg-[#0A0A0A] divide-y divide-white/5">
+                            <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F] divide-y divide-white/5">
                                 {commissions.map(c => {
                                     const referrer = userLookup.get(c.referrer_id);
                                     const referred = userLookup.get(c.referred_id);
                                     return (
                                         <div key={c.id} className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
                                             <div>
-                                                <div className="text-white text-xs font-bold">{referrer?.name || 'Desconhecido'} <span className="text-gray-500">indicou</span> {referred?.name || 'Desconhecido'}</div>
-                                                <div className="text-[10px] text-gray-500 font-mono">{c.commission_percentage}% de {formatCurrency(c.base_amount)}</div>
+                                                <div className="text-white text-xs font-bold">{referrer?.name || 'Desconhecido'} <span className="text-slate-500">indicou</span> {referred?.name || 'Desconhecido'}</div>
+                                                <div className="text-[10px] text-slate-500 font-mono">{c.commission_percentage}% de {formatCurrency(c.base_amount)}</div>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-white text-sm font-mono font-bold">{formatCurrency(c.amount)}</div>
-                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase ${c.status === 'paid' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'}`}>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase rounded-sm ${c.status === 'paid' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                                                     {c.status}
                                                 </span>
                                             </div>
@@ -736,7 +736,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     );
                                 })}
                                 {commissions.length === 0 && (
-                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                    <div className="px-6 py-16 text-center text-slate-500 text-xs uppercase tracking-widest">
                                         Nenhuma comissão de indicação registrada.
                                     </div>
                                 )}
@@ -747,22 +747,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {/* --- TAB CONTENT: NOTICES --- */}
                     {activeTab === 'NOTICES' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
-                            <div className="bg-[#0A0A0A] border border-orange-500/20 p-6">
-                                <div className="flex items-center gap-2 text-orange-500 mb-4">
+                            <div className="bg-[#12283F] border border-blue-500/20 p-6 rounded-md">
+                                <div className="flex items-center gap-2 text-blue-400 mb-4">
                                     <Zap className="w-4 h-4" />
                                     <h3 className="text-sm font-bold uppercase tracking-widest text-white">Push Manual (Todos os Usuários)</h3>
                                 </div>
                                 <div className="space-y-3">
                                     <input
                                         type="text"
-                                        className="w-full bg-black border border-white/10 p-3 text-sm text-white outline-none focus:border-orange-500"
+                                        className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
                                         placeholder="Título da notificação"
                                         value={broadcastTitle}
                                         onChange={e => setBroadcastTitle(e.target.value)}
                                         maxLength={80}
                                     />
                                     <textarea
-                                        className="w-full h-20 bg-black border border-white/10 p-3 text-xs text-white outline-none focus:border-orange-500"
+                                        className="w-full h-20 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 rounded-md"
                                         placeholder="Mensagem..."
                                         value={broadcastBody}
                                         onChange={e => setBroadcastBody(e.target.value)}
@@ -772,7 +772,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         <button
                                             onClick={handleSendBroadcastPush}
                                             disabled={isSendingBroadcast || !broadcastTitle.trim() || !broadcastBody.trim()}
-                                            className="px-4 py-2 bg-orange-600 text-black text-xs uppercase font-bold hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-md"
                                         >
                                             {isSendingBroadcast ? 'Enviando...' : 'Enviar Push para Todos'}
                                         </button>
@@ -784,7 +784,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <h2 className="text-lg font-bold text-white uppercase tracking-tighter">System Broadcasts</h2>
                                 <button
                                     onClick={() => setEditingNotice({ is_active: true, level: 'info' })}
-                                    className="bg-orange-600 text-black px-4 py-2 text-xs font-bold uppercase hover:bg-orange-500 transition-colors"
+                                    className="bg-blue-600 text-white px-4 py-2 text-xs font-bold uppercase hover:bg-blue-500 transition-colors rounded-md"
                                 >
                                     + New Broadcast
                                 </button>
@@ -792,17 +792,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {notices.map(notice => (
-                                    <div key={notice.id} className="bg-[#0A0A0A] border border-white/10 p-6 relative group hover:border-orange-500/30 transition-all">
+                                    <div key={notice.id} className="bg-[#12283F] border border-white/10 p-6 relative group hover:border-blue-500/30 transition-all rounded-md">
                                         <div className="absolute top-4 right-4 flex gap-2">
-                                            <button onClick={() => setEditingNotice(notice)} className="text-gray-600 hover:text-white"><Edit2 className="w-3 h-3" /></button>
-                                            <button onClick={() => handleDeleteNotice(notice.id)} className="text-gray-600 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
+                                            <button onClick={() => setEditingNotice(notice)} className="text-slate-500 hover:text-white"><Edit2 className="w-3 h-3" /></button>
+                                            <button onClick={() => handleDeleteNotice(notice.id)} className="text-slate-500 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                                         </div>
-                                        <div className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase mb-3 border ${notice.level === 'critical' ? 'border-red-500/30 text-red-500' : 'border-blue-500/30 text-blue-500'
+                                        <div className={`inline-block px-2 py-0.5 text-[9px] font-bold uppercase mb-3 border rounded-sm ${notice.level === 'critical' ? 'border-red-500/30 text-red-400' : 'border-blue-500/30 text-blue-400'
                                             }`}>
                                             {notice.level}
                                         </div>
                                         <h3 className="text-white font-bold text-sm uppercase mb-2">{notice.title}</h3>
-                                        <p className="text-gray-500 text-xs leading-relaxed">{notice.content}</p>
+                                        <p className="text-slate-400 text-xs leading-relaxed">{notice.content}</p>
                                     </div>
                                 ))}
                             </div>
@@ -812,33 +812,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                     {/* --- TAB CONTENT: LOGS --- */}
                     {activeTab === 'LOGS' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
-                            <div className="flex justify-between items-center bg-[#0a0a0a] p-4 border border-white/10 rounded-sm">
-                                <div className="flex items-center gap-2 text-orange-500">
+                            <div className="flex justify-between items-center bg-[#12283F] p-4 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-2 text-blue-400">
                                     <Activity className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Audit Trail</h2>
                                 </div>
-                                <span className="text-[10px] text-gray-600 font-mono">{logs.length} ENTRIES</span>
+                                <span className="text-[10px] text-slate-500 font-mono">{logs.length} ENTRIES</span>
                             </div>
 
-                            <div className="border border-white/10 rounded-sm overflow-hidden bg-[#0A0A0A] divide-y divide-white/5">
+                            <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F] divide-y divide-white/5">
                                 {logs.map(log => (
                                     <div key={log.id} className="px-6 py-4 flex items-start gap-4 hover:bg-white/5 transition-colors">
-                                        <span className={`shrink-0 mt-0.5 text-[9px] font-bold px-2 py-1 border uppercase ${log.target_type === 'user' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
-                                            log.target_type === 'support_ticket' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                                'bg-white/5 text-gray-400 border-white/10'
+                                        <span className={`shrink-0 mt-0.5 text-[9px] font-bold px-2 py-1 border uppercase rounded-sm ${log.target_type === 'user' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                            log.target_type === 'support_ticket' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                'bg-white/5 text-slate-400 border-white/10'
                                             }`}>
                                             {log.target_type}
                                         </span>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-white text-xs font-bold uppercase">{log.action}</div>
-                                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">{log.description}</div>
+                                            <div className="text-[10px] text-slate-500 font-mono mt-0.5">{log.description}</div>
                                         </div>
-                                        <span className="shrink-0 text-[10px] text-gray-600 font-mono">{formatDate(log.created_at)}</span>
+                                        <span className="shrink-0 text-[10px] text-slate-500 font-mono">{formatDate(log.created_at)}</span>
                                     </div>
                                 ))}
 
                                 {logs.length === 0 && (
-                                    <div className="px-6 py-16 text-center text-gray-600 text-xs uppercase tracking-widest">
+                                    <div className="px-6 py-16 text-center text-slate-500 text-xs uppercase tracking-widest">
                                         No audit entries recorded.
                                     </div>
                                 )}
@@ -852,24 +852,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             {/* --- MODALS (Overlays) --- */}
             {/* TICKET EDITOR */}
             {editingTicket && (
-                <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-[#0f0f0f] border border-white/10 w-full max-w-lg p-6 shadow-2xl">
+                <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-6 shadow-2xl rounded-lg">
                         <h3 className="text-white font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <MessageCircle className="w-4 h-4 text-blue-500" /> Response Terminal
+                            <MessageCircle className="w-4 h-4 text-blue-400" /> Response Terminal
                         </h3>
 
-                        <div className="bg-black p-4 border border-white/5 mb-4 text-xs text-gray-400 font-mono">
-                            <p className="mb-2 text-gray-500 uppercase">User Query:</p>
+                        <div className="bg-[#0B1F33] p-4 border border-white/5 mb-4 text-xs text-slate-400 font-mono rounded-md">
+                            <p className="mb-2 text-slate-500 uppercase">User Query:</p>
                             {editingTicket.description}
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="text-[10px] uppercase font-bold text-gray-500">Admin Response</label>
+                                <label className="text-[10px] uppercase font-bold text-slate-500">Admin Response</label>
                                 <textarea
                                     value={ticketReply}
                                     onChange={e => setTicketReply(e.target.value)}
-                                    className="w-full h-32 bg-black border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500"
+                                    className="w-full h-32 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 rounded-md"
                                     placeholder="Type response..."
                                 />
                             </div>
@@ -877,15 +877,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <select
                                     value={ticketStatus}
                                     onChange={e => setTicketStatus(e.target.value)}
-                                    className="bg-black border border-white/10 text-xs text-white p-2 outline-none"
+                                    className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2 outline-none rounded-md"
                                 >
                                     <option value="open">OPEN</option>
                                     <option value="in_progress">IN PROGRESS</option>
                                     <option value="resolved">RESOLVED</option>
                                 </select>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setEditingTicket(null)} className="px-4 py-2 text-xs uppercase font-bold text-gray-500 hover:text-white" disabled={isSavingTicket}>Cancel</button>
-                                    <button onClick={handleSaveTicketResponse} disabled={isSavingTicket} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500">
+                                    <button onClick={() => setEditingTicket(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white" disabled={isSavingTicket}>Cancel</button>
+                                    <button onClick={handleSaveTicketResponse} disabled={isSavingTicket} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 rounded-md">
                                         {isSavingTicket ? 'Transmitting...' : 'Transmit'}
                                     </button>
                                 </div>
@@ -897,21 +897,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             {/* NOTICE EDITOR */}
             {editingNotice && (
-                <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-[#0f0f0f] border border-white/10 w-full max-w-lg p-6 shadow-2xl">
+                <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-6 shadow-2xl rounded-lg">
                         <h3 className="text-white font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <Megaphone className="w-4 h-4 text-orange-500" /> Broadcast System
+                            <Megaphone className="w-4 h-4 text-blue-400" /> Broadcast System
                         </h3>
                         <div className="space-y-4">
                             <input
                                 type="text"
-                                className="w-full bg-black border border-white/10 p-3 text-sm text-white outline-none focus:border-orange-500"
+                                className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
                                 placeholder="NOTICE TITLE"
                                 value={editingNotice.title || ''}
                                 onChange={e => setEditingNotice({ ...editingNotice, title: e.target.value })}
                             />
                             <textarea
-                                className="w-full h-32 bg-black border border-white/10 p-3 text-xs text-white outline-none focus:border-orange-500"
+                                className="w-full h-32 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 rounded-md"
                                 placeholder="Message content..."
                                 value={editingNotice.content || ''}
                                 onChange={e => setEditingNotice({ ...editingNotice, content: e.target.value })}
@@ -919,20 +919,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                             <div className="flex gap-4">
                                 <select
-                                    className="bg-black border border-white/10 text-xs text-white p-2 outline-none flex-1"
+                                    className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2 outline-none flex-1 rounded-md"
                                     value={editingNotice.level || 'info'}
                                     onChange={e => setEditingNotice({ ...editingNotice, level: e.target.value as any })}
                                 >
-                                    <option value="info">Info (Blue)</option>
-                                    <option value="important">Important (Orange)</option>
-                                    <option value="critical">Critical (Red)</option>
+                                    <option value="info">Info (Azul)</option>
+                                    <option value="important">Important (Âmbar)</option>
+                                    <option value="critical">Critical (Vermelho)</option>
                                 </select>
 
                                 <div className="flex flex-col gap-2">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            className="w-4 h-4 rounded border-white/10 bg-black text-orange-600 focus:ring-orange-500"
+                                            className="w-4 h-4 rounded border-white/10 bg-[#0B1F33] text-blue-600 focus:ring-blue-500"
                                             checked={editingNotice.is_mandatory || false}
                                             onChange={e => setEditingNotice({ ...editingNotice, is_mandatory: e.target.checked })}
                                         />
@@ -941,7 +941,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            className="w-4 h-4 rounded border-white/10 bg-black text-green-600 focus:ring-green-500"
+                                            className="w-4 h-4 rounded border-white/10 bg-[#0B1F33] text-green-600 focus:ring-green-500"
                                             checked={editingNotice.is_active ?? true}
                                             onChange={e => setEditingNotice({ ...editingNotice, is_active: e.target.checked })}
                                         />
@@ -951,8 +951,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             </div>
 
                             <div className="flex justify-end gap-2 mt-4">
-                                <button onClick={() => setEditingNotice(null)} className="px-4 py-2 text-xs uppercase font-bold text-gray-500 hover:text-white">Abort</button>
-                                <button onClick={handleSaveNotice} className="px-4 py-2 bg-orange-600 text-black text-xs uppercase font-bold hover:bg-orange-500">
+                                <button onClick={() => setEditingNotice(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white">Abort</button>
+                                <button onClick={handleSaveNotice} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 rounded-md">
                                     {isSavingNotice ? 'Saving...' : 'Deploy Broadcast'}
                                 </button>
                             </div>
@@ -963,25 +963,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
             {/* USER EDITOR */}
             {editingUser && (
-                <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-[#0f0f0f] border border-white/10 w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto rounded-lg">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-white font-bold uppercase tracking-widest flex items-center gap-2">
-                                <Users className="w-4 h-4 text-orange-500" /> Operator Profile
+                                <Users className="w-4 h-4 text-blue-400" /> Operator Profile
                             </h3>
-                            <button onClick={() => setEditingUser(null)} className="text-gray-500 hover:text-white">
+                            <button onClick={() => setEditingUser(null)} className="text-slate-500 hover:text-white">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
 
-                        <div className="bg-black p-4 border border-white/5 mb-4">
+                        <div className="bg-[#0B1F33] p-4 border border-white/5 mb-4 rounded-md">
                             <div className="text-white font-bold text-sm">{editingUser.name}</div>
-                            <div className="text-[10px] text-gray-500 font-mono">{editingUser.email}</div>
-                            <div className="flex gap-4 mt-3 text-[10px] text-gray-400 font-mono flex-wrap">
+                            <div className="text-[10px] text-slate-500 font-mono">{editingUser.email}</div>
+                            <div className="flex gap-4 mt-3 text-[10px] text-slate-400 font-mono flex-wrap">
                                 <span>OPS: {editingUser.total_freights ?? 0}</span>
-                                <span className="text-yellow-500">CF COINS: {editingUser.cf_coins_balance ?? 0}</span>
+                                <span className="text-amber-400">CF COINS: {editingUser.cf_coins_balance ?? 0}</span>
                                 <span>DESDE: {formatDate(editingUser.created_at)}</span>
-                                <span className={editingUser.account_status === 'banned' ? 'text-red-500' : 'text-green-500'}>
+                                <span className={editingUser.account_status === 'banned' ? 'text-red-400' : 'text-green-400'}>
                                     {editingUser.account_status === 'banned' ? 'BANIDO' : 'ATIVO'}
                                 </span>
                             </div>
@@ -989,12 +989,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
                         <div className="space-y-4">
                             <div>
-                                <label className="text-[10px] uppercase font-bold text-gray-500">Plano</label>
+                                <label className="text-[10px] uppercase font-bold text-slate-500">Plano</label>
                                 <div className="flex gap-2 mt-1">
                                     <select
                                         value={selectedPlan}
                                         onChange={e => setSelectedPlan(e.target.value as 'free' | 'pro')}
-                                        className="bg-black border border-white/10 text-xs text-white p-2 outline-none flex-1"
+                                        className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2 outline-none flex-1 rounded-md"
                                     >
                                         <option value="free">FREE</option>
                                         <option value="pro">PRO</option>
@@ -1002,7 +1002,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <button
                                         onClick={() => handleUpdatePlan(editingUser)}
                                         disabled={!!userAction}
-                                        className="px-4 py-2 bg-orange-600 text-black text-xs uppercase font-bold hover:bg-orange-500 disabled:opacity-50"
+                                        className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 disabled:opacity-50 rounded-md"
                                     >
                                         Aplicar
                                     </button>
@@ -1010,12 +1010,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             </div>
 
                             <div>
-                                <label className="text-[10px] uppercase font-bold text-gray-500">Notas Administrativas (internas)</label>
+                                <label className="text-[10px] uppercase font-bold text-slate-500">Notas Administrativas (internas)</label>
                                 <textarea
                                     value={adminNotesInput}
                                     onChange={e => setAdminNotesInput(e.target.value)}
                                     onBlur={() => handleSaveAdminNotes(editingUser)}
-                                    className="w-full h-20 bg-black border border-white/10 p-3 text-xs text-white outline-none focus:border-orange-500 mt-1"
+                                    className="w-full h-20 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 mt-1 rounded-md"
                                     placeholder="Ex: cliente reclamou de cobrança duplicada em..."
                                 />
                             </div>
@@ -1024,9 +1024,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <button
                                     onClick={() => handleBanToggle(editingUser)}
                                     disabled={!!userAction}
-                                    className={`px-3 py-2 text-xs uppercase font-bold border transition-colors disabled:opacity-50 ${editingUser.account_status === 'banned'
-                                        ? 'border-green-500/30 text-green-500 hover:bg-green-500/10'
-                                        : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
+                                    className={`px-3 py-2 text-xs uppercase font-bold border transition-colors disabled:opacity-50 rounded-md ${editingUser.account_status === 'banned'
+                                        ? 'border-green-500/30 text-green-400 hover:bg-green-500/10'
+                                        : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
                                         }`}
                                 >
                                     {editingUser.account_status === 'banned' ? 'Reativar Conta' : 'Banir Usuário'}
@@ -1034,14 +1034,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <button
                                     onClick={() => handleForceLogout(editingUser)}
                                     disabled={!!userAction}
-                                    className="px-3 py-2 text-xs uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-50"
+                                    className="px-3 py-2 text-xs uppercase font-bold border border-white/10 text-slate-400 hover:bg-white/5 disabled:opacity-50 rounded-md"
                                 >
                                     Forçar Logout
                                 </button>
                                 <button
                                     onClick={() => handleSendPasswordReset(editingUser)}
                                     disabled={!!userAction}
-                                    className="col-span-2 px-3 py-2 text-xs uppercase font-bold border border-white/10 text-gray-400 hover:bg-white/5 disabled:opacity-50"
+                                    className="col-span-2 px-3 py-2 text-xs uppercase font-bold border border-white/10 text-slate-400 hover:bg-white/5 disabled:opacity-50 rounded-md"
                                 >
                                     Enviar Redefinição de Senha
                                 </button>
@@ -1063,17 +1063,17 @@ const StatBox = ({ label, value, icon: Icon, trend, unit, color = "text-white" }
     unit?: string;
     color?: string;
 }) => (
-    <div className="bg-[#0A0A0A] border border-white/10 p-6 flex flex-col justify-between group hover:border-white/20 transition-all">
+    <div className="bg-[#12283F] border border-white/10 p-6 flex flex-col justify-between group hover:border-white/20 transition-all rounded-md">
         <div className="flex justify-between items-start mb-4">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{label}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{label}</span>
             <Icon className={`w-4 h-4 ${color} opacity-50 group-hover:opacity-100 transition-opacity`} />
         </div>
         <div>
             <div className="text-2xl font-mono font-bold text-white flex items-end gap-2">
                 {value}
-                {unit && <span className="text-[10px] text-gray-600 mb-1">{unit}</span>}
+                {unit && <span className="text-[10px] text-slate-500 mb-1">{unit}</span>}
             </div>
-            {trend && <div className="text-[10px] text-green-500 font-bold mt-1">{trend}</div>}
+            {trend && <div className="text-[10px] text-green-400 font-bold mt-1">{trend}</div>}
         </div>
     </div>
 );
