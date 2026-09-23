@@ -32,6 +32,21 @@ interface AdminStats {
 
 type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE';
 
+// Cada seção do painel é buscada de forma independente (Promise.allSettled):
+// se uma falhar (ex: RPC quebrada), as outras continuam aparecendo em vez de
+// zerar o painel inteiro.
+function unwrapSettled<T>(result: PromiseSettledResult<{ data: T[] | null; error: any }>, label: string): T[] {
+    if (result.status === 'rejected') {
+        console.error(`Error fetching ${label}:`, result.reason);
+        return [];
+    }
+    if (result.value.error) {
+        console.error(`Error fetching ${label}:`, result.value.error);
+        return [];
+    }
+    return result.value.data || [];
+}
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
     const { success: toastSuccess, error: toastError } = useToast();
     const confirmDialog = useConfirm();
@@ -140,78 +155,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     const fetchDashboardData = async () => {
         setLoading(true);
-        try {
-            // 1. Fetch Users (uma única consulta no banco, já com a contagem de
-            // fretes via LEFT JOIN — evita 1 consulta extra por usuário e não
-            // traz CPF/dados sensíveis que essa tela nem usa).
-            const { data: usersData, error: usersError } = await supabase
-                .rpc('get_admin_users_with_freight_counts');
 
-            if (usersError) throw usersError;
+        // Busca tudo em paralelo e isolado: uma seção quebrada não pode mais
+        // zerar o painel inteiro (era o que acontecia antes — a RPC de
+        // usuários lançava exceção e cancelava tickets/receita/indicações
+        // no mesmo try/catch).
+        const [usersRes, ticketsRes, noticesRes, logsRes, paymentsRes, commissionsRes] = await Promise.allSettled([
+            supabase.rpc('get_admin_users_with_freight_counts'),
+            supabase.from('support_tickets').select('*').order('created_at', { ascending: false }),
+            supabase.from('platform_notices').select('*').order('created_at', { ascending: false }),
+            supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100),
+            supabase.from('payment_history').select('*').order('processed_at', { ascending: false }).limit(200),
+            supabase.from('referral_commissions').select('*').order('created_at', { ascending: false }).limit(200),
+        ]);
 
-            setUsers(usersData || []);
-
-            // 2. Fetch Tickets
-            const { data: ticketsData } = await supabase
-                .from('support_tickets')
-                .select('*')
-                .order('created_at', { ascending: false });
-            setTickets(ticketsData || []);
-
-            // 3. Fetch Notices
-            const { data: noticesData } = await supabase
-                .from('platform_notices')
-                .select('*')
-                .order('created_at', { ascending: false });
-            setNotices(noticesData || []);
-
-            // 3.1 Fetch Admin Logs
-            const { data: logsData } = await supabase
-                .from('admin_logs')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(100);
-            setLogs(logsData || []);
-
-            // 3.2 Fetch Payments (Revenue)
-            const { data: paymentsData } = await supabase
-                .from('payment_history')
-                .select('*')
-                .order('processed_at', { ascending: false })
-                .limit(200);
-            setPayments(paymentsData || []);
-
-            // 3.3 Fetch Referral Commissions
-            const { data: commissionsData } = await supabase
-                .from('referral_commissions')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(200);
-            setCommissions(commissionsData || []);
-
-            // 4. Calculate Stats
-            const now = new Date();
-            const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
-            const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-            const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-            setStats({
-                totalUsers: usersData?.length || 0,
-                newUsersToday: usersData?.filter(u => u.created_at >= startOfDay).length || 0,
-                newUsersWeek: usersData?.filter(u => u.created_at >= startOfWeek).length || 0,
-                newUsersMonth: usersData?.filter(u => u.created_at >= startOfMonth).length || 0,
-                activeProUsers: usersData?.filter(u => u.is_premium).length || 0,
-                bannedUsers: usersData?.filter(u => u.account_status === 'banned').length || 0,
-                openTickets: ticketsData?.filter(t => t.status === 'open').length || 0,
-                activeNotices: noticesData?.filter(n => n.is_active).length || 0,
-                sessionNewUsers: 0
-            });
-
-        } catch (error) {
-            console.error('Error fetching admin data:', error);
-        } finally {
-            setLoading(false);
+        if (usersRes.status === 'rejected' || usersRes.value.error) {
+            const err = usersRes.status === 'rejected' ? usersRes.reason : usersRes.value.error;
+            console.error('Error fetching admin users:', err);
+            toastError(`Falha ao carregar usuários: ${err?.message || 'erro desconhecido'}`);
         }
+
+        const usersData = unwrapSettled<any>(usersRes, 'usuários');
+        const ticketsData = unwrapSettled<SupportTicket>(ticketsRes, 'tickets');
+        const noticesData = unwrapSettled<PlatformNotice>(noticesRes, 'avisos');
+        const logsData = unwrapSettled<AdminLog>(logsRes, 'logs');
+        const paymentsData = unwrapSettled<any>(paymentsRes, 'pagamentos');
+        const commissionsData = unwrapSettled<any>(commissionsRes, 'comissões');
+
+        setUsers(usersData);
+        setTickets(ticketsData);
+        setNotices(noticesData);
+        setLogs(logsData);
+        setPayments(paymentsData);
+        setCommissions(commissionsData);
+
+        // 4. Calculate Stats
+        const now = new Date();
+        const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+        const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        setStats({
+            totalUsers: usersData.length,
+            newUsersToday: usersData.filter(u => u.created_at >= startOfDay).length,
+            newUsersWeek: usersData.filter(u => u.created_at >= startOfWeek).length,
+            newUsersMonth: usersData.filter(u => u.created_at >= startOfMonth).length,
+            activeProUsers: usersData.filter(u => u.is_premium).length,
+            bannedUsers: usersData.filter(u => u.account_status === 'banned').length,
+            openTickets: ticketsData.filter(t => t.status === 'open').length,
+            activeNotices: noticesData.filter(n => n.is_active).length,
+            sessionNewUsers: 0
+        });
+
+        setLoading(false);
     };
 
     const handleSaveNotice = async () => {
