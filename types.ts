@@ -113,6 +113,7 @@ export interface User {
   privacy_accepted_at?: string; // ISO Date string
   referrer_id?: string;
   referral_code?: string;
+  partner_code?: string;
 }
 
 export interface GoalHistoryEntry {
@@ -162,7 +163,7 @@ export interface Client {
   created_at: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'MAINTENANCE' | 'FINANCIAL';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'MAINTENANCE' | 'FINANCIAL' | 'PARTNERS';
 
 export interface BankAccount {
   id: string;
@@ -214,6 +215,49 @@ export interface SupportTicket {
   priority: 'low' | 'medium' | 'high';
   admin_reply?: string;
   attachment_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Partner {
+  id: string;
+  name: string;
+  category: string;
+  description?: string;
+  logo_url?: string;
+  cover_image_url?: string;
+  whatsapp_phone?: string;
+  website_url?: string;
+  city?: string;
+  state?: string;
+  is_featured: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PartnerOffer {
+  id: string;
+  partner_id: string;
+  title: string;
+  description?: string;
+  rules?: string;
+  valid_until?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PartnerLead {
+  id: string;
+  user_id: string;
+  partner_id: string;
+  offer_id?: string;
+  user_name?: string;
+  user_phone?: string;
+  user_partner_code?: string;
+  status: 'novo' | 'contatado' | 'convertido' | 'descartado';
+  admin_notes?: string;
   created_at: string;
   updated_at: string;
 }

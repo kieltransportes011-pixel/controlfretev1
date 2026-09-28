@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ViewState, PercentageCategory } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare, Coins, Gift, Copy } from 'lucide-react';
+import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, ArrowRight, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Smartphone, Share, PlusSquare, Coins, Gift, Copy, Handshake } from 'lucide-react';
 import { supabase } from '../supabase';
 import { maskPhone } from '../utils';
 
@@ -687,6 +687,25 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
       </section>
 
 
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+          <Handshake className="w-4 h-4" />
+          Parceiros
+        </h2>
+        <Card className="p-4 bg-[#F5F7FA] dark:bg-slate-900 border-none">
+          <button
+            onClick={() => onNavigate('PARTNERS')}
+            className="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+          >
+            <Handshake className="w-5 h-5" />
+            Ver Benefícios de Parceiros
+          </button>
+          <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
+            Descontos e condições especiais pra quem trabalha com transporte.
+          </p>
+        </Card>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">

@@ -25,7 +25,8 @@ import {
   Loader2,
   Clock,
   Briefcase,
-  Landmark
+  Landmark,
+  Handshake
 } from 'lucide-react';
 import { CardSkeleton } from './Skeleton';
 import { useSubscription } from '../hooks/useSubscription';
@@ -56,13 +57,14 @@ interface DashboardProps {
   onViewFleet: () => void;
   onViewMaintenance: () => void;
   onViewFinancial: () => void;
+  onViewPartners: () => void;
   onOpenAdmin: () => void;
   onAddExtraIncome: (ei: Omit<ExtraIncome, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
   onDeleteExtraIncome: (id: string) => Promise<void>;
   loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewFinancial, onOpenAdmin, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewFinancial, onViewPartners, onOpenAdmin, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -406,6 +408,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
               <div>
                 <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Contas Bancárias</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase">Saldos e Contas</p>
+              </div>
+            </div>
+          </Card>
+          <Card onClick={onViewPartners} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-pink-500 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-pink-500/10 rounded-lg text-pink-600 group-hover:scale-110 transition-transform">
+                <Handshake className="w-5 h-5 bg-transparent" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Parceiros</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Benefícios e Descontos</p>
               </div>
             </div>
           </Card>

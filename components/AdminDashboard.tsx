@@ -6,9 +6,9 @@ import {
     AlertTriangle, FileText, Activity, Bell, Trash2, Tag,
     Eye, Megaphone, Plus, DollarSign, Calendar, Zap,
     TrendingUp, TrendingDown, BarChart3, Terminal, Cpu,
-    Crosshair, Signal
+    Crosshair, Signal, Handshake, Star, Sparkles
 } from 'lucide-react';
-import { SupportTicket, AdminLog, PlatformNotice } from '../types';
+import { SupportTicket, AdminLog, PlatformNotice, Partner, PartnerOffer, PartnerLead } from '../types';
 import { formatCurrency } from '../utils';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
@@ -28,9 +28,23 @@ interface AdminStats {
     openTickets: number;
     activeNotices: number;
     sessionNewUsers: number;
+    totalPartners: number;
+    activeOffers: number;
+    totalLeads: number;
+    leadsLast30d: number;
 }
 
-type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE';
+type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE' | 'PARTNERS';
+type PartnersSubTab = 'PARTNERS' | 'OFFERS' | 'LEADS';
+
+const LEAD_STATUS_LABELS: Record<string, string> = {
+    novo: 'Novo',
+    contatado: 'Contatado',
+    convertido: 'Convertido',
+    descartado: 'Descartado',
+};
+
+const PARTNER_CATEGORY_OPTIONS = ['Pneus', 'Peças', 'Combustível', 'Alimentação', 'Hospedagem', 'Oficina Mecânica', 'Documentação', 'Outros'];
 
 const TICKET_STATUS_LABELS: Record<string, string> = {
     all: 'Todos',
@@ -72,9 +86,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [notices, setNotices] = useState<PlatformNotice[]>([]);
     const [commissions, setCommissions] = useState<any[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
+    const [partners, setPartners] = useState<Partner[]>([]);
+    const [partnerOffers, setPartnerOffers] = useState<PartnerOffer[]>([]);
+    const [partnerLeads, setPartnerLeads] = useState<PartnerLead[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [usersPage, setUsersPage] = useState(1);
     const [ticketStatusFilter, setTicketStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
+    const [partnersSubTab, setPartnersSubTab] = useState<PartnersSubTab>('PARTNERS');
 
     // Edit States
     const [editingUser, setEditingUser] = useState<any | null>(null);
@@ -90,6 +108,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [broadcastTitle, setBroadcastTitle] = useState('');
     const [broadcastBody, setBroadcastBody] = useState('');
     const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+    const [editingPartner, setEditingPartner] = useState<Partial<Partner> | null>(null);
+    const [isSavingPartner, setIsSavingPartner] = useState(false);
+    const [editingOffer, setEditingOffer] = useState<Partial<PartnerOffer> | null>(null);
+    const [isSavingOffer, setIsSavingOffer] = useState(false);
+    const [editingLead, setEditingLead] = useState<PartnerLead | null>(null);
+    const [isSavingLead, setIsSavingLead] = useState(false);
 
     const handleSaveTicketResponse = async () => {
         if (!editingTicket) {
@@ -146,7 +170,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         bannedUsers: 0,
         openTickets: 0,
         activeNotices: 0,
-        sessionNewUsers: 0
+        sessionNewUsers: 0,
+        totalPartners: 0,
+        activeOffers: 0,
+        totalLeads: 0,
+        leadsLast30d: 0
     });
 
     useEffect(() => {
@@ -174,13 +202,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         // zerar o painel inteiro (era o que acontecia antes — a RPC de
         // usuários lançava exceção e cancelava tickets/receita/indicações
         // no mesmo try/catch).
-        const [usersRes, ticketsRes, noticesRes, logsRes, paymentsRes, commissionsRes] = await Promise.allSettled([
+        const [usersRes, ticketsRes, noticesRes, logsRes, paymentsRes, commissionsRes, partnersRes, partnerOffersRes, partnerLeadsRes] = await Promise.allSettled([
             supabase.rpc('get_admin_users_with_freight_counts'),
             supabase.from('support_tickets').select('*').order('created_at', { ascending: false }),
             supabase.from('platform_notices').select('*').order('created_at', { ascending: false }),
             supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100),
             supabase.from('payment_history').select('*').order('processed_at', { ascending: false }).limit(200),
             supabase.from('referral_commissions').select('*').order('created_at', { ascending: false }).limit(200),
+            supabase.from('partners').select('*').order('created_at', { ascending: false }),
+            supabase.from('partner_offers').select('*').order('created_at', { ascending: false }),
+            supabase.from('partner_leads').select('*').order('created_at', { ascending: false }).limit(300),
         ]);
 
         if (usersRes.status === 'rejected' || usersRes.value.error) {
@@ -195,6 +226,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         const logsData = unwrapSettled<AdminLog>(logsRes, 'logs');
         const paymentsData = unwrapSettled<any>(paymentsRes, 'pagamentos');
         const commissionsData = unwrapSettled<any>(commissionsRes, 'comissões');
+        const partnersData = unwrapSettled<Partner>(partnersRes, 'parceiros');
+        const partnerOffersData = unwrapSettled<PartnerOffer>(partnerOffersRes, 'ofertas de parceiros');
+        const partnerLeadsData = unwrapSettled<PartnerLead>(partnerLeadsRes, 'leads de parceiros');
 
         setUsers(usersData);
         setTickets(ticketsData);
@@ -202,6 +236,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         setLogs(logsData);
         setPayments(paymentsData);
         setCommissions(commissionsData);
+        setPartners(partnersData);
+        setPartnerOffers(partnerOffersData);
+        setPartnerLeads(partnerLeadsData);
 
         // 4. Calculate Stats
         const now = new Date();
@@ -218,7 +255,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             bannedUsers: usersData.filter(u => u.account_status === 'banned').length,
             openTickets: ticketsData.filter(t => t.status === 'open').length,
             activeNotices: noticesData.filter(n => n.is_active).length,
-            sessionNewUsers: 0
+            sessionNewUsers: 0,
+            totalPartners: partnersData.filter(p => p.is_active).length,
+            activeOffers: partnerOffersData.filter(o => o.is_active).length,
+            totalLeads: partnerLeadsData.length,
+            leadsLast30d: partnerLeadsData.filter(l => l.created_at >= startOfMonth).length
         });
 
         setLoading(false);
@@ -319,6 +360,93 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         fetchDashboardData();
     };
 
+    const handleSavePartner = async () => {
+        if (!editingPartner || !editingPartner.name?.trim()) return;
+        setIsSavingPartner(true);
+        try {
+            const payload = {
+                name: editingPartner.name,
+                category: editingPartner.category || 'Outros',
+                description: editingPartner.description || null,
+                logo_url: editingPartner.logo_url || null,
+                whatsapp_phone: editingPartner.whatsapp_phone || null,
+                website_url: editingPartner.website_url || null,
+                city: editingPartner.city || null,
+                state: editingPartner.state || null,
+                is_featured: editingPartner.is_featured ?? false,
+                is_active: editingPartner.is_active ?? true,
+                updated_at: new Date().toISOString(),
+            };
+            if (editingPartner.id) {
+                const { error } = await supabase.from('partners').update(payload).eq('id', editingPartner.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('partners').insert([payload]);
+                if (error) throw error;
+            }
+            await fetchDashboardData();
+            setEditingPartner(null);
+            toastSuccess('Parceiro salvo com sucesso.');
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro ao salvar parceiro: ${e.message}`);
+        } finally {
+            setIsSavingPartner(false);
+        }
+    };
+
+    const handleSaveOffer = async () => {
+        if (!editingOffer || !editingOffer.title?.trim() || !editingOffer.partner_id) return;
+        setIsSavingOffer(true);
+        try {
+            const payload = {
+                partner_id: editingOffer.partner_id,
+                title: editingOffer.title,
+                description: editingOffer.description || null,
+                rules: editingOffer.rules || null,
+                valid_until: editingOffer.valid_until || null,
+                is_active: editingOffer.is_active ?? true,
+                updated_at: new Date().toISOString(),
+            };
+            if (editingOffer.id) {
+                const { error } = await supabase.from('partner_offers').update(payload).eq('id', editingOffer.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('partner_offers').insert([payload]);
+                if (error) throw error;
+            }
+            await fetchDashboardData();
+            setEditingOffer(null);
+            toastSuccess('Oferta salva com sucesso.');
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro ao salvar oferta: ${e.message}`);
+        } finally {
+            setIsSavingOffer(false);
+        }
+    };
+
+    const handleSaveLead = async () => {
+        if (!editingLead) return;
+        setIsSavingLead(true);
+        try {
+            const { error } = await supabase.from('partner_leads').update({
+                status: editingLead.status,
+                admin_notes: editingLead.admin_notes || null,
+                updated_at: new Date().toISOString(),
+            }).eq('id', editingLead.id);
+            if (error) throw error;
+            await fetchDashboardData();
+            setEditingLead(null);
+            toastSuccess('Lead atualizado com sucesso.');
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro ao atualizar lead: ${e.message}`);
+        } finally {
+            setIsSavingLead(false);
+        }
+    };
+
     const handleSendBroadcastPush = async () => {
         if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
         const confirmed = await confirmDialog({
@@ -370,6 +498,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         return map;
     }, [users]);
 
+    const partnerLookup = React.useMemo(() => {
+        const map = new Map<string, Partner>();
+        partners.forEach(p => map.set(p.id, p));
+        return map;
+    }, [partners]);
+
+    const offerLookup = React.useMemo(() => {
+        const map = new Map<string, PartnerOffer>();
+        partnerOffers.forEach(o => map.set(o.id, o));
+        return map;
+    }, [partnerOffers]);
+
     const revenueStats = React.useMemo(() => {
         const approved = payments.filter(p => p.status === 'approved');
         const now = new Date();
@@ -420,6 +560,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         { id: 'SUPPORT', label: 'Suporte', icon: MessageCircle, badge: stats.openTickets > 0 ? stats.openTickets : null },
         { id: 'REVENUE', label: 'Receita', icon: DollarSign },
         { id: 'REFERRALS', label: 'Indicações', icon: TrendingUp },
+        { id: 'PARTNERS', label: 'Parceiros', icon: Handshake },
         { id: 'NOTICES', label: 'Avisos', icon: Megaphone },
         { id: 'LOGS', label: 'Registros', icon: Activity },
     ];
@@ -792,6 +933,155 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         </div>
                     )}
 
+                    {/* --- TAB CONTENT: PARTNERS --- */}
+                    {activeTab === 'PARTNERS' && (
+                        <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4">
+                                <StatBox label="Parceiros Ativos" value={stats.totalPartners} icon={Handshake} color="text-pink-400" />
+                                <StatBox label="Ofertas Ativas" value={stats.activeOffers} icon={Sparkles} color="text-blue-400" />
+                                <StatBox label="Leads Totais" value={stats.totalLeads} icon={Users} />
+                                <StatBox label="Leads (30d)" value={stats.leadsLast30d} icon={TrendingUp} color="text-green-400" />
+                            </div>
+
+                            <div className="flex gap-1 flex-wrap">
+                                {([
+                                    { id: 'PARTNERS' as const, label: 'Parceiros' },
+                                    { id: 'OFFERS' as const, label: 'Ofertas' },
+                                    { id: 'LEADS' as const, label: 'Leads' },
+                                ]).map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setPartnersSubTab(t.id)}
+                                        className={`px-3 py-1.5 text-[10px] uppercase font-bold border transition-colors rounded-md ${partnersSubTab === t.id
+                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                            : 'border-white/10 text-slate-400 hover:text-white'
+                                            }`}
+                                    >
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {partnersSubTab === 'PARTNERS' && (
+                                <div className="space-y-4">
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={() => setEditingPartner({ is_active: true, is_featured: false, category: 'Outros' })}
+                                            className="bg-blue-600 text-white px-4 py-2 text-xs font-bold uppercase hover:bg-blue-500 transition-colors rounded-md"
+                                        >
+                                            + Novo Parceiro
+                                        </button>
+                                    </div>
+                                    <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F] divide-y divide-white/5">
+                                        {partners.map(partner => (
+                                            <div
+                                                key={partner.id}
+                                                className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+                                                onClick={() => setEditingPartner(partner)}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center shrink-0 overflow-hidden">
+                                                        {partner.logo_url ? (
+                                                            <img src={partner.logo_url} alt={partner.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <Handshake className="w-5 h-5 text-slate-400" />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="text-white text-sm font-bold truncate flex items-center gap-2">
+                                                            {partner.name}
+                                                            {partner.is_featured && <Star className="w-3 h-3 text-amber-400 fill-current shrink-0" />}
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-500">{partner.category}</div>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-[10px] font-bold px-2 py-1 border rounded-sm shrink-0 ${partner.is_active ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/5 text-slate-400 border-white/10'}`}>
+                                                    {partner.is_active ? 'Ativo' : 'Inativo'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {partners.length === 0 && (
+                                            <div className="px-6 py-16 text-center text-slate-500 text-xs uppercase tracking-widest">
+                                                Nenhum parceiro cadastrado.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {partnersSubTab === 'OFFERS' && (
+                                <div className="space-y-4">
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={() => setEditingOffer({ is_active: true, partner_id: partners[0]?.id })}
+                                            disabled={partners.length === 0}
+                                            className="bg-blue-600 text-white px-4 py-2 text-xs font-bold uppercase hover:bg-blue-500 transition-colors rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            + Nova Oferta
+                                        </button>
+                                    </div>
+                                    <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F] divide-y divide-white/5">
+                                        {partnerOffers.map(offer => (
+                                            <div
+                                                key={offer.id}
+                                                className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+                                                onClick={() => setEditingOffer(offer)}
+                                            >
+                                                <div className="min-w-0">
+                                                    <div className="text-white text-sm font-bold truncate">{offer.title}</div>
+                                                    <div className="text-[10px] text-slate-500">{partnerLookup.get(offer.partner_id)?.name || 'Parceiro removido'}</div>
+                                                </div>
+                                                <span className={`text-[10px] font-bold px-2 py-1 border rounded-sm shrink-0 ${offer.is_active ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/5 text-slate-400 border-white/10'}`}>
+                                                    {offer.is_active ? 'Ativa' : 'Inativa'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {partnerOffers.length === 0 && (
+                                            <div className="px-6 py-16 text-center text-slate-500 text-xs uppercase tracking-widest">
+                                                Nenhuma oferta cadastrada.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {partnersSubTab === 'LEADS' && (
+                                <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F] divide-y divide-white/5">
+                                    {partnerLeads.map(lead => (
+                                        <div
+                                            key={lead.id}
+                                            className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer gap-3"
+                                            onClick={() => setEditingLead(lead)}
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="text-white text-sm font-bold truncate">
+                                                    {lead.user_name || 'Usuário'} <span className="text-slate-500 font-normal">→</span> {partnerLookup.get(lead.partner_id)?.name || 'Parceiro removido'}
+                                                </div>
+                                                <div className="text-[10px] text-slate-500">
+                                                    {lead.offer_id ? (offerLookup.get(lead.offer_id)?.title || 'Oferta removida') : 'Sem oferta'}
+                                                    {lead.user_partner_code ? ` • ${lead.user_partner_code}` : ''}
+                                                    {' • '}{formatDate(lead.created_at)}
+                                                </div>
+                                            </div>
+                                            <span className={`text-[9px] font-bold px-2 py-1 border uppercase rounded-sm shrink-0 ${lead.status === 'convertido' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                                lead.status === 'descartado' ? 'bg-white/5 text-slate-400 border-white/10' :
+                                                    lead.status === 'contatado' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                                        'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                }`}>
+                                                {LEAD_STATUS_LABELS[lead.status] || lead.status}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {partnerLeads.length === 0 && (
+                                        <div className="px-6 py-16 text-center text-slate-500 text-xs uppercase tracking-widest">
+                                            Nenhum lead registrado ainda.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* --- TAB CONTENT: NOTICES --- */}
                     {activeTab === 'NOTICES' && (
                         <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-300">
@@ -1002,6 +1292,220 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <button onClick={() => setEditingNotice(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white">Cancelar</button>
                                 <button onClick={handleSaveNotice} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 rounded-md">
                                     {isSavingNotice ? 'Salvando...' : 'Publicar Aviso'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PARTNER EDITOR */}
+            {editingPartner && (
+                <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-4 md:p-6 shadow-2xl rounded-lg max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-white font-bold mb-6 flex items-center gap-2">
+                            <Handshake className="w-4 h-4 text-blue-400" /> {editingPartner.id ? 'Editar Parceiro' : 'Novo Parceiro'}
+                        </h3>
+                        <div className="space-y-4">
+                            <input
+                                type="text"
+                                className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="Nome do parceiro"
+                                value={editingPartner.name || ''}
+                                onChange={e => setEditingPartner({ ...editingPartner, name: e.target.value })}
+                            />
+                            <div>
+                                <input
+                                    type="text"
+                                    list="partner-category-options"
+                                    className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                    placeholder="Categoria"
+                                    value={editingPartner.category || ''}
+                                    onChange={e => setEditingPartner({ ...editingPartner, category: e.target.value })}
+                                />
+                                <datalist id="partner-category-options">
+                                    {PARTNER_CATEGORY_OPTIONS.map(c => <option key={c} value={c} />)}
+                                </datalist>
+                            </div>
+                            <textarea
+                                className="w-full h-20 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="Descrição"
+                                value={editingPartner.description || ''}
+                                onChange={e => setEditingPartner({ ...editingPartner, description: e.target.value })}
+                            />
+                            <input
+                                type="text"
+                                className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="URL do logo"
+                                value={editingPartner.logo_url || ''}
+                                onChange={e => setEditingPartner({ ...editingPartner, logo_url: e.target.value })}
+                            />
+                            <input
+                                type="text"
+                                className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="WhatsApp (dígitos com DDI, ex: 5511999998888)"
+                                value={editingPartner.whatsapp_phone || ''}
+                                onChange={e => setEditingPartner({ ...editingPartner, whatsapp_phone: e.target.value })}
+                            />
+                            <input
+                                type="text"
+                                className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="Site (https://...)"
+                                value={editingPartner.website_url || ''}
+                                onChange={e => setEditingPartner({ ...editingPartner, website_url: e.target.value })}
+                            />
+                            <div className="flex gap-3">
+                                <input
+                                    type="text"
+                                    className="flex-1 bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                    placeholder="Cidade"
+                                    value={editingPartner.city || ''}
+                                    onChange={e => setEditingPartner({ ...editingPartner, city: e.target.value })}
+                                />
+                                <input
+                                    type="text"
+                                    className="w-20 bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                    placeholder="UF"
+                                    maxLength={2}
+                                    value={editingPartner.state || ''}
+                                    onChange={e => setEditingPartner({ ...editingPartner, state: e.target.value.toUpperCase() })}
+                                />
+                            </div>
+                            <div className="flex gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded border-white/10 bg-[#0B1F33] text-amber-500 focus:ring-amber-500"
+                                        checked={editingPartner.is_featured || false}
+                                        onChange={e => setEditingPartner({ ...editingPartner, is_featured: e.target.checked })}
+                                    />
+                                    <span className="text-xs text-white">Destaque</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded border-white/10 bg-[#0B1F33] text-green-600 focus:ring-green-500"
+                                        checked={editingPartner.is_active ?? true}
+                                        onChange={e => setEditingPartner({ ...editingPartner, is_active: e.target.checked })}
+                                    />
+                                    <span className="text-xs text-white">Ativo</span>
+                                </label>
+                            </div>
+                            <div className="flex justify-end gap-2 mt-4">
+                                <button onClick={() => setEditingPartner(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white">Cancelar</button>
+                                <button onClick={handleSavePartner} disabled={isSavingPartner} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 rounded-md disabled:opacity-50">
+                                    {isSavingPartner ? 'Salvando...' : 'Salvar Parceiro'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* OFFER EDITOR */}
+            {editingOffer && (
+                <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-4 md:p-6 shadow-2xl rounded-lg max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-white font-bold mb-6 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-blue-400" /> {editingOffer.id ? 'Editar Oferta' : 'Nova Oferta'}
+                        </h3>
+                        <div className="space-y-4">
+                            <select
+                                className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                value={editingOffer.partner_id || ''}
+                                onChange={e => setEditingOffer({ ...editingOffer, partner_id: e.target.value })}
+                            >
+                                <option value="" disabled>Selecione o parceiro</option>
+                                {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                            <input
+                                type="text"
+                                className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="Título do benefício (ex: 10% de desconto)"
+                                value={editingOffer.title || ''}
+                                onChange={e => setEditingOffer({ ...editingOffer, title: e.target.value })}
+                            />
+                            <textarea
+                                className="w-full h-20 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="Descrição do benefício"
+                                value={editingOffer.description || ''}
+                                onChange={e => setEditingOffer({ ...editingOffer, description: e.target.value })}
+                            />
+                            <textarea
+                                className="w-full h-20 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 rounded-md"
+                                placeholder="Regras de uso"
+                                value={editingOffer.rules || ''}
+                                onChange={e => setEditingOffer({ ...editingOffer, rules: e.target.value })}
+                            />
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-500">Válido até (opcional)</label>
+                                <input
+                                    type="date"
+                                    className="w-full bg-[#0B1F33] border border-white/10 p-3 text-sm text-white outline-none focus:border-blue-500 rounded-md mt-1"
+                                    value={editingOffer.valid_until || ''}
+                                    onChange={e => setEditingOffer({ ...editingOffer, valid_until: e.target.value })}
+                                />
+                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="w-4 h-4 rounded border-white/10 bg-[#0B1F33] text-green-600 focus:ring-green-500"
+                                    checked={editingOffer.is_active ?? true}
+                                    onChange={e => setEditingOffer({ ...editingOffer, is_active: e.target.checked })}
+                                />
+                                <span className="text-xs text-white">Ativa</span>
+                            </label>
+                            <div className="flex justify-end gap-2 mt-4">
+                                <button onClick={() => setEditingOffer(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white">Cancelar</button>
+                                <button onClick={handleSaveOffer} disabled={isSavingOffer || !editingOffer.partner_id} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 rounded-md disabled:opacity-50">
+                                    {isSavingOffer ? 'Salvando...' : 'Salvar Oferta'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* LEAD EDITOR */}
+            {editingLead && (
+                <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-4 md:p-6 shadow-2xl rounded-lg max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-blue-400" /> Lead
+                        </h3>
+                        <div className="bg-[#0B1F33] p-4 border border-white/5 mb-4 rounded-md text-xs text-slate-300 space-y-1">
+                            <div><span className="text-slate-500">Usuário:</span> {editingLead.user_name || '—'} {editingLead.user_partner_code ? `(${editingLead.user_partner_code})` : ''}</div>
+                            <div><span className="text-slate-500">Parceiro:</span> {partnerLookup.get(editingLead.partner_id)?.name || '—'}</div>
+                            <div><span className="text-slate-500">Oferta:</span> {editingLead.offer_id ? (offerLookup.get(editingLead.offer_id)?.title || '—') : '—'}</div>
+                            <div><span className="text-slate-500">Data:</span> {formatDate(editingLead.created_at)}</div>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-500">Status</label>
+                                <select
+                                    value={editingLead.status}
+                                    onChange={e => setEditingLead({ ...editingLead, status: e.target.value as PartnerLead['status'] })}
+                                    className="w-full bg-[#0B1F33] border border-white/10 text-sm text-white p-2 outline-none rounded-md mt-1"
+                                >
+                                    <option value="novo">Novo</option>
+                                    <option value="contatado">Contatado</option>
+                                    <option value="convertido">Convertido</option>
+                                    <option value="descartado">Descartado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-500">Notas internas</label>
+                                <textarea
+                                    value={editingLead.admin_notes || ''}
+                                    onChange={e => setEditingLead({ ...editingLead, admin_notes: e.target.value })}
+                                    className="w-full h-20 bg-[#0B1F33] border border-white/10 p-3 text-xs text-white outline-none focus:border-blue-500 mt-1 rounded-md"
+                                    placeholder="Ex: falei com o parceiro, aguardando retorno..."
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 mt-4">
+                                <button onClick={() => setEditingLead(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white">Cancelar</button>
+                                <button onClick={handleSaveLead} disabled={isSavingLead} className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 rounded-md disabled:opacity-50">
+                                    {isSavingLead ? 'Salvando...' : 'Salvar'}
                                 </button>
                             </div>
                         </div>
