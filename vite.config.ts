@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        // O script de registro não é mais auto-injetado no HTML — é chamado
+        // manualmente em index.tsx, só fora do app nativo (ver comentário lá).
+        // Dentro do Capacitor/WebView, um Service Worker registrado podia
+        // ficar servindo uma versão em cache do app mesmo depois de instalar
+        // uma atualização nova via Play Store — o app nativo já tem seu
+        // próprio mecanismo de atualização (a instalação do APK em si), não
+        // precisa (e não deve) do cache de PWA por cima.
+        injectRegister: null,
         includeAssets: ['pwa-icon-512.png', 'pwa-icon-192.png'],
         manifest: {
           name: 'Control Frete',
