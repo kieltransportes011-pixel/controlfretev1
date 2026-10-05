@@ -83,7 +83,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
           </div>
         ) : (
         <div className="p-4 md:p-8">
-          <div className="grid md:grid-cols-3 gap-6 items-center">
+          <div className="grid md:grid-cols-2 gap-6 items-center max-w-2xl mx-auto">
             {/* Mensal */}
             <PricingCard
               title="Mensal"
@@ -97,41 +97,23 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
                 "Sem fidelidade"
               ]}
               onSelect={() => handleCheckout('monthly')}
-              oldPrice="R$ 19,90"
             />
 
-            {/* Anual Promo */}
+            {/* Anual */}
             <PricingCard
               title="Anual Pro"
-              price="R$ 39,99"
+              price="R$ 49,99"
               period="ano"
-              description="Melhor custo-benefício. Apenas R$ 3,33/mês."
+              description="Melhor custo-benefício. Apenas R$ 4,17/mês."
               features={[
                 "Tudo do Plano Mensal",
                 "Prioridade no Suporte",
                 "Bônus Exclusivos",
-                "Economia de 70%"
+                "Economia de mais de 50%"
               ]}
               highlight={true}
-              tag="OFERTA RELÂMPAGO"
-              oldPrice="R$ 59,99"
+              tag="MAIS POPULAR"
               onSelect={() => handleCheckout('annual_promo')}
-            />
-
-            {/* Vitalício */}
-            <PricingCard
-              title="Vitalício"
-              price="R$ 249,90"
-              period="único"
-              description="Pague uma vez, use para sempre."
-              features={[
-                "Acesso Vitalício",
-                "Sem mensalidades",
-                "Suporte VIP",
-                "Selo de Membro Fundador"
-              ]}
-              tag="VIP"
-              onSelect={() => handleCheckout('lifetime')}
             />
           </div>
 

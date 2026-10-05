@@ -114,6 +114,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [isSavingOffer, setIsSavingOffer] = useState(false);
     const [editingLead, setEditingLead] = useState<PartnerLead | null>(null);
     const [isSavingLead, setIsSavingLead] = useState(false);
+    const [isReprocessingPayments, setIsReprocessingPayments] = useState(false);
 
     const handleSaveTicketResponse = async () => {
         if (!editingTicket) {
@@ -492,6 +493,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         URL.revokeObjectURL(url);
     };
 
+    const handleReprocessPayments = async () => {
+        const confirmed = await confirmDialog('Verificar os últimos 50 pagamentos aprovados e corrigir contas que ficaram FREE por engano?');
+        if (!confirmed) return;
+        setIsReprocessingPayments(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('reprocess-payments', {});
+            if (error || data?.error) throw new Error(data?.error || error?.message || 'Erro desconhecido');
+            const repaired = (data?.results || []).filter((r: any) => r.status === 'repaired').length;
+            toastSuccess(repaired > 0 ? `${repaired} conta(s) corrigida(s) para PRO.` : 'Nenhuma conta precisava de correção.');
+            await fetchDashboardData();
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro ao reprocessar pagamentos: ${e.message}`);
+        } finally {
+            setIsReprocessingPayments(false);
+        }
+    };
+
     const userLookup = React.useMemo(() => {
         const map = new Map<string, any>();
         users.forEach(u => map.set(u.id, u));
@@ -854,12 +873,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                 <StatBox label="Pagamentos Este Mês" value={revenueStats.countThisMonth} icon={TrendingUp} />
                             </div>
 
-                            <div className="flex justify-between items-center bg-[#12283F] p-4 border border-white/10 rounded-md">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-[#12283F] p-4 border border-white/10 rounded-md">
                                 <div className="flex items-center gap-2 text-green-400">
                                     <DollarSign className="w-5 h-5" />
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Histórico de Pagamentos</h2>
                                 </div>
-                                <span className="text-[10px] text-slate-500">{payments.length} registros</span>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleReprocessPayments}
+                                        disabled={isReprocessingPayments}
+                                        className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase font-bold border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors rounded-md disabled:opacity-50"
+                                        title="Verifica os últimos 50 pagamentos aprovados e corrige contas que ficaram FREE por engano"
+                                    >
+                                        {isReprocessingPayments ? 'Verificando...' : 'Reprocessar Pagamentos'}
+                                    </button>
+                                    <span className="text-[10px] text-slate-500">{payments.length} registros</span>
+                                </div>
                             </div>
 
                             <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F] divide-y divide-white/5">

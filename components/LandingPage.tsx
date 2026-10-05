@@ -403,7 +403,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                         <p className="text-gray-500 max-w-xl mx-auto font-light">Selecione o nível de acesso adequado para sua operação.</p>
                     </motion.div>
 
-                    <div className="grid md:grid-cols-3 gap-8 items-stretch">
+                    <div className="grid md:grid-cols-2 gap-8 items-stretch max-w-3xl mx-auto">
                         {/* Mensal */}
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
@@ -439,10 +439,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                                 Oferta Limitada
                             </div>
                             <div className="text-xs font-black uppercase tracking-[0.2em] text-[var(--precision-accent)] mb-6 group-hover:tracking-[0.3em] transition-all duration-300 font-mono">// Anual Pro</div>
-                            <div className="text-5xl font-black text-white mb-2">R$ 39<span className="text-2xl">,99</span></div>
-                            <div className="text-gray-500 text-sm mb-8 font-mono">Valor promocional (R$ 3,33/mês)</div>
+                            <div className="text-5xl font-black text-white mb-2">R$ 49<span className="text-2xl">,99</span></div>
+                            <div className="text-gray-500 text-sm mb-8 font-mono">Equivale a R$ 4,17/mês</div>
                             <ul className="space-y-4 mb-8 flex-1">
-                                {['Economia de 70%', 'Prioridade no Suporte', 'Módulo Financeiro', 'Sem anúncios', 'Mentoria em Grupo'].map(i => (
+                                {['Economia de mais de 50%', 'Prioridade no Suporte', 'Módulo Financeiro', 'Sem anúncios', 'Mentoria em Grupo'].map(i => (
                                     <li key={i} className="flex items-center gap-3 text-sm text-white">
                                         <CheckCircle className="w-4 h-4 text-[var(--precision-accent)]" /> {i}
                                     </li>
@@ -450,29 +450,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             </ul>
                             <button onClick={onLogin} className="w-full py-4 bg-[var(--precision-accent)] text-white font-bold uppercase text-xs tracking-widest hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 rounded-none">
                                 Garantir Oferta
-                            </button>
-                        </motion.div>
-
-                        {/* Enterprise / Vitalicio */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true, margin: "-80px" }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300"
-                        >
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Nível Enterprise</div>
-                            <div className="text-4xl font-black text-white mb-2">R$ 249</div>
-                            <div className="text-gray-500 text-sm mb-8">Pagamento único (Vitalício)</div>
-                            <ul className="space-y-4 mb-8 flex-1">
-                                {['Acesso para sempre', 'Mentorias Individuais', 'Selo Fundador', 'Funcionalidades Alpha'].map(i => (
-                                    <li key={i} className="flex items-center gap-3 text-sm text-gray-400">
-                                        <div className="w-1 h-1 bg-gray-500" /> {i}
-                                    </li>
-                                ))}
-                            </ul>
-                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors rounded-none">
-                                Comprar Vitalício
                             </button>
                         </motion.div>
                     </div>

@@ -72,13 +72,16 @@ serve(async (req) => {
         const notification_url = `${supabaseUrl}/functions/v1/mercado-pago-webhook`;
         const origin = req.headers.get('origin') || 'http://localhost:5173';
 
+        // Único plano anual: R$ 49,99. Esse valor precisa bater exatamente com o
+        // que é exibido no Paywall/LandingPage — foi daqui que saiu o bug de uma
+        // venda ter cobrado R$ 19,99 em vez do valor anunciado.
         let item = {
             id: 'pro_annual',
             title: 'Assinatura Anual Control Frete Pro',
             description: 'Acesso completo - 1 Ano',
             quantity: 1,
             currency_id: 'BRL',
-            unit_price: 19.99
+            unit_price: 49.99
         };
 
         if (planType === 'monthly') {
@@ -93,20 +96,11 @@ serve(async (req) => {
         } else if (planType === 'annual_promo') {
             item = {
                 id: 'pro_annual_promo',
-                title: 'Assinatura Anual Promo (Oferta Limitada)',
+                title: 'Assinatura Anual Control Frete Pro',
                 description: 'Acesso completo - 1 Ano',
                 quantity: 1,
                 currency_id: 'BRL',
-                unit_price: 19.99
-            };
-        } else if (planType === 'lifetime') {
-            item = {
-                id: 'pro_lifetime',
-                title: 'Acesso Vitalício Control Frete Pro',
-                description: 'Pagamento Único - Acesso Eterno',
-                quantity: 1,
-                currency_id: 'BRL',
-                unit_price: 249.90
+                unit_price: 49.99
             };
         }
 
