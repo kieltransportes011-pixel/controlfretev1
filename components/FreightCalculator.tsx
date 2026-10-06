@@ -138,7 +138,17 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
       const { data, error } = await supabase.functions.invoke('calculate-route-distance', {
         body: { origin, destination },
       });
-      if (error || data?.error) throw new Error(data?.error || error?.message);
+      if (error) {
+        // Em respostas não-2xx o supabase-js deixa o corpo real no context;
+        // sem isso o usuário vê só "non-2xx status code".
+        let detail = error.message;
+        try {
+          const body = await error.context?.json();
+          if (body?.error) detail = body.error;
+        } catch {}
+        throw new Error(detail);
+      }
+      if (data?.error) throw new Error(data.error);
       setDistance(String(data.distance_km));
     } catch (err: any) {
       setDistanceError(err.message || 'Não foi possível calcular a distância.');
@@ -155,7 +165,7 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
 
     const text = `
 🚛 *ORÇAMENTO DE FRETE*
-${extrasDetails ? `${extrasDetails}\n` : ''}
+${origin ? `📍 Coleta: ${origin}\n` : ''}${destination ? `🏁 Destino: ${destination}\n` : ''}${extrasDetails ? `${extrasDetails}\n` : ''}
 ----------------
 ✅ *VALOR TOTAL: ${formatCurrency(totals.total)}*
     `.trim();

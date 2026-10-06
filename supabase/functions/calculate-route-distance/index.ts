@@ -60,7 +60,9 @@ Deno.serve(async (req) => {
 
     if (!res.ok || !data.routes?.[0]) {
       console.error('Routes API error:', data);
-      throw new Error('Não foi possível calcular a rota entre esses endereços.');
+      // A mensagem do Google não carrega a chave — repassar ajuda a diagnosticar
+      // (ex: API não habilitada, faturamento, endereço não encontrado).
+      throw new Error(data.error?.message ?? 'Não foi possível calcular a rota entre esses endereços.');
     }
 
     const distanceKm = Math.round((data.routes[0].distanceMeters / 1000) * 10) / 10;
