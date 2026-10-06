@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../supabase';
+import { AddressAutocomplete } from './AddressAutocomplete';
 import {
   ChevronLeft,
   Copy,
@@ -218,26 +219,18 @@ ${origin ? `📍 Coleta: ${origin}\n` : ''}${destination ? `🏁 Destino: ${dest
 
         {/* Endereços — preenche a distância automaticamente */}
         <div className="space-y-3">
-          <div className="space-y-2">
-            <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Endereço de Coleta</label>
-            <input
-              type="text"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-              placeholder="Cidade ou endereço de coleta"
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-sm text-slate-800 dark:text-white"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Endereço de Destino</label>
-            <input
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="Cidade ou endereço de entrega"
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-sm text-slate-800 dark:text-white"
-            />
-          </div>
+          <AddressAutocomplete
+            label="Endereço de Coleta"
+            value={origin}
+            onChange={setOrigin}
+            placeholder="Cidade ou endereço de coleta"
+          />
+          <AddressAutocomplete
+            label="Endereço de Destino"
+            value={destination}
+            onChange={setDestination}
+            placeholder="Cidade ou endereço de entrega"
+          />
           <button
             type="button"
             onClick={handleCalculateDistance}
