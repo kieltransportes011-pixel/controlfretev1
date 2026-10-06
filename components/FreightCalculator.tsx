@@ -4,6 +4,7 @@ import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
 import { useToast } from '../contexts/ToastContext';
+import { supabase } from '../supabase';
 import {
   ChevronLeft,
   Copy,
@@ -16,7 +17,9 @@ import {
   AlertTriangle,
   Plus,
   Trash2,
-  CircleDollarSign
+  CircleDollarSign,
+  Route,
+  Loader2
 } from 'lucide-react';
 
 interface ExtraItem {
@@ -33,6 +36,10 @@ interface FreightCalculatorProps {
 export const FreightCalculator: React.FC<FreightCalculatorProps> = ({ onCancel, onRegister }) => {
   const { success: toastSuccess } = useToast();
   // Dados Principais
+  const [origin, setOrigin] = useState<string>('');
+  const [destination, setDestination] = useState<string>('');
+  const [calculatingDistance, setCalculatingDistance] = useState(false);
+  const [distanceError, setDistanceError] = useState<string | null>(null);
   const [distance, setDistance] = useState<string>('');
   const [pricePerKm, setPricePerKm] = useState<string>('');
 
@@ -123,6 +130,23 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
     toastSuccess("Copiado para a área de transferência!");
   };
 
+  const handleCalculateDistance = async () => {
+    if (!origin || !destination) return;
+    setCalculatingDistance(true);
+    setDistanceError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('calculate-route-distance', {
+        body: { origin, destination },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      setDistance(String(data.distance_km));
+    } catch (err: any) {
+      setDistanceError(err.message || 'Não foi possível calcular a distância.');
+    } finally {
+      setCalculatingDistance(false);
+    }
+  };
+
   const handleShareWhatsapp = () => {
     const extrasDetails = extraItems
       .filter(i => parseFloat(i.value) > 0)
@@ -130,14 +154,10 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
       .join('\n');
 
     const text = `
-🚛 *ORÇAMENTO RÁPIDO*
-🛣️ Distância: ${distance}km
-💰 Valor por Km: ${formatCurrency(parseFloat(pricePerKm) || 0)}
-----------------
-📦 Frete Base: ${formatCurrency(totals.freightBase)}
+🚛 *ORÇAMENTO DE FRETE*
 ${extrasDetails ? `${extrasDetails}\n` : ''}
 ----------------
-✅ *VALOR TOTAL COBRADO: ${formatCurrency(totals.total)}*
+✅ *VALOR TOTAL: ${formatCurrency(totals.total)}*
     `.trim();
 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
@@ -184,6 +204,42 @@ ${extrasDetails ? `${extrasDetails}\n` : ''}
 
           {/* BG Decorativo */}
           <CircleDollarSign className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 -rotate-12" />
+        </div>
+
+        {/* Endereços — preenche a distância automaticamente */}
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Endereço de Coleta</label>
+            <input
+              type="text"
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value)}
+              placeholder="Cidade ou endereço de coleta"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-sm text-slate-800 dark:text-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-roboto font-bold text-slate-400 uppercase tracking-widest px-1">Endereço de Destino</label>
+            <input
+              type="text"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder="Cidade ou endereço de entrega"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-brand-secondary/20 text-sm text-slate-800 dark:text-white"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleCalculateDistance}
+            disabled={!origin || !destination || calculatingDistance}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-brand/10 text-brand font-roboto font-bold text-xs uppercase tracking-widest hover:bg-brand/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {calculatingDistance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Route className="w-4 h-4" />}
+            Calcular distância pelo endereço
+          </button>
+          {distanceError && (
+            <p className="text-xs text-red-500 px-1">{distanceError}</p>
+          )}
         </div>
 
         {/* Inputs Principais */}
