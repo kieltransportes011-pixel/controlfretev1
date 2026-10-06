@@ -242,7 +242,7 @@ ${origin ? `📍 Coleta: ${origin}\n` : ''}${destination ? `🏁 Destino: ${dest
             type="button"
             onClick={handleCalculateDistance}
             disabled={!origin || !destination || calculatingDistance}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-brand/10 text-brand font-roboto font-bold text-xs uppercase tracking-widest hover:bg-brand/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-brand/10 text-brand dark:bg-blue-500/20 dark:text-blue-300 font-roboto font-bold text-xs uppercase tracking-widest hover:bg-brand/20 dark:hover:bg-blue-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {calculatingDistance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Route className="w-4 h-4" />}
             Calcular distância pelo endereço
