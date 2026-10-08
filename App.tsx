@@ -29,7 +29,6 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { PrivacyModal } from './components/PrivacyModal';
 import { Support } from './components/Support';
 import { Partners } from './components/Partners';
-import { RouteOptimizer } from './components/RouteOptimizer';
 import { MandatoryNoticeModal } from './components/MandatoryNoticeModal';
 import { NoticesCenter } from './components/NoticesCenter';
 
@@ -139,8 +138,7 @@ export default function App() {
       FINANCIAL: '/financial',
       NOTICES: '/notices',
       ADMIN: '/admin',
-      PARTNERS: '/partners',
-      ROUTE_OPTIMIZER: '/route-optimizer'
+      PARTNERS: '/partners'
     };
     return map[v] || '/';
   };
@@ -166,8 +164,7 @@ export default function App() {
       '/financial': 'FINANCIAL',
       '/notices': 'NOTICES',
       '/admin': 'ADMIN',
-      '/partners': 'PARTNERS',
-      '/route-optimizer': 'ROUTE_OPTIMIZER'
+      '/partners': 'PARTNERS'
     };
     return map[path] || 'DASHBOARD';
   };
@@ -896,7 +893,6 @@ Obs: ${of.description || 'Sem observações'}`;
                 }}
                 onViewFinancial={() => setView('FINANCIAL')}
                 onViewPartners={() => setView('PARTNERS')}
-                onViewRouteOptimizer={() => setView('ROUTE_OPTIMIZER')}
                 onOpenAdmin={() => setView('ADMIN')}
                 onAddExtraIncome={async (ei) => {
                   if (!currentUser) return;
@@ -1242,12 +1238,6 @@ Obs: ${of.description || 'Sem observações'}`;
           {view === 'PARTNERS' && currentUser && (
             <motion.div key="partners" variants={viewVariants} initial="initial" animate="animate" exit="exit">
               <Partners user={currentUser} onBack={() => setView('SETTINGS')} />
-            </motion.div>
-          )}
-
-          {view === 'ROUTE_OPTIMIZER' && currentUser && (
-            <motion.div key="route-optimizer" variants={viewVariants} initial="initial" animate="animate" exit="exit">
-              <RouteOptimizer user={currentUser} onBack={() => setView('SETTINGS')} />
             </motion.div>
           )}
 
