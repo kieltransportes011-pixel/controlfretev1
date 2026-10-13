@@ -35,6 +35,7 @@ export interface Freight {
   paymentMethod?: string;
   clientDoc?: string;
   bank_account_id?: string | null;
+  vehicle_id?: string | null;
   distribution?: Array<PercentageCategory & { value: number }>;
 }
 

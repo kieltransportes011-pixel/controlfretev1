@@ -204,7 +204,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
                     <Card
                         key={vehicle.id}
                         className="group hover:border-brand/40 transition-all cursor-pointer p-4 relative overflow-hidden"
-                        onClick={() => handleEdit(vehicle)}
+                        onClick={() => onViewDetails(vehicle)}
                     >
                         <div className="flex items-center gap-4 relative z-10">
                             <div className="w-14 h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-brand transition-colors group-hover:bg-brand group-hover:text-white">

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppSettings, Freight, Client, User, PercentageCategory } from '../types';
+import { AppSettings, Freight, Client, User, PercentageCategory, Vehicle } from '../types';
 import { formatCurrency, generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
@@ -13,12 +13,13 @@ interface AddFreightProps {
   user: User;
   settings: AppSettings;
   clients?: Client[];
+  vehicles?: Vehicle[];
   onSave: (freight: Freight) => void;
   onCancel: () => void;
   initialData?: Partial<Freight>;
 }
 
-export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients = [], onSave, onCancel, initialData }) => {
+export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients = [], vehicles = [], onSave, onCancel, initialData }) => {
   const [totalValue, setTotalValue] = useState<string>(initialData?.totalValue ? String(initialData.totalValue) : '');
   const [client, setClient] = useState(initialData?.client || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
@@ -68,6 +69,7 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
   // Bank Account
   const { accounts } = useBankAccounts(user);
   const [selectedAccount, setSelectedAccount] = useState<string>(initialData?.bank_account_id || '');
+  const [vehicleId, setVehicleId] = useState<string>(initialData?.vehicle_id || '');
 
   // UI State for Client Selection
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -188,7 +190,8 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
       receivedValue: received,
       pendingValue: pending,
       dueDate: pending > 0 ? dueDate : undefined,
-      bank_account_id: selectedAccount || null
+      bank_account_id: selectedAccount || null,
+      vehicle_id: vehicleId || null
     };
 
     setIsSuccess(true);
@@ -294,6 +297,22 @@ export const AddFreight: React.FC<AddFreightProps> = ({ user, settings, clients 
             {/* Overlay to close suggestions */}
             {showSuggestions && <div className="fixed inset-0 z-50" onClick={() => setShowSuggestions(false)} />}
           </div>
+
+          {vehicles.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Veículo <span className="text-slate-400 font-normal">(Opcional)</span></label>
+              <select
+                value={vehicleId}
+                onChange={(e) => setVehicleId(e.target.value)}
+                className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand dark:text-white"
+              >
+                <option value="">Nenhum</option>
+                {vehicles.map(v => (
+                  <option key={v.id} value={v.id}>{v.model} - {v.plate}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Data do Serviço</label>

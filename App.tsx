@@ -38,6 +38,7 @@ import { FreightNoticeModal } from './components/FreightNoticeModal';
 import { Clients } from './components/Clients';
 import { Fleet } from './components/Fleet';
 import { MaintenanceLogs } from './components/MaintenanceLogs';
+import { VehicleDetails } from './components/VehicleDetails';
 import { Skeleton, CardSkeleton, ListSkeleton } from './components/Skeleton';
 import { useToast } from './contexts/ToastContext';
 import { useConfirm } from './contexts/ConfirmContext';
@@ -199,6 +200,7 @@ export default function App() {
   const [clients, setClients] = useState<Client[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
   const [permissionError, setPermissionError] = useState(false);
@@ -872,6 +874,8 @@ Obs: ${of.description || 'Sem observações'}`;
                 accountsPayable={accountsPayable}
                 extraIncomes={extraIncomes}
                 settings={settings}
+                vehicles={vehicles}
+                maintenanceLogs={maintenanceLogs}
                 loading={loadingData}
                 onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
                 onAddExpense={() => setView('ADD_EXPENSE')}
@@ -950,6 +954,7 @@ Obs: ${of.description || 'Sem observações'}`;
                 user={currentUser}
                 settings={settings}
                 clients={clients}
+                vehicles={vehicles}
                 onSave={async (f) => {
                   if (!currentUser) return;
                   try {
@@ -974,6 +979,7 @@ Obs: ${of.description || 'Sem observações'}`;
                         payment_method: f.paymentMethod,
                         client_doc: f.clientDoc,
                         bank_account_id: f.bank_account_id || null,
+                        vehicle_id: f.vehicle_id || null,
                         distribution: f.distribution // New dynamic field
                       }).eq('id', f.id);
                       if (error) throw error;
@@ -998,6 +1004,7 @@ Obs: ${of.description || 'Sem observações'}`;
                         payment_method: f.paymentMethod,
                         client_doc: f.clientDoc,
                         bank_account_id: f.bank_account_id || null,
+                        vehicle_id: f.vehicle_id || null,
                         distribution: f.distribution // New dynamic field
                       }]);
                       if (error) throw error;
@@ -1304,8 +1311,25 @@ Obs: ${of.description || 'Sem observações'}`;
                   if (error) throw error;
                   fetchData();
                 }}
-                onViewDetails={(v) => { /* Could implement details view later */ }}
+                onViewDetails={(v) => { setSelectedVehicle(v); setView('VEHICLE_DETAILS'); }}
                 onBack={() => setView('DASHBOARD')}
+              />
+            </motion.div>
+          )}
+
+          {view === 'VEHICLE_DETAILS' && selectedVehicle && (
+            <motion.div key="vehicle-details" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <VehicleDetails
+                vehicle={selectedVehicle}
+                maintenanceLogs={maintenanceLogs}
+                freights={freights}
+                onBack={() => { setSelectedVehicle(null); setView('FLEET'); }}
+                onEditVehicle={() => setView('FLEET')}
+                onDeleteLog={async (id) => {
+                  const { error } = await supabase.from('maintenance_logs').delete().eq('id', id);
+                  if (error) throw error;
+                  fetchData();
+                }}
               />
             </motion.div>
           )}
@@ -1319,6 +1343,21 @@ Obs: ${of.description || 'Sem observações'}`;
                   if (!currentUser) return;
                   const { error } = await supabase.from('maintenance_logs').insert([{ ...l, user_id: currentUser.id }]);
                   if (error) throw error;
+
+                  if (l.km_at_service) {
+                    const vehicle = vehicles.find(v => v.id === l.vehicle_id);
+                    if (vehicle && l.km_at_service > vehicle.current_km) {
+                      const { error: kmError } = await supabase.from('vehicles').update({
+                        plate: vehicle.plate,
+                        brand: vehicle.brand,
+                        model: vehicle.model,
+                        year: vehicle.year,
+                        current_km: l.km_at_service
+                      }).eq('id', vehicle.id);
+                      if (kmError) console.error('Failed to sync vehicle km:', kmError);
+                    }
+                  }
+
                   fetchData();
                 }}
                 onDeleteLog={async (id) => {

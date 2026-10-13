@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MaintenanceLog, Vehicle, MaintenanceCategory } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from '../utils';
 import { Wrench, Plus, X, Calendar, Hash, Tag, ChevronDown, Filter, Trash2, AlertCircle, Truck, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { getVehiclesNeedingAttention } from '../utils/vehicleAlerts';
 
 interface MaintenanceProps {
     logs: MaintenanceLog[];
@@ -15,7 +16,7 @@ interface MaintenanceProps {
     onBack: () => void;
 }
 
-const CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
+export const CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
     OIL: 'Troca de Óleo',
     TIRES: 'Pneus',
     BRAKES: 'Freios',
@@ -24,7 +25,7 @@ const CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
     OTHER: 'Outros'
 };
 
-const CATEGORY_COLORS: Record<MaintenanceCategory, string> = {
+export const CATEGORY_COLORS: Record<MaintenanceCategory, string> = {
     OIL: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     TIRES: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     BRAKES: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
@@ -51,6 +52,7 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
     const [cost, setCost] = useState('');
 
     const filteredLogs = logs.filter(l => filterVehicle === 'ALL' || l.vehicle_id === filterVehicle);
+    const attention = useMemo(() => getVehiclesNeedingAttention(vehicles, logs), [vehicles, logs]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -105,6 +107,25 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
                     <Plus className="w-5 h-5" />
                 </button>
             </header>
+
+            {attention.length > 0 && (
+                <Card className="bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30 p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Alertas de Revisão</span>
+                    </div>
+                    <ul className="space-y-1">
+                        {attention.map(a => (
+                            <li key={a.vehicle.id} className="text-xs text-orange-700 dark:text-orange-300 font-bold">
+                                {a.vehicle.model} ({a.vehicle.plate}) —{' '}
+                                {a.reason !== 'DATE' && `revisão aos ${a.dueKm?.toLocaleString()} KM`}
+                                {a.reason === 'BOTH' && ' ou '}
+                                {a.reason !== 'KM' && a.dueDate && `revisão em ${formatDate(a.dueDate)}`}
+                            </li>
+                        ))}
+                    </ul>
+                </Card>
+            )}
 
             {/* Stats Quick View */}
             <div className="grid grid-cols-2 gap-3">

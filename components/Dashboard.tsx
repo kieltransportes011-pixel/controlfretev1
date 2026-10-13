@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome, AppSettings } from '../types';
+import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome, AppSettings, Vehicle, MaintenanceLog } from '../types';
+import { getVehiclesNeedingAttention } from '../utils/vehicleAlerts';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -45,6 +46,8 @@ interface DashboardProps {
   accountsPayable: AccountPayable[];
   extraIncomes: ExtraIncome[];
   settings: AppSettings;
+  vehicles: Vehicle[];
+  maintenanceLogs: MaintenanceLog[];
   onAddFreight: () => void;
   onAddExpense: () => void;
   onViewSchedule: () => void;
@@ -64,7 +67,7 @@ interface DashboardProps {
   loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewFinancial, onViewPartners, onOpenAdmin, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, vehicles, maintenanceLogs, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewFinancial, onViewPartners, onOpenAdmin, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -88,6 +91,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
       }
     }
   }, [user, freights]);
+
+  const vehiclesNeedingAttention = useMemo(
+    () => getVehiclesNeedingAttention(vehicles ?? [], maintenanceLogs ?? []),
+    [vehicles, maintenanceLogs]
+  );
 
   const upcomingBills = useMemo(() => {
     if (!accountsPayable) return [];
@@ -449,7 +457,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
                   <Wrench className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Manutenção</h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Manutenção</h3>
+                    {vehiclesNeedingAttention.length > 0 && (
+                      <span className="bg-red-500/20 text-red-500 dark:text-red-400 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-red-500/30">
+                        {vehiclesNeedingAttention.length}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Alertas de Revisão</p>
                 </div>
               </div>
