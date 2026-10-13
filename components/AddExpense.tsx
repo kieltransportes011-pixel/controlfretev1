@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Expense, ExpenseSource, ExpenseCategory, User } from '../types';
+import { Expense, ExpenseSource, ExpenseCategory, User, Vehicle } from '../types';
 import { generateId } from '../utils';
 import { Button } from './Button';
 import { Card } from './Card';
@@ -8,11 +8,12 @@ import { useBankAccounts } from '../hooks/useBankAccounts';
 
 interface AddExpenseProps {
   user: User;
+  vehicles?: Vehicle[];
   onSave: (expense: Expense) => void;
   onCancel: () => void;
 }
 
-export const AddExpense: React.FC<AddExpenseProps> = ({ user, onSave, onCancel }) => {
+export const AddExpense: React.FC<AddExpenseProps> = ({ user, vehicles = [], onSave, onCancel }) => {
   const [value, setValue] = useState<string>('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -21,6 +22,7 @@ export const AddExpense: React.FC<AddExpenseProps> = ({ user, onSave, onCancel }
   const [isSuccess, setIsSuccess] = useState(false);
   const { accounts } = useBankAccounts(user);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [vehicleId, setVehicleId] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +35,8 @@ export const AddExpense: React.FC<AddExpenseProps> = ({ user, onSave, onCancel }
       value: parseFloat(value),
       source,
       category,
-      bank_account_id: selectedAccount || null
+      bank_account_id: selectedAccount || null,
+      vehicle_id: vehicleId || null
     };
 
     setIsSuccess(true);
@@ -113,6 +116,22 @@ export const AddExpense: React.FC<AddExpenseProps> = ({ user, onSave, onCancel }
               </div>
             </div>
           </div>
+
+          {vehicles.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Veículo <span className="text-slate-400 font-normal">(Opcional)</span></label>
+              <select
+                value={vehicleId}
+                onChange={(e) => setVehicleId(e.target.value)}
+                className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 dark:text-white"
+              >
+                <option value="">Nenhum</option>
+                {vehicles.map(v => (
+                  <option key={v.id} value={v.id}>{v.model} - {v.plate}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Descrição</label>

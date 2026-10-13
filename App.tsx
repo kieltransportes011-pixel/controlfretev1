@@ -1031,6 +1031,7 @@ Obs: ${of.description || 'Sem observações'}`;
             <motion.div key="add-expense" variants={viewVariants} initial="initial" animate="animate" exit="exit">
               <AddExpense
                 user={currentUser}
+                vehicles={vehicles}
                 onSave={async (e) => {
                   if (!currentUser) return;
                   await supabase.from('expenses').insert([{
@@ -1040,7 +1041,8 @@ Obs: ${of.description || 'Sem observações'}`;
                     value: e.value,
                     source: e.source,
                     category: e.category,
-                    bank_account_id: e.bank_account_id || null
+                    bank_account_id: e.bank_account_id || null,
+                    vehicle_id: e.vehicle_id || null
                   }]);
                   fetchData();
                   setView('DASHBOARD');
@@ -1323,6 +1325,7 @@ Obs: ${of.description || 'Sem observações'}`;
                 vehicle={selectedVehicle}
                 maintenanceLogs={maintenanceLogs}
                 freights={freights}
+                expenses={expenses}
                 onBack={() => { setSelectedVehicle(null); setView('FLEET'); }}
                 onEditVehicle={() => setView('FLEET')}
                 onDeleteLog={async (id) => {

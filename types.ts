@@ -87,6 +87,7 @@ export interface Expense {
   source: ExpenseSource;
   category?: ExpenseCategory;
   bank_account_id?: string | null;
+  vehicle_id?: string | null;
 }
 
 export interface User {

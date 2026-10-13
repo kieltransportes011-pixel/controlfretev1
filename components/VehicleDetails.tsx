@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { Vehicle, MaintenanceLog, Freight } from '../types';
+import { Vehicle, MaintenanceLog, Freight, Expense } from '../types';
 import { Card } from './Card';
 import { formatCurrency, formatDate } from '../utils';
-import { X, Hash, Calendar, Wrench, DollarSign, AlertCircle, Trash2 } from 'lucide-react';
+import { X, Hash, Calendar, Wrench, DollarSign, AlertCircle, Trash2, Fuel } from 'lucide-react';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { getVehiclesNeedingAttention } from '../utils/vehicleAlerts';
 import { CATEGORY_LABELS, CATEGORY_COLORS } from './MaintenanceLogs';
@@ -11,12 +11,13 @@ interface VehicleDetailsProps {
   vehicle: Vehicle;
   maintenanceLogs: MaintenanceLog[];
   freights: Freight[];
+  expenses: Expense[];
   onBack: () => void;
   onEditVehicle: () => void;
   onDeleteLog: (id: string) => Promise<void>;
 }
 
-export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, maintenanceLogs, freights, onBack, onEditVehicle, onDeleteLog }) => {
+export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, maintenanceLogs, freights, expenses, onBack, onEditVehicle, onDeleteLog }) => {
   const confirmDialog = useConfirm();
 
   const logsForVehicle = useMemo(
@@ -33,6 +34,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
 
   const totalMaintenanceCost = logsForVehicle.reduce((acc, l) => acc + l.cost, 0);
   const totalRevenue = freightsForVehicle.reduce((acc, f) => acc + f.totalValue, 0);
+
+  const fuelExpensesForVehicle = useMemo(
+    () => expenses.filter(e => e.vehicle_id === vehicle.id && e.category === 'FUEL'),
+    [expenses, vehicle.id]
+  );
+  const totalFuelCost = fuelExpensesForVehicle.reduce((acc, e) => acc + e.value, 0);
+  const totalProfit = totalRevenue - totalMaintenanceCost - totalFuelCost;
 
   const alerts = useMemo(
     () => getVehiclesNeedingAttention([vehicle], maintenanceLogs),
@@ -105,6 +113,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
             <span className="text-[10px] font-black uppercase tracking-widest">Receita (Fretes)</span>
           </div>
           <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(totalRevenue)}</p>
+        </Card>
+        <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30 p-4">
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+            <Fuel className="w-3 h-3" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Gasto Combustível</span>
+          </div>
+          <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(totalFuelCost)}</p>
+        </Card>
+        <Card className={totalProfit >= 0
+          ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 p-4'
+          : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 p-4'}>
+          <div className={`flex items-center gap-2 mb-1 ${totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+            <DollarSign className="w-3 h-3" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Lucro</span>
+          </div>
+          <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(totalProfit)}</p>
         </Card>
       </div>
 
