@@ -258,10 +258,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack, initialView = 'LOGI
 
     try {
       // 1.5. Validate CPF uniqueness on backend
-      const { data: cpfExists, error: rpcError } = await supabase.rpc('check_cpf_exists', {
-        p_cpf: formData.cpf
+      const { data: cpfCheck, error: cpfCheckError } = await supabase.functions.invoke('check-cpf', {
+        body: { cpf: formData.cpf }
       });
-      if (cpfExists) {
+      if (cpfCheckError || cpfCheck?.error) {
+        setError(cpfCheck?.error || 'Não foi possível validar o CPF. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+      if (cpfCheck?.exists) {
         setError('Este CPF já está cadastrado no sistema.');
         setLoading(false);
         return;
