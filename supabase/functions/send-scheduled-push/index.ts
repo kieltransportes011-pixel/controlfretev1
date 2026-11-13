@@ -1,9 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-// Roda 1x por dia via pg_cron (ver migration correspondente). Varre a fila
+// Roda a cada hora via pg_cron (ver migration correspondente). Varre a fila
 // push_campaign_queue por avisos com scheduled_at já vencido, ainda dentro
-// da validade (expires_at) e que nunca foram enviados, e dispara cada um
-// via send-push-notification (broadcast pra todos os dispositivos).
+// da validade (expires_at) e que nunca foram enviados, e dispara cada um via
+// send-push-notification. Por padrão manda pra todo mundo (audience='all');
+// quando audience='free', manda só pra quem ainda não é PRO (ex: avisos de
+// upgrade não fazem sentido pra quem já assina).
 
 Deno.serve(async (req) => {
   // Mesmo padrão de auth do check-due-bills: só o próprio pg_cron chama essa
@@ -26,7 +28,7 @@ Deno.serve(async (req) => {
 
     const { data: due, error } = await supabase
       .from('push_campaign_queue')
-      .select('id, title, body')
+      .select('id, title, body, audience')
       .is('sent_at', null)
       .not('scheduled_at', 'is', null)
       .lte('scheduled_at', nowIso)
@@ -45,13 +47,26 @@ Deno.serve(async (req) => {
     let sent = 0;
 
     for (const item of due) {
+      let payload: Record<string, unknown> = { title: item.title, body: item.body, broadcast: true };
+
+      if (item.audience === 'free') {
+        const { data: freeUsers } = await supabase
+          .from('profiles')
+          .select('id')
+          .or('is_premium.is.null,is_premium.eq.false');
+
+        const userIds = (freeUsers ?? []).map((u) => u.id);
+        if (userIds.length === 0) continue; // ninguém pra mandar, pula sem marcar como enviado
+        payload = { title: item.title, body: item.body, user_ids: userIds };
+      }
+
       const res = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${cronAuthKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ broadcast: true, title: item.title, body: item.body }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
