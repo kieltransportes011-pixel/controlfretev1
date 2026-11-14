@@ -12,8 +12,11 @@ import {
     Clock,
     Cpu,
     Activity,
-    DollarSign
+    DollarSign,
+    Download
 } from 'lucide-react';
+
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.controlfrete.app&hl=pt_BR';
 
 interface LandingPageProps {
     onLogin: () => void;
@@ -62,6 +65,16 @@ const Navbar = ({ onLogin, isMenuOpen, setIsMenuOpen, scrollToSection }: any) =>
                 ))}
 
                 <div className="h-4 w-px bg-[var(--industrial-border)]"></div>
+
+                <a
+                    href={PLAY_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden lg:flex items-center gap-2 text-gray-400 hover:text-white uppercase text-[10px] font-bold tracking-[0.2em] transition-colors"
+                >
+                    <Download className="w-3.5 h-3.5" />
+                    Play Store
+                </a>
 
                 <button
                     onClick={onLogin}
@@ -182,6 +195,19 @@ const Hero = ({ onLogin, onScrollToPlans }: any) => {
                             <span className="text-xs font-black uppercase tracking-[0.2em]">Ver Planos</span>
                         </button>
                     </motion.div>
+
+                    <motion.a
+                        href={PLAY_STORE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.85 }}
+                        className="group mt-4 inline-flex items-center gap-3 px-6 py-3 bg-white text-black hover:bg-[var(--precision-accent)] hover:text-white transition-colors self-center lg:self-start"
+                    >
+                        <Download className="w-4 h-4" strokeWidth={2.5} />
+                        <span className="text-xs font-black uppercase tracking-[0.2em]">Baixar na Play Store</span>
+                    </motion.a>
                 </div>
 
                 {/* Hero Image - Phone Mockup (Layered Over Title) */}
