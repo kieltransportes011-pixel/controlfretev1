@@ -1008,6 +1008,20 @@ Obs: ${of.description || 'Sem observações'}`;
                         distribution: f.distribution // New dynamic field
                       }]);
                       if (error) throw error;
+
+                      if (f.vehicle_id && f.distance_km) {
+                        const vehicle = vehicles.find(v => v.id === f.vehicle_id);
+                        if (vehicle) {
+                          const { error: kmError } = await supabase.from('vehicles').update({
+                            plate: vehicle.plate,
+                            brand: vehicle.brand,
+                            model: vehicle.model,
+                            year: vehicle.year,
+                            current_km: vehicle.current_km + f.distance_km
+                          }).eq('id', vehicle.id);
+                          if (kmError) console.error('Failed to sync vehicle km:', kmError);
+                        }
+                      }
                     }
 
                     fetchData();
