@@ -54,7 +54,7 @@ const Navbar = ({ onLogin, isMenuOpen, setIsMenuOpen, scrollToSection }: any) =>
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-10">
-                {['Recursos', 'Planos', 'Tecnologia'].map((item) => (
+                {['Recursos', 'Novidades', 'Planos', 'Tecnologia'].map((item) => (
                     <button
                         key={item}
                         onClick={() => scrollToSection(item.toLowerCase())}
@@ -293,6 +293,26 @@ const featuresData = [
     }
 ];
 
+// Lista curta de novidades — atualizar aqui a cada versão nova do app.
+// Mais recente primeiro.
+const novidadesData = [
+    {
+        date: "Nov 2026",
+        title: "Gestão de Frota completa",
+        desc: "Alertas automáticos de revisão, histórico por veículo, KM atualizado sozinho e painel de lucro por caminhão.",
+    },
+    {
+        date: "Nov 2026",
+        title: "Calculadora com endereço automático",
+        desc: "Digite o endereço de coleta e destino — o app sugere e já calcula a distância sozinho.",
+    },
+    {
+        date: "Out 2026",
+        title: "Control Frete chegou à Play Store",
+        desc: "App oficial disponível pra instalação, com atualizações automáticas a partir de agora.",
+    },
+];
+
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeFeature, setActiveFeature] = useState(0);
@@ -411,6 +431,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 </div>
             </section>
 
+            {/* Novidades */}
+            <section id="novidades" className="py-24 bg-[#050505] border-t border-[var(--industrial-border)] relative">
+                <div className="max-w-5xl mx-auto px-6 relative z-10">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-80px" }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-16"
+                    >
+                        <div className="inline-flex items-center gap-3 border border-[var(--industrial-border)] bg-[#0a0a0a] px-4 py-2 mb-6">
+                            <div className="w-2 h-2 bg-[var(--precision-accent)] rounded-full animate-pulse" />
+                            <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-mono">Em evolução constante</span>
+                        </div>
+                        <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Novidades</h2>
+                    </motion.div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {novidadesData.map((n, index) => (
+                            <motion.div
+                                key={n.title}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-80px" }}
+                                transition={{ duration: 0.5, delay: index * 0.1 }}
+                                className="p-6 border border-[var(--industrial-border)] hover:border-gray-600 transition-colors bg-[#0a0a0a]"
+                            >
+                                <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--precision-accent)] font-mono mb-3">{n.date}</div>
+                                <h3 className="text-white font-bold mb-2">{n.title}</h3>
+                                <p className="text-gray-500 text-sm leading-relaxed">{n.desc}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* Plans Section (Industrial Tables) */}
             <section id="planos" className="py-32 bg-[#080808] border-t border-[var(--industrial-border)] relative">
                 {/* Visual grid details */}
@@ -429,8 +485,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                         <p className="text-gray-500 max-w-xl mx-auto font-light">Selecione o nível de acesso adequado para sua operação.</p>
                     </motion.div>
 
-                    <div className="grid md:grid-cols-2 gap-8 items-stretch max-w-3xl mx-auto">
-                        {/* Mensal */}
+                    <div className="grid md:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
+                        {/* Free */}
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -438,11 +494,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             transition={{ duration: 0.5 }}
                             className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300"
                         >
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Nível Básico</div>
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Gratuito</div>
+                            <div className="text-4xl font-black text-white mb-2">R$ 0</div>
+                            <div className="text-gray-500 text-sm mb-8">Para sempre, sem cartão</div>
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {['Fretes e despesas ilimitados', 'Calculadora com endereço automático', 'Painel financeiro completo', 'Controle de clientes', 'Control Frete Parceiros', '7 dias de teste PRO grátis'].map(i => (
+                                    <li key={i} className="flex items-center gap-3 text-sm text-gray-400">
+                                        <div className="w-1 h-1 bg-gray-500" /> {i}
+                                    </li>
+                                ))}
+                            </ul>
+                            <button onClick={onLogin} className="w-full py-4 border border-gray-700 text-white font-bold uppercase text-xs tracking-widest hover:bg-white hover:text-black transition-colors rounded-none">
+                                Começar Grátis
+                            </button>
+                        </motion.div>
+
+                        {/* Mensal */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-80px" }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            className="p-8 border border-[var(--industrial-border)] hover:border-gray-500 transition-all flex flex-col bg-[#050505] duration-300"
+                        >
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 font-mono">// Mensal</div>
                             <div className="text-4xl font-black text-white mb-2">R$ 9<span className="text-xl">,90</span></div>
                             <div className="text-gray-500 text-sm mb-8">Cobrado mensalmente</div>
                             <ul className="space-y-4 mb-8 flex-1">
-                                {['Fretes Ilimitados', 'Relatórios básicos', 'Calculadora'].map(i => (
+                                {['Tudo do plano gratuito', 'Gestão de Frota completa', 'Alertas de revisão e lucro por caminhão', 'Agenda e Metas', 'Suporte dedicado'].map(i => (
                                     <li key={i} className="flex items-center gap-3 text-sm text-gray-400">
                                         <div className="w-1 h-1 bg-gray-500" /> {i}
                                     </li>
@@ -458,17 +537,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-80px" }}
-                            transition={{ duration: 0.5, delay: 0.1 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
                             className="p-8 border-2 border-[var(--precision-accent)] bg-[#050505] relative transform md:-translate-y-4 shadow-[0_0_50px_-25px_var(--precision-accent)] hover:shadow-[0_0_50px_-10px_var(--precision-accent)] hover:scale-[1.02] transition-all duration-500 group flex flex-col"
                         >
                             <div className="absolute top-0 right-0 bg-[var(--precision-accent)] text-white text-[10px] font-black uppercase px-3 py-1 tracking-widest">
-                                Oferta Limitada
+                                Mais Popular
                             </div>
                             <div className="text-xs font-black uppercase tracking-[0.2em] text-[var(--precision-accent)] mb-6 group-hover:tracking-[0.3em] transition-all duration-300 font-mono">// Anual Pro</div>
                             <div className="text-5xl font-black text-white mb-2">R$ 49<span className="text-2xl">,99</span></div>
                             <div className="text-gray-500 text-sm mb-8 font-mono">Equivale a R$ 4,17/mês</div>
                             <ul className="space-y-4 mb-8 flex-1">
-                                {['Economia de mais de 50%', 'Prioridade no Suporte', 'Módulo Financeiro', 'Sem anúncios', 'Mentoria em Grupo'].map(i => (
+                                {['Economia de mais de 50% vs. mensal', 'Gestão de Frota completa', 'Alertas de revisão e lucro por caminhão', 'Agenda, Metas e Suporte dedicado'].map(i => (
                                     <li key={i} className="flex items-center gap-3 text-sm text-white">
                                         <CheckCircle className="w-4 h-4 text-[var(--precision-accent)]" /> {i}
                                     </li>
