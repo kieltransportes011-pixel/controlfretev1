@@ -1,10 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Vehicle, VehicleStatus, MaintenanceLog, Freight, Expense, VehicleInspection } from '../types';
 import { Card } from './Card';
+import { Button } from './Button';
 import { formatCurrency, formatDate } from '../utils';
 import { X, Hash, Calendar, Wrench, DollarSign, AlertCircle, Trash2, Fuel, User, Printer, CheckCircle, Circle, TrendingUp } from 'lucide-react';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { useToast } from '../contexts/ToastContext';
 import { getVehiclesNeedingAttention } from '../utils/vehicleAlerts';
 import { CATEGORY_LABELS, CATEGORY_COLORS } from './MaintenanceLogs';
 
@@ -38,6 +40,7 @@ interface VehicleDetailsProps {
 
 export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, maintenanceLogs, freights, expenses, inspections, onBack, onEditVehicle, onDeleteLog, onAddInspection }) => {
   const confirmDialog = useConfirm();
+  const { error: toastError } = useToast();
 
   const logsForVehicle = useMemo(
     () => maintenanceLogs
@@ -90,6 +93,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
   const [savingChecklist, setSavingChecklist] = useState(false);
 
   const handleSaveChecklist = async () => {
+    if (savingChecklist) return;
     setSavingChecklist(true);
     try {
       await onAddInspection({
@@ -101,25 +105,28 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
       setShowChecklistForm(false);
       setChecklistState(Object.fromEntries(CHECKLIST_ITEMS.map(i => [i, false])));
       setChecklistNotes('');
+    } catch (err: any) {
+      console.error('Erro ao salvar checklist:', err);
+      toastError(err?.message || 'Erro ao salvar checklist. Tente novamente.');
     } finally {
       setSavingChecklist(false);
     }
   };
 
-  const handleExportPdf = () => {
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = () => {
+    const content = printRef.current;
+    if (!content) return;
     const printWindow = window.open('', '', 'height=700,width=900');
-    if (!printWindow) return;
-
-    const rows = logsForVehicle.map(l => `
-      <tr>
-        <td>${formatDate(l.date)}</td>
-        <td>${CATEGORY_LABELS[l.category]}</td>
-        <td>${l.description}</td>
-        <td class="text-right">${l.km_at_service ? l.km_at_service.toLocaleString() + ' KM' : '-'}</td>
-        <td class="text-right">${formatCurrency(l.cost)}</td>
-      </tr>
-    `).join('');
-
+    if (!printWindow || printWindow === window) {
+      // Esse ambiente (ex: app instalado/PWA) não permite abrir uma janela
+      // separada — a pré-visualização em tela já cobre o essencial, então
+      // só avisa em vez de arriscar navegar o app inteiro pra fora.
+      toastError('Esse dispositivo não permite abrir a janela de impressão. Use a pré-visualização na tela.');
+      return;
+    }
     printWindow.document.write(`<html><head><title>Relatório de Manutenção - ${vehicle.plate}</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 24px; color: #1e293b; }
@@ -135,22 +142,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
         .text-right { text-align: right; }
         @media print { body { padding: 0; } }
       </style>
-    </head><body>
-      <h1>Relatório de Manutenção</h1>
-      <p class="subtitle">${vehicle.model} - ${vehicle.plate}${vehicle.driver_name ? ' - Motorista: ' + vehicle.driver_name : ''}</p>
-      <div class="stats">
-        <div class="stat"><div class="stat-label">KM Atual</div><div class="stat-value">${vehicle.current_km.toLocaleString()}</div></div>
-        <div class="stat"><div class="stat-label">Gasto Manutenção</div><div class="stat-value">${formatCurrency(totalMaintenanceCost)}</div></div>
-        <div class="stat"><div class="stat-label">Gasto Combustível</div><div class="stat-value">${formatCurrency(totalFuelCost)}</div></div>
-        <div class="stat"><div class="stat-label">Lucro</div><div class="stat-value">${formatCurrency(totalProfit)}</div></div>
-      </div>
-      <table>
-        <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="text-right">KM</th><th class="text-right">Custo</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Nenhum serviço registrado.</td></tr>'}</tbody>
-      </table>
-    </body></html>`);
+    </head><body>${content.innerHTML}</body></html>`);
     printWindow.document.close();
-    setTimeout(() => printWindow.print(), 300);
+    printWindow.focus();
+    printWindow.print();
   };
 
   return (
@@ -177,7 +172,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleExportPdf}
+            onClick={() => setShowPdfPreview(true)}
             className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 p-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
             <Printer className="w-5 h-5" />
@@ -383,6 +378,70 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
           );
         })}
       </div>
+
+      {showPdfPreview && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <Card className="w-full max-w-lg max-h-[85vh] overflow-y-auto space-y-4 animate-slideUp">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Relatório de Manutenção</h2>
+              <button onClick={() => setShowPdfPreview(false)} className="text-slate-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div ref={printRef} className="space-y-4 text-slate-800">
+              <div>
+                <h1 style={{ fontSize: 18, fontWeight: 900, margin: 0 }}>Relatório de Manutenção</h1>
+                <p style={{ color: '#64748b', fontSize: 12, margin: '4px 0 0' }}>
+                  {vehicle.model} - {vehicle.plate}{vehicle.driver_name ? ` - Motorista: ${vehicle.driver_name}` : ''}
+                </p>
+              </div>
+              <div className="stats" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {[
+                  ['KM Atual', vehicle.current_km.toLocaleString()],
+                  ['Gasto Manutenção', formatCurrency(totalMaintenanceCost)],
+                  ['Gasto Combustível', formatCurrency(totalFuelCost)],
+                  ['Lucro', formatCurrency(totalProfit)],
+                ].map(([label, value]) => (
+                  <div key={label} className="stat" style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px' }}>
+                    <div className="stat-label" style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase' }}>{label}</div>
+                    <div className="stat-value" style={{ fontSize: 14, fontWeight: 700 }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr>
+                    <th style={{ background: '#f1f5f9', textAlign: 'left', padding: 8, fontSize: 10, textTransform: 'uppercase' }}>Data</th>
+                    <th style={{ background: '#f1f5f9', textAlign: 'left', padding: 8, fontSize: 10, textTransform: 'uppercase' }}>Categoria</th>
+                    <th style={{ background: '#f1f5f9', textAlign: 'left', padding: 8, fontSize: 10, textTransform: 'uppercase' }}>Descrição</th>
+                    <th className="text-right" style={{ background: '#f1f5f9', textAlign: 'right', padding: 8, fontSize: 10, textTransform: 'uppercase' }}>KM</th>
+                    <th className="text-right" style={{ background: '#f1f5f9', textAlign: 'right', padding: 8, fontSize: 10, textTransform: 'uppercase' }}>Custo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logsForVehicle.length === 0 ? (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', color: '#94a3b8', padding: 16 }}>Nenhum serviço registrado.</td></tr>
+                  ) : logsForVehicle.map(l => (
+                    <tr key={l.id}>
+                      <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{formatDate(l.date)}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{CATEGORY_LABELS[l.category]}</td>
+                      <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{l.description}</td>
+                      <td className="text-right" style={{ padding: 8, borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>{l.km_at_service ? `${l.km_at_service.toLocaleString()} KM` : '-'}</td>
+                      <td className="text-right" style={{ padding: 8, borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>{formatCurrency(l.cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Button fullWidth onClick={handlePrint} className="!py-2.5">
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir / Salvar PDF
+            </Button>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
