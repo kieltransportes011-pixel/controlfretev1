@@ -474,10 +474,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     };
 
     const handleExportUsersCSV = () => {
-        const headers = ['Nome', 'Email', 'Plano', 'Status Assinatura', 'Status Conta', 'Fretes', 'CF Coins', 'Criado em'];
+        const headers = ['Nome', 'Email', 'Plano', 'Status Assinatura', 'Status Conta', 'Fretes', 'Criado em'];
         const rows = filteredUsers.map(u => [
             u.name, u.email, u.plano, u.status_assinatura, u.account_status,
-            u.total_freights ?? 0, u.cf_coins_balance ?? 0, u.created_at
+            u.total_freights ?? 0, u.created_at
         ]);
         const csv = [headers, ...rows]
             .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
@@ -730,7 +730,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                 <th className="px-6 py-4">Usuário</th>
                                                 <th className="px-6 py-4">Plano</th>
                                                 <th className="px-6 py-4">Status</th>
-                                                <th className="px-6 py-4 text-right">CF Coins</th>
                                                 <th className="px-6 py-4 text-right">Fretes</th>
                                             </tr>
                                         </thead>
@@ -769,9 +768,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                             }`}>
                                                             {user.account_status === 'banned' ? 'Banido' : 'Ativo'}
                                                         </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right font-mono text-amber-400">
-                                                        {user.cf_coins_balance ?? 0}
                                                     </td>
                                                     <td className="px-6 py-4 text-right font-mono text-slate-400">
                                                         {user.total_freights}
@@ -1560,7 +1556,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <div className="text-[10px] text-slate-500">{editingUser.email}</div>
                             <div className="flex gap-4 mt-3 text-[10px] text-slate-400 flex-wrap">
                                 <span>Fretes: {editingUser.total_freights ?? 0}</span>
-                                <span className="text-amber-400">CF Coins: {editingUser.cf_coins_balance ?? 0}</span>
                                 <span>Desde: {formatDate(editingUser.created_at)}</span>
                                 <span className={editingUser.account_status === 'banned' ? 'text-red-400' : 'text-green-400'}>
                                     {editingUser.account_status === 'banned' ? 'Banido' : 'Ativo'}

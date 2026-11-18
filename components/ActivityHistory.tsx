@@ -12,6 +12,7 @@ interface ActivityHistoryProps {
 export const ActivityHistory: React.FC<ActivityHistoryProps> = ({ userId }) => {
     const [logs, setLogs] = useState<AccountActivityLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [expanded, setExpanded] = useState(false);
     const { error: showError } = useToast();
 
     useEffect(() => {
@@ -61,7 +62,7 @@ export const ActivityHistory: React.FC<ActivityHistoryProps> = ({ userId }) => {
                 Últimas Atividades de Segurança
             </h3>
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-                {logs.map((log) => {
+                {(expanded ? logs : logs.slice(0, 3)).map((log) => {
                     const isUser = log.actor === 'user';
                     const isAdmin = log.actor === 'admin';
 
@@ -91,11 +92,16 @@ export const ActivityHistory: React.FC<ActivityHistoryProps> = ({ userId }) => {
                     );
                 })}
             </div>
-            <div className="text-center">
-                <p className="text-[10px] text-slate-400">
-                    Mostrando as últimas 20 atividades. Logs mais antigos são arquivados por segurança.
-                </p>
-            </div>
+            {logs.length > 3 && (
+                <div className="text-center">
+                    <button
+                        onClick={() => setExpanded((e) => !e)}
+                        className="text-xs font-medium text-brand hover:underline"
+                    >
+                        {expanded ? 'Mostrar menos' : `Mostrar todas as atividades (${logs.length})`}
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
