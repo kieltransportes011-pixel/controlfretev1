@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
-import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog, VehicleInspection } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog, VehicleInspection, Driver } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -36,6 +36,7 @@ import { UpgradeModal } from './components/UpgradeModal';
 import { FreightIntegration } from './components/FreightIntegration';
 import { FreightNoticeModal } from './components/FreightNoticeModal';
 import { Clients } from './components/Clients';
+import { Drivers } from './components/Drivers';
 import { Fleet } from './components/Fleet';
 import { MaintenanceLogs } from './components/MaintenanceLogs';
 import { VehicleDetails } from './components/VehicleDetails';
@@ -135,6 +136,7 @@ export default function App() {
       CLIENTS: '/clients',
       FLEET: '/fleet',
       VEHICLE_DETAILS: '/fleet/vehicle',
+      DRIVERS: '/fleet/drivers',
       MAINTENANCE: '/maintenance',
       FINANCIAL: '/financial',
       NOTICES: '/notices',
@@ -161,6 +163,7 @@ export default function App() {
       '/clients': 'CLIENTS',
       '/fleet': 'FLEET',
       '/fleet/vehicle': 'VEHICLE_DETAILS',
+      '/fleet/drivers': 'DRIVERS',
       '/maintenance': 'MAINTENANCE',
       '/financial': 'FINANCIAL',
       '/notices': 'NOTICES',
@@ -198,6 +201,7 @@ export default function App() {
   const [ofretejaFreights, setOfretejaFreights] = useState<OFretejaFreight[]>([]);
   const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
   const [vehicleInspections, setVehicleInspections] = useState<VehicleInspection[]>([]);
@@ -523,6 +527,16 @@ export default function App() {
       setClients(clientsData as Client[]);
     }
 
+    // Fetch Drivers
+    const { data: driversData } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('name', { ascending: true });
+    if (driversData) {
+      setDrivers(driversData as Driver[]);
+    }
+
     // Fetch Vehicles
     const { data: vehiclesData } = await supabase
       .from('vehicles')
@@ -782,6 +796,43 @@ Obs: ${of.description || 'Sem observações'}`;
     } catch (error: any) {
       console.error("Erro ao excluir cliente:", error);
       toastError("Erro ao excluir cliente: " + (error.message || "Tente novamente."));
+    }
+  };
+
+  const handleSaveDriver = async (driver: Partial<Driver>) => {
+    if (!currentUser) return;
+    try {
+      if (driver.id) {
+        const { error } = await supabase
+          .from('drivers')
+          .update({ name: driver.name, phone: driver.phone, cnh: driver.cnh })
+          .eq('id', driver.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('drivers')
+          .insert([{ user_id: currentUser.id, name: driver.name, phone: driver.phone, cnh: driver.cnh }]);
+        if (error) throw error;
+      }
+      fetchData();
+    } catch (error: any) {
+      console.error("Erro ao salvar motorista:", error);
+      toastError("Erro ao salvar motorista: " + (error.message || "Tente novamente."));
+    }
+  };
+
+  const handleDeleteDriver = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      const { error } = await supabase
+        .from('drivers')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (error: any) {
+      console.error("Erro ao excluir motorista:", error);
+      toastError("Erro ao excluir motorista: " + (error.message || "Tente novamente."));
     }
   };
 
@@ -1312,12 +1363,25 @@ Obs: ${of.description || 'Sem observações'}`;
             </motion.div>
           )}
 
+          {view === 'DRIVERS' && (
+            <motion.div key="drivers" variants={viewVariants} initial="initial" animate="animate" exit="exit">
+              <Drivers
+                drivers={drivers}
+                onSaveDriver={handleSaveDriver}
+                onDeleteDriver={handleDeleteDriver}
+                onBack={() => setView('FLEET')}
+              />
+            </motion.div>
+          )}
+
           {view === 'FLEET' && (
             <motion.div key="fleet" variants={viewVariants} initial="initial" animate="animate" exit="exit">
               <Fleet
                 vehicles={vehicles}
                 maintenanceLogs={maintenanceLogs}
                 expenses={expenses}
+                drivers={drivers}
+                onManageDrivers={() => setView('DRIVERS')}
                 onAddVehicle={async (v) => {
                   if (!currentUser) return;
                   const { error } = await supabase.from('vehicles').insert([{ ...v, user_id: currentUser.id }]);

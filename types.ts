@@ -148,6 +148,15 @@ export interface AppSettings {
   customPercentages?: PercentageCategory[];
 }
 
+export interface Driver {
+  id: string;
+  user_id: string;
+  name: string;
+  phone?: string;
+  cnh?: string;
+  created_at: string;
+}
+
 export interface Client {
   id: string;
   user_id: string;
@@ -164,7 +173,7 @@ export interface Client {
   created_at: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'MAINTENANCE' | 'FINANCIAL' | 'PARTNERS';
+export type ViewState = 'DASHBOARD' | 'ADD_FREIGHT' | 'ADD_EXPENSE' | 'HISTORY' | 'RECEIVABLES' | 'SETTINGS' | 'CALCULATOR' | 'AGENDA' | 'GOALS' | 'PAYMENT' | 'ADMIN' | 'SUPPORT' | 'NOTICES' | 'FREIGHT_INTEGRATION' | 'CLIENTS' | 'FLEET' | 'VEHICLE_DETAILS' | 'MAINTENANCE' | 'FINANCIAL' | 'PARTNERS' | 'DRIVERS';
 
 export interface BankAccount {
   id: string;

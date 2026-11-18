@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Vehicle, VehicleStatus, MaintenanceLog, Expense } from '../types';
+import { Vehicle, VehicleStatus, MaintenanceLog, Expense, Driver } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Truck, Plus, ChevronRight, Search, Hash, Calendar, Fuel, Trash2, Edit3, X, Loader2, User, TrendingUp } from 'lucide-react';
@@ -11,6 +11,8 @@ interface FleetProps {
     vehicles: Vehicle[];
     maintenanceLogs: MaintenanceLog[];
     expenses: Expense[];
+    drivers: Driver[];
+    onManageDrivers: () => void;
     onAddVehicle: (v: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
     onEditVehicle: (v: Vehicle) => Promise<void>;
     onDeleteVehicle: (id: string) => Promise<void>;
@@ -32,7 +34,7 @@ const STATUS_COLORS: Record<VehicleStatus, string> = {
     inativo: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
 };
 
-export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expenses, onAddVehicle, onEditVehicle, onDeleteVehicle, onViewDetails, onBack }) => {
+export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expenses, drivers, onManageDrivers, onAddVehicle, onEditVehicle, onDeleteVehicle, onViewDetails, onBack }) => {
     const { error: toastError } = useToast();
     const confirmDialog = useConfirm();
     const [searchTerm, setSearchTerm] = useState('');
@@ -281,13 +283,23 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Motorista</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={driverName}
-                                        onChange={(e) => setDriverName(e.target.value)}
-                                        placeholder="Opcional"
+                                        onChange={(e) => {
+                                            if (e.target.value === '__manage__') { onManageDrivers(); return; }
+                                            setDriverName(e.target.value);
+                                        }}
                                         className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:border-brand-secondary font-bold"
-                                    />
+                                    >
+                                        <option value="">Nenhum</option>
+                                        {drivers.map(d => (
+                                            <option key={d.id} value={d.name}>{d.name}</option>
+                                        ))}
+                                        {driverName && !drivers.some(d => d.name === driverName) && (
+                                            <option value={driverName}>{driverName} (atual)</option>
+                                        )}
+                                        <option value="__manage__">+ Gerenciar motoristas</option>
+                                    </select>
                                 </div>
                             </div>
 
