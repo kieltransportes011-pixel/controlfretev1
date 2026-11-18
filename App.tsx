@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
-import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog, VehicleInspection } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -200,6 +200,7 @@ export default function App() {
   const [clients, setClients] = useState<Client[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+  const [vehicleInspections, setVehicleInspections] = useState<VehicleInspection[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
@@ -537,6 +538,14 @@ export default function App() {
       .eq('user_id', currentUser.id)
       .order('date', { ascending: false });
     if (maintenanceData) setMaintenanceLogs(maintenanceData as MaintenanceLog[]);
+
+    // Fetch Vehicle Inspections
+    const { data: inspectionsData } = await supabase
+      .from('vehicle_inspections')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('date', { ascending: false });
+    if (inspectionsData) setVehicleInspections(inspectionsData as VehicleInspection[]);
 
     setSyncing(false);
     setLoadingData(false);
@@ -1017,6 +1026,8 @@ Obs: ${of.description || 'Sem observações'}`;
                             brand: vehicle.brand,
                             model: vehicle.model,
                             year: vehicle.year,
+                            status: vehicle.status,
+                            driver_name: vehicle.driver_name,
                             current_km: vehicle.current_km + f.distance_km
                           }).eq('id', vehicle.id);
                           if (kmError) console.error('Failed to sync vehicle km:', kmError);
@@ -1305,6 +1316,8 @@ Obs: ${of.description || 'Sem observações'}`;
             <motion.div key="fleet" variants={viewVariants} initial="initial" animate="animate" exit="exit">
               <Fleet
                 vehicles={vehicles}
+                maintenanceLogs={maintenanceLogs}
+                expenses={expenses}
                 onAddVehicle={async (v) => {
                   if (!currentUser) return;
                   const { error } = await supabase.from('vehicles').insert([{ ...v, user_id: currentUser.id }]);
@@ -1317,7 +1330,9 @@ Obs: ${of.description || 'Sem observações'}`;
                     brand: v.brand,
                     model: v.model,
                     year: v.year,
-                    current_km: v.current_km
+                    current_km: v.current_km,
+                    status: v.status,
+                    driver_name: v.driver_name
                   }).eq('id', v.id);
                   if (error) throw error;
                   fetchData();
@@ -1340,6 +1355,13 @@ Obs: ${of.description || 'Sem observações'}`;
                 maintenanceLogs={maintenanceLogs}
                 freights={freights}
                 expenses={expenses}
+                inspections={vehicleInspections}
+                onAddInspection={async (i) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('vehicle_inspections').insert([{ ...i, user_id: currentUser.id }]);
+                  if (error) throw error;
+                  fetchData();
+                }}
                 onBack={() => { setSelectedVehicle(null); setView('FLEET'); }}
                 onEditVehicle={() => setView('FLEET')}
                 onDeleteLog={async (id) => {
@@ -1369,6 +1391,8 @@ Obs: ${of.description || 'Sem observações'}`;
                         brand: vehicle.brand,
                         model: vehicle.model,
                         year: vehicle.year,
+                        status: vehicle.status,
+                        driver_name: vehicle.driver_name,
                         current_km: l.km_at_service
                       }).eq('id', vehicle.id);
                       if (kmError) console.error('Failed to sync vehicle km:', kmError);

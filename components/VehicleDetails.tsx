@@ -1,23 +1,42 @@
-import React, { useMemo } from 'react';
-import { Vehicle, MaintenanceLog, Freight, Expense } from '../types';
+import React, { useMemo, useState } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Vehicle, VehicleStatus, MaintenanceLog, Freight, Expense, VehicleInspection } from '../types';
 import { Card } from './Card';
 import { formatCurrency, formatDate } from '../utils';
-import { X, Hash, Calendar, Wrench, DollarSign, AlertCircle, Trash2, Fuel } from 'lucide-react';
+import { X, Hash, Calendar, Wrench, DollarSign, AlertCircle, Trash2, Fuel, User, Printer, CheckCircle, Circle, TrendingUp } from 'lucide-react';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { getVehiclesNeedingAttention } from '../utils/vehicleAlerts';
 import { CATEGORY_LABELS, CATEGORY_COLORS } from './MaintenanceLogs';
+
+const STATUS_LABELS: Record<VehicleStatus, string> = {
+  ativo: 'Ativo',
+  em_manutencao: 'Em Manutenção',
+  vendido: 'Vendido',
+  inativo: 'Inativo',
+};
+
+const STATUS_COLORS: Record<VehicleStatus, string> = {
+  ativo: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  em_manutencao: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  vendido: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+  inativo: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+};
+
+const CHECKLIST_ITEMS = ['Pneus', 'Freios', 'Óleo', 'Água do Radiador', 'Luzes/Sinalização', 'Nível de Combustível', 'Documentação'];
 
 interface VehicleDetailsProps {
   vehicle: Vehicle;
   maintenanceLogs: MaintenanceLog[];
   freights: Freight[];
   expenses: Expense[];
+  inspections: VehicleInspection[];
   onBack: () => void;
   onEditVehicle: () => void;
   onDeleteLog: (id: string) => Promise<void>;
+  onAddInspection: (i: Omit<VehicleInspection, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
 }
 
-export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, maintenanceLogs, freights, expenses, onBack, onEditVehicle, onDeleteLog }) => {
+export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, maintenanceLogs, freights, expenses, inspections, onBack, onEditVehicle, onDeleteLog, onAddInspection }) => {
   const confirmDialog = useConfirm();
 
   const logsForVehicle = useMemo(
@@ -47,6 +66,93 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
     [vehicle, maintenanceLogs]
   );
 
+  const kmHistory = useMemo(
+    () => logsForVehicle
+      .filter(l => l.km_at_service)
+      .slice()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .map(l => ({ name: formatDate(l.date), km: l.km_at_service as number })),
+    [logsForVehicle]
+  );
+
+  const inspectionsForVehicle = useMemo(
+    () => inspections
+      .filter(i => i.vehicle_id === vehicle.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [inspections, vehicle.id]
+  );
+
+  const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [checklistState, setChecklistState] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(CHECKLIST_ITEMS.map(i => [i, false]))
+  );
+  const [checklistNotes, setChecklistNotes] = useState('');
+  const [savingChecklist, setSavingChecklist] = useState(false);
+
+  const handleSaveChecklist = async () => {
+    setSavingChecklist(true);
+    try {
+      await onAddInspection({
+        vehicle_id: vehicle.id,
+        date: new Date().toISOString(),
+        items: checklistState,
+        notes: checklistNotes || undefined,
+      });
+      setShowChecklistForm(false);
+      setChecklistState(Object.fromEntries(CHECKLIST_ITEMS.map(i => [i, false])));
+      setChecklistNotes('');
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
+
+  const handleExportPdf = () => {
+    const printWindow = window.open('', '', 'height=700,width=900');
+    if (!printWindow) return;
+
+    const rows = logsForVehicle.map(l => `
+      <tr>
+        <td>${formatDate(l.date)}</td>
+        <td>${CATEGORY_LABELS[l.category]}</td>
+        <td>${l.description}</td>
+        <td class="text-right">${l.km_at_service ? l.km_at_service.toLocaleString() + ' KM' : '-'}</td>
+        <td class="text-right">${formatCurrency(l.cost)}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`<html><head><title>Relatório de Manutenção - ${vehicle.plate}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 24px; color: #1e293b; }
+        h1 { font-size: 20px; margin-bottom: 4px; }
+        .subtitle { color: #64748b; font-size: 12px; margin-bottom: 24px; }
+        .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .stat { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
+        .stat-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+        .stat-value { font-size: 16px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f1f5f9; text-align: left; padding: 10px; font-size: 11px; text-transform: uppercase; }
+        td { padding: 10px; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
+        .text-right { text-align: right; }
+        @media print { body { padding: 0; } }
+      </style>
+    </head><body>
+      <h1>Relatório de Manutenção</h1>
+      <p class="subtitle">${vehicle.model} - ${vehicle.plate}${vehicle.driver_name ? ' - Motorista: ' + vehicle.driver_name : ''}</p>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">KM Atual</div><div class="stat-value">${vehicle.current_km.toLocaleString()}</div></div>
+        <div class="stat"><div class="stat-label">Gasto Manutenção</div><div class="stat-value">${formatCurrency(totalMaintenanceCost)}</div></div>
+        <div class="stat"><div class="stat-label">Gasto Combustível</div><div class="stat-value">${formatCurrency(totalFuelCost)}</div></div>
+        <div class="stat"><div class="stat-label">Lucro</div><div class="stat-value">${formatCurrency(totalProfit)}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="text-right">KM</th><th class="text-right">Custo</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Nenhum serviço registrado.</td></tr>'}</tbody>
+      </table>
+    </body></html>`);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
   return (
     <div className="pb-24 space-y-6 animate-fadeIn">
       <header className="flex justify-between items-center pb-1">
@@ -56,15 +162,33 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
           </button>
           <div>
             <h1 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">{vehicle.model}</h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{vehicle.plate}</p>
+            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{vehicle.plate}</p>
+              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${STATUS_COLORS[vehicle.status || 'ativo']}`}>
+                {STATUS_LABELS[vehicle.status || 'ativo']}
+              </span>
+              {vehicle.driver_name && (
+                <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase">
+                  <User className="w-3 h-3" /> {vehicle.driver_name}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <button
-          onClick={onEditVehicle}
-          className="bg-brand text-white p-2.5 rounded-xl shadow-lg shadow-brand/20 hover:scale-105 transition-transform"
-        >
-          <Wrench className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportPdf}
+            className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 p-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Printer className="w-5 h-5" />
+          </button>
+          <button
+            onClick={onEditVehicle}
+            className="bg-brand text-white p-2.5 rounded-xl shadow-lg shadow-brand/20 hover:scale-105 transition-transform"
+          >
+            <Wrench className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       {alerts.length > 0 && (
@@ -132,6 +256,39 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
         </Card>
       </div>
 
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Evolução de KM</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase">Baseado nas manutenções registradas</p>
+          </div>
+          <TrendingUp className="w-5 h-5 text-brand" />
+        </div>
+        {kmHistory.length < 2 ? (
+          <div className="h-28 flex items-center justify-center text-xs text-slate-400 text-center px-6">
+            Registre mais manutenções informando o KM pra ver a evolução.
+          </div>
+        ) : (
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={kmHistory}>
+                <defs>
+                  <linearGradient id="colorKm" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} dy={10} />
+                <YAxis hide />
+                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold' }} />
+                <Area type="monotone" dataKey="km" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorKm)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </Card>
+
       <div className="space-y-3">
         <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Histórico de Manutenção</h2>
         {logsForVehicle.length === 0 && (
@@ -161,6 +318,70 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
             </button>
           </Card>
         ))}
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Checklist de Inspeção</h2>
+          <button
+            onClick={() => setShowChecklistForm(s => !s)}
+            className="text-[10px] font-black text-brand uppercase tracking-widest"
+          >
+            {showChecklistForm ? 'Cancelar' : '+ Novo Checklist'}
+          </button>
+        </div>
+
+        {showChecklistForm && (
+          <Card className="p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {CHECKLIST_ITEMS.map(item => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setChecklistState(s => ({ ...s, [item]: !s[item] }))}
+                  className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-left transition-colors ${checklistState[item] ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400'}`}
+                >
+                  {checklistState[item] ? <CheckCircle className="w-4 h-4 shrink-0" /> : <Circle className="w-4 h-4 shrink-0" />}
+                  {item}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={checklistNotes}
+              onChange={(e) => setChecklistNotes(e.target.value)}
+              placeholder="Observações (opcional)"
+              rows={2}
+              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl outline-none text-sm resize-none dark:text-white"
+            />
+            <button
+              onClick={handleSaveChecklist}
+              disabled={savingChecklist}
+              className="w-full py-3 bg-brand text-white rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50"
+            >
+              {savingChecklist ? 'Salvando...' : 'Salvar Checklist'}
+            </button>
+          </Card>
+        )}
+
+        {inspectionsForVehicle.length === 0 && !showChecklistForm && (
+          <Card className="p-4 text-center text-xs text-slate-400 font-bold">Nenhum checklist registrado ainda.</Card>
+        )}
+        {inspectionsForVehicle.slice(0, 5).map(insp => {
+          const total = Object.keys(insp.items).length;
+          const checked = Object.values(insp.items).filter(Boolean).length;
+          const complete = checked === total;
+          return (
+            <Card key={insp.id} className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{formatDate(insp.date)}</p>
+                {insp.notes && <p className="text-xs text-slate-400 mt-0.5">{insp.notes}</p>}
+              </div>
+              <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest shrink-0 ${complete ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                {checked}/{total} OK
+              </span>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

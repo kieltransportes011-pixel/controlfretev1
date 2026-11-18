@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { Vehicle } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Vehicle, VehicleStatus, MaintenanceLog, Expense } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Truck, Plus, ChevronRight, Search, Hash, Calendar, Fuel, Trash2, Edit3, X, Loader2 } from 'lucide-react';
+import { Truck, Plus, ChevronRight, Search, Hash, Calendar, Fuel, Trash2, Edit3, X, Loader2, User, TrendingUp } from 'lucide-react';
+import { formatCurrency } from '../utils';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 interface FleetProps {
     vehicles: Vehicle[];
+    maintenanceLogs: MaintenanceLog[];
+    expenses: Expense[];
     onAddVehicle: (v: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
     onEditVehicle: (v: Vehicle) => Promise<void>;
     onDeleteVehicle: (id: string) => Promise<void>;
@@ -15,13 +18,28 @@ interface FleetProps {
     onBack: () => void;
 }
 
-export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehicle, onDeleteVehicle, onViewDetails, onBack }) => {
+const STATUS_LABELS: Record<VehicleStatus, string> = {
+    ativo: 'Ativo',
+    em_manutencao: 'Em Manutenção',
+    vendido: 'Vendido',
+    inativo: 'Inativo',
+};
+
+const STATUS_COLORS: Record<VehicleStatus, string> = {
+    ativo: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    em_manutencao: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    vendido: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+    inativo: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+};
+
+export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expenses, onAddVehicle, onEditVehicle, onDeleteVehicle, onViewDetails, onBack }) => {
     const { error: toastError } = useToast();
     const confirmDialog = useConfirm();
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showInactive, setShowInactive] = useState(false);
 
     // Form State
     const [plate, setPlate] = useState('');
@@ -29,12 +47,29 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
     const [model, setModel] = useState('');
     const [year, setYear] = useState('');
     const [km, setKm] = useState('');
+    const [status, setStatus] = useState<VehicleStatus>('ativo');
+    const [driverName, setDriverName] = useState('');
 
-    const filteredVehicles = vehicles.filter(v =>
-        v.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.brand?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const inactiveCount = vehicles.filter(v => v.status === 'vendido' || v.status === 'inativo').length;
+
+    const filteredVehicles = vehicles.filter(v => {
+        if (!showInactive && (v.status === 'vendido' || v.status === 'inativo')) return false;
+        return v.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            v.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            v.brand?.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    const costRanking = useMemo(() => {
+        const ranked = vehicles
+            .filter(v => v.current_km > 0)
+            .map(v => {
+                const maintCost = maintenanceLogs.filter(l => l.vehicle_id === v.id).reduce((a, l) => a + l.cost, 0);
+                const fuelCost = expenses.filter(e => e.vehicle_id === v.id && e.category === 'FUEL').reduce((a, e) => a + e.value, 0);
+                return { vehicle: v, costPerKm: (maintCost + fuelCost) / v.current_km };
+            })
+            .sort((a, b) => b.costPerKm - a.costPerKm);
+        return ranked;
+    }, [vehicles, maintenanceLogs, expenses]);
 
     const resetForm = () => {
         setPlate('');
@@ -42,6 +77,8 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
         setModel('');
         setYear('');
         setKm('');
+        setStatus('ativo');
+        setDriverName('');
         setEditingVehicle(null);
         setShowAddForm(false);
     };
@@ -60,6 +97,8 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
             model,
             year: year ? parseInt(year) : undefined,
             current_km: km ? parseFloat(km) : 0,
+            status,
+            driver_name: driverName || undefined,
         };
 
         setIsSubmitting(true);
@@ -85,6 +124,8 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
         setModel(v.model);
         setYear(v.year?.toString() || '');
         setKm(v.current_km.toString());
+        setStatus(v.status || 'ativo');
+        setDriverName(v.driver_name || '');
         setShowAddForm(true);
     };
 
@@ -108,16 +149,51 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
                 </button>
             </header>
 
+            {costRanking.length >= 2 && (
+                <Card className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-brand" />
+                        <h2 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Custo por KM da Frota</h2>
+                    </div>
+                    <div className="space-y-2.5">
+                        {costRanking.map(({ vehicle, costPerKm }) => (
+                            <div key={vehicle.id}>
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{vehicle.model} ({vehicle.plate})</span>
+                                    <span className="text-xs font-black text-slate-700 dark:text-slate-200">{formatCurrency(costPerKm)}/km</span>
+                                </div>
+                                <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                    <div
+                                        className="bg-brand h-full"
+                                        style={{ width: `${costRanking[0].costPerKm > 0 ? Math.max(4, (costPerKm / costRanking[0].costPerKm) * 100) : 0}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            )}
+
             {/* Search */}
-            <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                    type="text"
-                    placeholder="Buscar por placa ou modelo..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-800 border-none rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-brand/20 text-sm transition-all"
-                />
+            <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por placa ou modelo..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-800 border-none rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-brand/20 text-sm transition-all"
+                    />
+                </div>
+                {inactiveCount > 0 && (
+                    <button
+                        onClick={() => setShowInactive(s => !s)}
+                        className={`shrink-0 px-3 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors ${showInactive ? 'bg-brand text-white' : 'bg-white dark:bg-slate-800 text-slate-400'}`}
+                    >
+                        Inativos ({inactiveCount})
+                    </button>
+                )}
             </div>
 
             {showAddForm && (
@@ -190,6 +266,31 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
                                 </div>
                             </div>
 
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Status</label>
+                                    <select
+                                        value={status}
+                                        onChange={(e) => setStatus(e.target.value as VehicleStatus)}
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:border-brand-secondary font-bold"
+                                    >
+                                        {(Object.keys(STATUS_LABELS) as VehicleStatus[]).map(s => (
+                                            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Motorista</label>
+                                    <input
+                                        type="text"
+                                        value={driverName}
+                                        onChange={(e) => setDriverName(e.target.value)}
+                                        placeholder="Opcional"
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:border-brand-secondary font-bold"
+                                    />
+                                </div>
+                            </div>
+
                             <Button fullWidth type="submit" className="h-12" disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (editingVehicle ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR VEÍCULO')}
                             </Button>
@@ -211,11 +312,14 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
                                 <Truck className="w-7 h-7" />
                             </div>
                             <div className="flex-1">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">{vehicle.model}</h3>
                                     <span className="text-[9px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">{vehicle.plate}</span>
+                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${STATUS_COLORS[vehicle.status || 'ativo']}`}>
+                                        {STATUS_LABELS[vehicle.status || 'ativo']}
+                                    </span>
                                 </div>
-                                <div className="flex items-center gap-4 mt-1">
+                                <div className="flex items-center gap-4 mt-1 flex-wrap">
                                     <div className="flex items-center gap-1 text-slate-400">
                                         <Hash className="w-3 h-3" />
                                         <span className="text-[10px] font-bold uppercase">{vehicle.current_km.toLocaleString()} KM</span>
@@ -224,6 +328,12 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, onAddVehicle, onEditVehi
                                         <div className="flex items-center gap-1 text-slate-400">
                                             <Calendar className="w-3 h-3" />
                                             <span className="text-[10px] font-bold uppercase">{vehicle.year}</span>
+                                        </div>
+                                    )}
+                                    {vehicle.driver_name && (
+                                        <div className="flex items-center gap-1 text-slate-400">
+                                            <User className="w-3 h-3" />
+                                            <span className="text-[10px] font-bold uppercase">{vehicle.driver_name}</span>
                                         </div>
                                     )}
                                 </div>

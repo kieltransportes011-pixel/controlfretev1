@@ -311,6 +311,8 @@ export interface ExtraIncome {
   bank_account_id?: string | null;
 }
 
+export type VehicleStatus = 'ativo' | 'em_manutencao' | 'vendido' | 'inativo';
+
 export interface Vehicle {
   id: string;
   user_id: string;
@@ -319,6 +321,8 @@ export interface Vehicle {
   model: string;
   year?: number;
   current_km: number;
+  status?: VehicleStatus;
+  driver_name?: string;
   created_at: string;
 }
 
@@ -335,6 +339,16 @@ export interface MaintenanceLog {
   next_revision_km?: number;
   next_revision_date?: string;
   cost: number;
+  created_at: string;
+}
+
+export interface VehicleInspection {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  date: string;
+  items: Record<string, boolean>;
+  notes?: string;
   created_at: string;
 }
 
