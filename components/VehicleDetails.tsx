@@ -98,7 +98,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
     try {
       await onAddInspection({
         vehicle_id: vehicle.id,
-        date: new Date().toISOString(),
+        date: new Date().toISOString().slice(0, 10),
         items: checklistState,
         notes: checklistNotes || undefined,
       });
@@ -368,7 +368,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, mainten
           return (
             <Card key={insp.id} className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{formatDate(insp.date)}</p>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{formatDate(insp.date.slice(0, 10))}</p>
                 {insp.notes && <p className="text-xs text-slate-400 mt-0.5">{insp.notes}</p>}
               </div>
               <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest shrink-0 ${complete ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
