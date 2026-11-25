@@ -130,3 +130,6 @@ Thumbs.db
 *.keystore
 key.properties
 keystore.properties
+
+# Connection string do banco, usada só pelo script de backup local — nunca commitar.
+supabase-backup.local.json
