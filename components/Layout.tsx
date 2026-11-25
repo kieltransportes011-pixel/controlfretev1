@@ -1,6 +1,5 @@
 import React from 'react';
 import { ViewState } from '../types';
-import { LayoutGrid, List, Settings, Wallet, Truck, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -40,11 +39,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {shouldShowNav && (
         <nav className="fixed bottom-0 left-0 right-0 glass border-t px-2 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] flex justify-between items-center z-40 w-full max-w-screen-xl mx-auto transition-colors duration-200">
           {[
-            { to: '/', icon: LayoutGrid, label: 'Início' },
-            { to: '/receivables', icon: Wallet, label: 'Contas' },
-            { to: '/history', icon: List, label: 'Histórico' },
-            { to: '/settings', icon: Settings, label: 'Ajustes' },
-          ].map(({ to, icon: Icon, label }) => {
+            { to: '/', icon: '/assets/nav-icons/icon-inicio.webp', label: 'Início' },
+            { to: '/receivables', icon: '/assets/nav-icons/icon-contas.webp', label: 'Contas' },
+            { to: '/history', icon: '/assets/nav-icons/icon-historico.webp', label: 'Histórico' },
+            { to: '/settings', icon: '/assets/nav-icons/icon-ajustes.webp', label: 'Ajustes' },
+          ].map(({ to, icon, label }) => {
             const active = getIsActive(to);
             return (
               <button
@@ -55,9 +54,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {active && (
                   <span className="absolute -top-2.5 h-1 w-6 rounded-full bg-brand dark:bg-brand-400" />
                 )}
-                <Icon
-                  className={`w-5 h-5 transition-all ${active ? 'text-brand dark:text-brand-400 scale-110' : 'text-slate-400 group-hover:text-brand/70 dark:group-hover:text-brand-400/70'}`}
-                  strokeWidth={active ? 2.5 : 2}
+                <img
+                  src={icon}
+                  alt=""
+                  className={`w-6 h-6 rounded-md transition-all ${active ? 'scale-110' : 'opacity-60 group-hover:opacity-90'}`}
                 />
                 <span className={`text-[9px] font-roboto font-medium uppercase tracking-wider transition-colors ${active ? 'text-brand dark:text-brand-400' : 'text-slate-400'}`}>
                   {label}

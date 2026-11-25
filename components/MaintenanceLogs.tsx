@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { MaintenanceLog, Vehicle, MaintenanceCategory } from '../types';
+import { MaintenanceLog, Vehicle, MaintenanceCategory, VehicleMaintenancePlan } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
 import { formatCurrency, formatDate } from '../utils';
@@ -11,6 +11,7 @@ import { getVehiclesNeedingAttention } from '../utils/vehicleAlerts';
 interface MaintenanceProps {
     logs: MaintenanceLog[];
     vehicles: Vehicle[];
+    plans: VehicleMaintenancePlan[];
     onAddLog: (log: Omit<MaintenanceLog, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
     onDeleteLog: (id: string) => Promise<void>;
     onBack: () => void;
@@ -34,7 +35,7 @@ export const CATEGORY_COLORS: Record<MaintenanceCategory, string> = {
     OTHER: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
 };
 
-export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, onAddLog, onDeleteLog, onBack }) => {
+export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, plans, onAddLog, onDeleteLog, onBack }) => {
     const { error: toastError } = useToast();
     const confirmDialog = useConfirm();
     const [showForm, setShowForm] = useState(false);
@@ -52,7 +53,7 @@ export const MaintenanceLogs: React.FC<MaintenanceProps> = ({ logs, vehicles, on
     const [cost, setCost] = useState('');
 
     const filteredLogs = logs.filter(l => filterVehicle === 'ALL' || l.vehicle_id === filterVehicle);
-    const attention = useMemo(() => getVehiclesNeedingAttention(vehicles, logs), [vehicles, logs]);
+    const attention = useMemo(() => getVehiclesNeedingAttention(vehicles, plans), [vehicles, plans]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

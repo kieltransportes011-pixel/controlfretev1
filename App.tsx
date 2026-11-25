@@ -984,6 +984,7 @@ Obs: ${of.description || 'Sem observações'}`;
                 settings={settings}
                 vehicles={vehicles}
                 maintenanceLogs={maintenanceLogs}
+                maintenancePlans={maintenancePlans}
                 loading={loadingData}
                 onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
                 onAddExpense={() => setView('ADD_EXPENSE')}
@@ -1616,6 +1617,7 @@ Obs: ${of.description || 'Sem observações'}`;
               <MaintenanceLogs
                 logs={maintenanceLogs}
                 vehicles={vehicles}
+                plans={maintenancePlans}
                 onAddLog={async (l) => {
                   if (!currentUser) return;
                   const { error } = await supabase.from('maintenance_logs').insert([{ ...l, user_id: currentUser.id }]);

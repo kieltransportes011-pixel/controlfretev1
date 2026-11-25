@@ -37,6 +37,7 @@ export interface Freight {
   bank_account_id?: string | null;
   vehicle_id?: string | null;
   distribution?: Array<PercentageCategory & { value: number }>;
+  created_at?: string;
 }
 
 export interface OFretejaFreight {

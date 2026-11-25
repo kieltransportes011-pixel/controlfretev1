@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome, AppSettings, Vehicle, MaintenanceLog } from '../types';
+import { Freight, Expense, DashboardStats, User, AccountPayable, ExtraIncome, AppSettings, Vehicle, MaintenanceLog, VehicleMaintenancePlan } from '../types';
 import { getVehiclesNeedingAttention } from '../utils/vehicleAlerts';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
 import { Card } from './Card';
@@ -48,6 +48,7 @@ interface DashboardProps {
   settings: AppSettings;
   vehicles: Vehicle[];
   maintenanceLogs: MaintenanceLog[];
+  maintenancePlans: VehicleMaintenancePlan[];
   onAddFreight: () => void;
   onAddExpense: () => void;
   onViewSchedule: () => void;
@@ -67,7 +68,7 @@ interface DashboardProps {
   loading?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, vehicles, maintenanceLogs, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewFinancial, onViewPartners, onOpenAdmin, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, accountsPayable, extraIncomes, settings, vehicles, maintenanceLogs, maintenancePlans, onAddFreight, onAddExpense, onViewSchedule, onOpenCalculator, onViewGoals, onUpgrade, onViewAgenda, onRequestUpgrade, onViewClients, onViewFleet, onViewMaintenance, onViewFinancial, onViewPartners, onOpenAdmin, onAddExtraIncome, onDeleteExtraIncome, loading }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBillAlert, setShowBillAlert] = useState(true);
   const [showUsageBanner, setShowUsageBanner] = useState(false);
@@ -93,8 +94,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
   }, [user, freights]);
 
   const vehiclesNeedingAttention = useMemo(
-    () => getVehiclesNeedingAttention(vehicles ?? [], maintenanceLogs ?? []),
-    [vehicles, maintenanceLogs]
+    () => getVehiclesNeedingAttention(vehicles ?? [], maintenancePlans ?? []),
+    [vehicles, maintenancePlans]
   );
 
   const upcomingBills = useMemo(() => {
@@ -399,9 +400,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <Card onClick={onOpenCalculator} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-brand bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand/10 rounded-lg text-brand group-hover:scale-110 transition-transform">
-                <Calculator className="w-5 h-5 bg-transparent" />
-              </div>
+              <img src="/assets/dashboard-icons/icon-lucro.webp" alt="" className="w-10 h-10 rounded-lg group-hover:scale-110 transition-transform" />
               <div>
                 <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Simular Lucro</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase">Calculadora Avançada</p>
@@ -410,9 +409,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           </Card>
           <Card onClick={onViewFinancial} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-emerald-500 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">
-                <Landmark className="w-5 h-5 bg-transparent" />
-              </div>
+              <img src="/assets/dashboard-icons/icon-contas.webp" alt="" className="w-10 h-10 rounded-lg group-hover:scale-110 transition-transform" />
               <div>
                 <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Contas Bancárias</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase">Saldos e Contas</p>
@@ -421,9 +418,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           </Card>
           <Card onClick={onViewPartners} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-pink-500 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-pink-500/10 rounded-lg text-pink-600 group-hover:scale-110 transition-transform">
-                <Handshake className="w-5 h-5 bg-transparent" />
-              </div>
+              <img src="/assets/dashboard-icons/icon-parceiros.webp" alt="" className="w-10 h-10 rounded-lg group-hover:scale-110 transition-transform" />
               <div>
                 <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Parceiros</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase">Benefícios e Descontos</p>
@@ -442,9 +437,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Card onClick={onViewFleet} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-brand">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 group-hover:text-brand group-hover:bg-brand/10 transition-all">
-                  <Truck className="w-5 h-5" />
-                </div>
+                <img src="/assets/dashboard-icons/icon-caminhoes.webp" alt="" className="w-10 h-10 rounded-lg group-hover:scale-110 transition-transform" />
                 <div>
                   <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Caminhões</h3>
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Frota Ativa</p>
@@ -453,9 +446,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
             </Card>
             <Card onClick={onViewMaintenance} className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group border-b-2 border-transparent hover:border-orange-500">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 group-hover:text-orange-500 group-hover:bg-orange-500/10 transition-all">
-                  <Wrench className="w-5 h-5" />
-                </div>
+                <img src="/assets/dashboard-icons/icon-manutencao.webp" alt="" className="w-10 h-10 rounded-lg group-hover:scale-110 transition-transform" />
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase">Manutenção</h3>
