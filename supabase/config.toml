@@ -1,0 +1,25 @@
+# Config minima do Supabase CLI pra este projeto. O unico motivo de existir
+# e declarar verify_jwt=false pras Edge Functions que sao chamadas por
+# provedores externos (Mercado Pago, Stripe) - eles nao mandam um JWT do
+# Supabase, entao a verificacao padrao (true) rejeita a chamada com 401
+# antes mesmo do nosso codigo rodar. Foi exatamente isso que quebrou o
+# webhook do Mercado Pago por ~4 meses (2026-11-25): um redeploy sem a flag
+# --no-verify-jwt resetou verify_jwt pra true de novo, silenciosamente.
+#
+# Com isso aqui, "npx supabase functions deploy <nome>" (sem flag nenhuma)
+# passa a respeitar essas configuracoes automaticamente.
+#
+# As demais functions (crons como check-vehicle-revisions,
+# check-document-expirations, check-due-bills) continuam exigindo JWT
+# normalmente - elas sao chamadas pelo pg_cron usando a service role key de
+# verdade (um JWT valido), entao nao tem esse problema.
+project_id = "pwfbgcbchhtumvwjrlep"
+
+[functions.mercado-pago-webhook]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.stripe-checkout]
+verify_jwt = false
