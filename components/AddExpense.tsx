@@ -23,6 +23,8 @@ export const AddExpense: React.FC<AddExpenseProps> = ({ user, vehicles = [], onS
   const { accounts } = useBankAccounts(user);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [vehicleId, setVehicleId] = useState<string>('');
+  const [liters, setLiters] = useState('');
+  const [odometerKm, setOdometerKm] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +38,9 @@ export const AddExpense: React.FC<AddExpenseProps> = ({ user, vehicles = [], onS
       source,
       category,
       bank_account_id: selectedAccount || null,
-      vehicle_id: vehicleId || null
+      vehicle_id: vehicleId || null,
+      liters: category === 'FUEL' && liters ? parseFloat(liters) : null,
+      odometer_km: category === 'FUEL' && odometerKm ? parseFloat(odometerKm) : null,
     };
 
     setIsSuccess(true);
@@ -130,6 +134,34 @@ export const AddExpense: React.FC<AddExpenseProps> = ({ user, vehicles = [], onS
                   <option key={v.id} value={v.id}>{v.model} - {v.plate}</option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {category === 'FUEL' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Litros <span className="text-slate-400 font-normal">(Opcional)</span></label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={liters}
+                  onChange={(e) => setLiters(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 dark:text-white"
+                />
+              </div>
+              {vehicleId && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">KM no painel <span className="text-slate-400 font-normal">(Opcional)</span></label>
+                  <input
+                    type="number"
+                    value={odometerKm}
+                    onChange={(e) => setOdometerKm(e.target.value)}
+                    placeholder="0"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 dark:text-white"
+                  />
+                </div>
+              )}
             </div>
           )}
 

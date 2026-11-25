@@ -3,7 +3,7 @@ import { Vehicle, VehicleStatus, MaintenanceLog, Expense, Driver } from '../type
 import { Card } from './Card';
 import { Button } from './Button';
 import { Truck, Plus, ChevronRight, Search, Hash, Calendar, Fuel, Trash2, Edit3, X, Loader2, User, TrendingUp } from 'lucide-react';
-import { formatCurrency } from '../utils';
+import { formatCurrency, normalizePlate } from '../utils';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -50,9 +50,21 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
     const [year, setYear] = useState('');
     const [km, setKm] = useState('');
     const [status, setStatus] = useState<VehicleStatus>('ativo');
+    const [driverId, setDriverId] = useState('');
     const [driverName, setDriverName] = useState('');
 
     const inactiveCount = vehicles.filter(v => v.status === 'vendido' || v.status === 'inativo').length;
+
+    // Com motorista vinculado por id, o nome exibido vem sempre do cadastro
+    // atual (acompanha renomeacao); sem vinculo, cai pro texto antigo salvo
+    // direto no veiculo (cadastros de antes dessa mudanca).
+    const getDriverDisplayName = (v: Vehicle) => {
+        if (v.driver_id) {
+            const d = drivers.find(d => d.id === v.driver_id);
+            if (d) return d.name;
+        }
+        return v.driver_name || '';
+    };
 
     const filteredVehicles = vehicles.filter(v => {
         if (!showInactive && (v.status === 'vendido' || v.status === 'inativo')) return false;
@@ -80,6 +92,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
         setYear('');
         setKm('');
         setStatus('ativo');
+        setDriverId('');
         setDriverName('');
         setEditingVehicle(null);
         setShowAddForm(false);
@@ -93,14 +106,22 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
         }
         if (isSubmitting) return;
 
+        const normalizedPlate = plate.toUpperCase();
+        const duplicate = vehicles.find(v => normalizePlate(v.plate) === normalizePlate(normalizedPlate) && v.id !== editingVehicle?.id);
+        if (duplicate) {
+            const confirmed = await confirmDialog({ message: `Já existe um veículo cadastrado com a placa ${normalizedPlate}. Cadastrar mesmo assim?`, danger: true });
+            if (!confirmed) return;
+        }
+
         const vehicleData = {
-            plate: plate.toUpperCase(),
+            plate: normalizedPlate,
             brand,
             model,
             year: year ? parseInt(year) : undefined,
             current_km: km ? parseFloat(km) : 0,
             status,
-            driver_name: driverName || undefined,
+            driver_id: driverId || null,
+            driver_name: driverName || null,
         };
 
         setIsSubmitting(true);
@@ -127,6 +148,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
         setYear(v.year?.toString() || '');
         setKm(v.current_km.toString());
         setStatus(v.status || 'ativo');
+        setDriverId(v.driver_id || '');
         setDriverName(v.driver_name || '');
         setShowAddForm(true);
     };
@@ -284,19 +306,24 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Motorista</label>
                                     <select
-                                        value={driverName}
+                                        value={driverId || (driverName ? '__legacy__' : '')}
                                         onChange={(e) => {
-                                            if (e.target.value === '__manage__') { onManageDrivers(); return; }
-                                            setDriverName(e.target.value);
+                                            const val = e.target.value;
+                                            if (val === '__manage__') { onManageDrivers(); return; }
+                                            if (val === '__legacy__') return; // mantem o nome antigo sem vincular a um motorista
+                                            if (val === '') { setDriverId(''); setDriverName(''); return; }
+                                            const d = drivers.find(d => d.id === val);
+                                            setDriverId(val);
+                                            setDriverName(d?.name || '');
                                         }}
                                         className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:border-brand-secondary font-bold"
                                     >
                                         <option value="">Nenhum</option>
                                         {drivers.map(d => (
-                                            <option key={d.id} value={d.name}>{d.name}</option>
+                                            <option key={d.id} value={d.id}>{d.name}</option>
                                         ))}
-                                        {driverName && !drivers.some(d => d.name === driverName) && (
-                                            <option value={driverName}>{driverName} (atual)</option>
+                                        {!driverId && driverName && (
+                                            <option value="__legacy__">{driverName} (nome antigo, sem cadastro)</option>
                                         )}
                                         <option value="__manage__">+ Gerenciar motoristas</option>
                                     </select>
@@ -342,10 +369,10 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
                                             <span className="text-[10px] font-bold uppercase">{vehicle.year}</span>
                                         </div>
                                     )}
-                                    {vehicle.driver_name && (
+                                    {getDriverDisplayName(vehicle) && (
                                         <div className="flex items-center gap-1 text-slate-400">
                                             <User className="w-3 h-3" />
-                                            <span className="text-[10px] font-bold uppercase">{vehicle.driver_name}</span>
+                                            <span className="text-[10px] font-bold uppercase">{getDriverDisplayName(vehicle)}</span>
                                         </div>
                                     )}
                                 </div>

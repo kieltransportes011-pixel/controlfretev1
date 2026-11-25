@@ -7,6 +7,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 // Como "revisão vencida" é uma condição persistente (não expira como uma
 // conta a pagar), só reenvia depois de 3 dias desde o último aviso pra cada
 // veículo (vehicles.last_revision_alert_at).
+//
+// Fonte do vencimento: vehicle_maintenance_plans (1 linha por veiculo,
+// formalizado na Fase 2 da profissionalizacao da Frota). Antes isso vinha de
+// um scan em maintenance_logs a cada execucao - a condicao de disparo
+// continua EXATAMENTE a mesma (kmDue / dateDue dentro de 15 dias), so a
+// origem do dado mudou.
 
 const DATE_WINDOW_DAYS = 15;
 const RENOTIFY_AFTER_DAYS = 3;
@@ -20,9 +26,8 @@ interface VehicleRow {
   last_revision_alert_at: string | null;
 }
 
-interface LogRow {
+interface PlanRow {
   vehicle_id: string;
-  date: string;
   next_revision_km: number | null;
   next_revision_date: string | null;
 }
@@ -60,20 +65,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: logs, error: logsError } = await supabase
-      .from('maintenance_logs')
-      .select('vehicle_id, date, next_revision_km, next_revision_date')
-      .or('next_revision_km.not.is.null,next_revision_date.not.is.null')
-      .order('date', { ascending: false });
-    if (logsError) throw logsError;
+    const { data: plans, error: plansError } = await supabase
+      .from('vehicle_maintenance_plans')
+      .select('vehicle_id, next_revision_km, next_revision_date');
+    if (plansError) throw plansError;
 
-    // Log mais recente por veículo (equivalente a DISTINCT ON vehicle_id, já
-    // que `logs` chegou ordenado por date desc).
-    const latestLogByVehicle = new Map<string, LogRow>();
-    for (const log of (logs ?? []) as LogRow[]) {
-      if (!latestLogByVehicle.has(log.vehicle_id)) {
-        latestLogByVehicle.set(log.vehicle_id, log);
-      }
+    const planByVehicle = new Map<string, PlanRow>();
+    for (const plan of (plans ?? []) as PlanRow[]) {
+      planByVehicle.set(plan.vehicle_id, plan);
     }
 
     const now = Date.now();
@@ -84,12 +83,12 @@ Deno.serve(async (req) => {
     const dueVehicles: DueVehicle[] = [];
 
     for (const vehicle of vehicles as VehicleRow[]) {
-      const log = latestLogByVehicle.get(vehicle.id);
-      if (!log) continue;
+      const plan = planByVehicle.get(vehicle.id);
+      if (!plan) continue;
 
-      const kmDue = !!log.next_revision_km && vehicle.current_km >= log.next_revision_km;
-      const dateDue = !!log.next_revision_date &&
-        (new Date(log.next_revision_date).getTime() - now) <= windowMs;
+      const kmDue = !!plan.next_revision_km && vehicle.current_km >= plan.next_revision_km;
+      const dateDue = !!plan.next_revision_date &&
+        (new Date(plan.next_revision_date).getTime() - now) <= windowMs;
       if (!kmDue && !dateDue) continue;
 
       const alreadyNotifiedRecently = !!vehicle.last_revision_alert_at &&
@@ -99,8 +98,8 @@ Deno.serve(async (req) => {
       dueVehicles.push({
         vehicle,
         reason: kmDue && dateDue ? 'BOTH' : kmDue ? 'KM' : 'DATE',
-        dueKm: log.next_revision_km,
-        dueDate: log.next_revision_date,
+        dueKm: plan.next_revision_km,
+        dueDate: plan.next_revision_date,
       });
     }
 

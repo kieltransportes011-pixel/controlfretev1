@@ -88,6 +88,8 @@ export interface Expense {
   category?: ExpenseCategory;
   bank_account_id?: string | null;
   vehicle_id?: string | null;
+  liters?: number | null;
+  odometer_km?: number | null;
 }
 
 export interface User {
@@ -154,6 +156,9 @@ export interface Driver {
   name: string;
   phone?: string;
   cnh?: string;
+  cnh_expiry_date?: string | null;
+  cnh_alert_days_before?: number;
+  cnh_alert_at?: string | null;
   created_at: string;
 }
 
@@ -331,7 +336,8 @@ export interface Vehicle {
   year?: number;
   current_km: number;
   status?: VehicleStatus;
-  driver_name?: string;
+  driver_name?: string | null;
+  driver_id?: string | null;
   created_at: string;
 }
 
@@ -358,6 +364,60 @@ export interface VehicleInspection {
   date: string;
   items: Record<string, boolean>;
   notes?: string;
+  created_at: string;
+}
+
+export type OdometerSource = 'manual' | 'maintenance' | 'freight' | 'correction' | 'fuel';
+
+export interface OdometerReading {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  km: number;
+  reading_date: string;
+  source: OdometerSource;
+  note?: string | null;
+  created_at: string;
+}
+
+export interface VehicleMaintenancePlan {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  next_revision_km?: number | null;
+  next_revision_date?: string | null;
+  updated_at: string;
+}
+
+export type IssueSeverity = 'baixa' | 'media' | 'alta';
+export type IssueStatus = 'aberta' | 'em_andamento' | 'resolvida';
+
+export interface InspectionIssue {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  inspection_id: string;
+  item: string;
+  description?: string | null;
+  severity: IssueSeverity;
+  status: IssueStatus;
+  maintenance_log_id?: string | null;
+  photo_url?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+}
+
+export type VehicleDocumentType = 'seguro' | 'licenciamento' | 'ipva' | 'outro';
+
+export interface VehicleDocument {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  type: VehicleDocumentType;
+  expiry_date: string;
+  alert_days_before: number;
+  last_alert_at?: string | null;
+  notes?: string | null;
   created_at: string;
 }
 

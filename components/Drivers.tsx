@@ -4,6 +4,7 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { Users, Search, Plus, Phone, IdCard, Pencil, Trash2, X, ChevronLeft, Loader2 } from 'lucide-react';
 import { maskPhone } from '../utils';
+import { getExpiryLevel } from '../utils/vehicleAlerts';
 
 interface DriversProps {
     drivers: Driver[];
@@ -20,7 +21,7 @@ export const Drivers: React.FC<DriversProps> = ({ drivers, onSaveDriver, onDelet
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form State
-    const [formData, setFormData] = useState({ name: '', phone: '', cnh: '' });
+    const [formData, setFormData] = useState({ name: '', phone: '', cnh: '', cnh_expiry_date: '', cnh_alert_days_before: '30' });
 
     const filteredDrivers = useMemo(() => {
         return drivers.filter(d =>
@@ -31,10 +32,16 @@ export const Drivers: React.FC<DriversProps> = ({ drivers, onSaveDriver, onDelet
     const handleOpenModal = (driver?: Driver) => {
         if (driver) {
             setEditingDriver(driver);
-            setFormData({ name: driver.name, phone: driver.phone || '', cnh: driver.cnh || '' });
+            setFormData({
+                name: driver.name,
+                phone: driver.phone || '',
+                cnh: driver.cnh || '',
+                cnh_expiry_date: driver.cnh_expiry_date || '',
+                cnh_alert_days_before: (driver.cnh_alert_days_before ?? 30).toString(),
+            });
         } else {
             setEditingDriver(null);
-            setFormData({ name: '', phone: '', cnh: '' });
+            setFormData({ name: '', phone: '', cnh: '', cnh_expiry_date: '', cnh_alert_days_before: '30' });
         }
         setIsModalOpen(true);
     };
@@ -45,7 +52,14 @@ export const Drivers: React.FC<DriversProps> = ({ drivers, onSaveDriver, onDelet
 
         setIsSubmitting(true);
         try {
-            await onSaveDriver({ id: editingDriver?.id, ...formData });
+            await onSaveDriver({
+                id: editingDriver?.id,
+                name: formData.name,
+                phone: formData.phone,
+                cnh: formData.cnh,
+                cnh_expiry_date: formData.cnh_expiry_date || null,
+                cnh_alert_days_before: formData.cnh_alert_days_before ? parseInt(formData.cnh_alert_days_before) : 30,
+            });
             setIsModalOpen(false);
         } finally {
             setIsSubmitting(false);
@@ -109,6 +123,12 @@ export const Drivers: React.FC<DriversProps> = ({ drivers, onSaveDriver, onDelet
                                                 CNH {driver.cnh}
                                             </div>
                                         )}
+                                        {driver.cnh_expiry_date && (() => {
+                                            const level = getExpiryLevel(driver.cnh_expiry_date, driver.cnh_alert_days_before ?? 30);
+                                            const color = level === 'OVERDUE' ? 'text-red-500' : level === 'SOON' ? 'text-amber-500' : 'text-green-600';
+                                            const label = level === 'OVERDUE' ? 'CNH vencida' : level === 'SOON' ? 'CNH vence em breve' : 'CNH em dia';
+                                            return <p className={`text-[10px] font-bold ${color}`}>{label}</p>;
+                                        })()}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -183,6 +203,27 @@ export const Drivers: React.FC<DriversProps> = ({ drivers, onSaveDriver, onDelet
                                     placeholder="00000000000"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Validade da CNH <span className="text-slate-400 font-normal">(Opcional)</span></label>
+                                <input
+                                    type="date"
+                                    value={formData.cnh_expiry_date}
+                                    onChange={(e) => setFormData({ ...formData, cnh_expiry_date: e.target.value })}
+                                    className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                                />
+                            </div>
+                            {formData.cnh_expiry_date && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Avisar com quantos dias de antecedência</label>
+                                    <input
+                                        type="number"
+                                        value={formData.cnh_alert_days_before}
+                                        onChange={(e) => setFormData({ ...formData, cnh_alert_days_before: e.target.value })}
+                                        placeholder="30"
+                                        className="w-full p-3 bg-[#F5F7FA] dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:border-brand dark:text-white text-sm"
+                                    />
+                                </div>
+                            )}
 
                             <div className="pt-4">
                                 <Button type="submit" fullWidth disabled={isSubmitting}>

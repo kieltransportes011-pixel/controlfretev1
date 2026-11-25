@@ -22,6 +22,14 @@ export const formatMonthYear = (date: Date): string => {
   }).format(date);
 };
 
+// Normaliza placa pra comparação: maiusculas, sem espaco/traco, so letras e
+// numeros. Cobre os dois formatos brasileiros (antigo ABC1234 e Mercosul
+// ABC1D23), que nao usam separador - o traco/espaco que aparece e so
+// digitacao do usuario.
+export const normalizePlate = (plate: string): string => {
+  return plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+};
+
 export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };

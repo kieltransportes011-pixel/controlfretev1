@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
-import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog, VehicleInspection, Driver } from './types';
+import { ViewState, Freight, Expense, AppSettings, User, Booking, AccountPayable, OFretejaFreight, ExtraIncome, Client, Vehicle, MaintenanceLog, VehicleInspection, Driver, OdometerReading, VehicleMaintenancePlan, InspectionIssue, VehicleDocument } from './types';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AddFreight } from './components/AddFreight';
@@ -205,6 +205,10 @@ export default function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
   const [vehicleInspections, setVehicleInspections] = useState<VehicleInspection[]>([]);
+  const [odometerReadings, setOdometerReadings] = useState<OdometerReading[]>([]);
+  const [maintenancePlans, setMaintenancePlans] = useState<VehicleMaintenancePlan[]>([]);
+  const [inspectionIssues, setInspectionIssues] = useState<InspectionIssue[]>([]);
+  const [vehicleDocuments, setVehicleDocuments] = useState<VehicleDocument[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [settings, setSettings] = useState<AppSettings>(SAFE_DEFAULT_SETTINGS);
   const [formData, setFormData] = useState<Partial<Freight> | undefined>(undefined);
@@ -561,6 +565,37 @@ export default function App() {
       .order('date', { ascending: false });
     if (inspectionsData) setVehicleInspections(inspectionsData as VehicleInspection[]);
 
+    // Fetch Odometer Readings
+    const { data: odometerData } = await supabase
+      .from('vehicle_odometer_readings')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('reading_date', { ascending: true });
+    if (odometerData) setOdometerReadings(odometerData as OdometerReading[]);
+
+    // Fetch Maintenance Plans (1 por veiculo: proximo vencimento de revisao)
+    const { data: plansData } = await supabase
+      .from('vehicle_maintenance_plans')
+      .select('*')
+      .eq('user_id', currentUser.id);
+    if (plansData) setMaintenancePlans(plansData as VehicleMaintenancePlan[]);
+
+    // Fetch Inspection Issues (pendencias geradas por item reprovado)
+    const { data: issuesData } = await supabase
+      .from('vehicle_inspection_issues')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+    if (issuesData) setInspectionIssues(issuesData as InspectionIssue[]);
+
+    // Fetch Vehicle Documents (seguro/licenciamento/IPVA)
+    const { data: documentsData } = await supabase
+      .from('vehicle_documents')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('expiry_date', { ascending: true });
+    if (documentsData) setVehicleDocuments(documentsData as VehicleDocument[]);
+
     setSyncing(false);
     setLoadingData(false);
   };
@@ -805,13 +840,26 @@ Obs: ${of.description || 'Sem observações'}`;
       if (driver.id) {
         const { error } = await supabase
           .from('drivers')
-          .update({ name: driver.name, phone: driver.phone, cnh: driver.cnh })
+          .update({
+            name: driver.name,
+            phone: driver.phone,
+            cnh: driver.cnh,
+            cnh_expiry_date: driver.cnh_expiry_date || null,
+            cnh_alert_days_before: driver.cnh_alert_days_before ?? 30,
+          })
           .eq('id', driver.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('drivers')
-          .insert([{ user_id: currentUser.id, name: driver.name, phone: driver.phone, cnh: driver.cnh }]);
+          .insert([{
+            user_id: currentUser.id,
+            name: driver.name,
+            phone: driver.phone,
+            cnh: driver.cnh,
+            cnh_expiry_date: driver.cnh_expiry_date || null,
+            cnh_alert_days_before: driver.cnh_alert_days_before ?? 30,
+          }]);
         if (error) throw error;
       }
       fetchData();
@@ -1079,9 +1127,17 @@ Obs: ${of.description || 'Sem observações'}`;
                             year: vehicle.year,
                             status: vehicle.status,
                             driver_name: vehicle.driver_name,
+                            driver_id: vehicle.driver_id,
                             current_km: vehicle.current_km + f.distance_km
                           }).eq('id', vehicle.id);
                           if (kmError) console.error('Failed to sync vehicle km:', kmError);
+                          else await supabase.from('vehicle_odometer_readings').insert([{
+                            user_id: currentUser.id,
+                            vehicle_id: vehicle.id,
+                            km: vehicle.current_km + f.distance_km,
+                            reading_date: f.date,
+                            source: 'freight',
+                          }]);
                         }
                       }
                     }
@@ -1118,8 +1174,40 @@ Obs: ${of.description || 'Sem observações'}`;
                     source: e.source,
                     category: e.category,
                     bank_account_id: e.bank_account_id || null,
-                    vehicle_id: e.vehicle_id || null
+                    vehicle_id: e.vehicle_id || null,
+                    liters: e.liters || null,
+                    odometer_km: e.odometer_km || null
                   }]);
+
+                  // Abastecimento com KM informado tambem conta como uma
+                  // leitura de odometro (Fase 2) - mesma logica de
+                  // sincronismo usada em manutencao/frete (so avanca, nunca
+                  // reduz current_km sem ser uma correcao explicita).
+                  if (e.category === 'FUEL' && e.vehicle_id && e.odometer_km) {
+                    const vehicle = vehicles.find(v => v.id === e.vehicle_id);
+                    if (vehicle) {
+                      if (e.odometer_km > vehicle.current_km) {
+                        await supabase.from('vehicles').update({
+                          plate: vehicle.plate,
+                          brand: vehicle.brand,
+                          model: vehicle.model,
+                          year: vehicle.year,
+                          status: vehicle.status,
+                          driver_name: vehicle.driver_name,
+                          driver_id: vehicle.driver_id,
+                          current_km: e.odometer_km
+                        }).eq('id', vehicle.id);
+                      }
+                      await supabase.from('vehicle_odometer_readings').insert([{
+                        user_id: currentUser.id,
+                        vehicle_id: e.vehicle_id,
+                        km: e.odometer_km,
+                        reading_date: e.date,
+                        source: 'fuel',
+                      }]);
+                    }
+                  }
+
                   fetchData();
                   setView('DASHBOARD');
                 }}
@@ -1396,7 +1484,8 @@ Obs: ${of.description || 'Sem observações'}`;
                     year: v.year,
                     current_km: v.current_km,
                     status: v.status,
-                    driver_name: v.driver_name
+                    driver_name: v.driver_name,
+                    driver_id: v.driver_id
                   }).eq('id', v.id);
                   if (error) throw error;
                   fetchData();
@@ -1420,17 +1509,102 @@ Obs: ${of.description || 'Sem observações'}`;
                 freights={freights}
                 expenses={expenses}
                 inspections={vehicleInspections}
+                drivers={drivers}
+                plans={maintenancePlans}
+                odometerReadings={odometerReadings}
                 onAddInspection={async (i) => {
                   if (!currentUser) return;
-                  const { error } = await supabase.from('vehicle_inspections').insert([{ ...i, user_id: currentUser.id }]);
+                  const { data, error } = await supabase.from('vehicle_inspections')
+                    .insert([{ ...i, user_id: currentUser.id }])
+                    .select()
+                    .single();
                   if (error) throw error;
+
+                  // Todo item marcado como reprovado gera uma pendencia
+                  // aberta vinculada a essa inspecao - o checklist em si nao
+                  // muda, a decisao do que fazer com a pendencia (resolver,
+                  // vincular a uma manutencao) fica sempre com o usuario.
+                  const failedItems = Object.entries(i.items).filter(([, ok]) => !ok).map(([item]) => item);
+                  if (failedItems.length > 0 && data) {
+                    await supabase.from('vehicle_inspection_issues').insert(
+                      failedItems.map(item => ({
+                        user_id: currentUser.id,
+                        vehicle_id: i.vehicle_id,
+                        inspection_id: data.id,
+                        item,
+                      }))
+                    );
+                  }
+
+                  fetchData();
+                }}
+                onUpdateIssue={async (id, patch) => {
+                  const updateObj: Record<string, unknown> = { ...patch };
+                  if ('status' in patch) {
+                    updateObj.resolved_at = patch.status === 'resolvida' ? new Date().toISOString() : null;
+                  }
+                  const { error } = await supabase.from('vehicle_inspection_issues').update(updateObj).eq('id', id);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                issues={inspectionIssues}
+                documents={vehicleDocuments}
+                onAddDocument={async (d) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('vehicle_documents').insert([{ ...d, user_id: currentUser.id }]);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onDeleteDocument={async (id) => {
+                  const { error } = await supabase.from('vehicle_documents').delete().eq('id', id);
+                  if (error) throw error;
+                  fetchData();
+                }}
+                onAddOdometerReading={async (r) => {
+                  if (!currentUser) return;
+                  const { error } = await supabase.from('vehicle_odometer_readings').insert([{ ...r, user_id: currentUser.id }]);
+                  if (error) throw error;
+
+                  const vehicle = vehicles.find(v => v.id === r.vehicle_id);
+                  if (vehicle) {
+                    const shouldSync = r.source === 'correction' ? r.km !== vehicle.current_km : r.km > vehicle.current_km;
+                    if (shouldSync) {
+                      const { error: kmError } = await supabase.from('vehicles').update({
+                        plate: vehicle.plate,
+                        brand: vehicle.brand,
+                        model: vehicle.model,
+                        year: vehicle.year,
+                        status: vehicle.status,
+                        driver_name: vehicle.driver_name,
+                        driver_id: vehicle.driver_id,
+                        current_km: r.km
+                      }).eq('id', vehicle.id);
+                      if (kmError) console.error('Failed to sync vehicle km:', kmError);
+                    }
+                  }
                   fetchData();
                 }}
                 onBack={() => { setSelectedVehicle(null); setView('FLEET'); }}
                 onEditVehicle={() => setView('FLEET')}
                 onDeleteLog={async (id) => {
+                  const deletedLog = maintenanceLogs.find(l => l.id === id);
                   const { error } = await supabase.from('maintenance_logs').delete().eq('id', id);
                   if (error) throw error;
+
+                  if (currentUser && deletedLog && (deletedLog.next_revision_km || deletedLog.next_revision_date)) {
+                    const remaining = maintenanceLogs
+                      .filter(l => l.vehicle_id === deletedLog.vehicle_id && l.id !== id && (l.next_revision_km || l.next_revision_date))
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    const next = remaining[0];
+                    await supabase.from('vehicle_maintenance_plans').upsert({
+                      user_id: currentUser.id,
+                      vehicle_id: deletedLog.vehicle_id,
+                      next_revision_km: next?.next_revision_km ?? null,
+                      next_revision_date: next?.next_revision_date ?? null,
+                      updated_at: new Date().toISOString(),
+                    }, { onConflict: 'vehicle_id' });
+                  }
+
                   fetchData();
                 }}
               />
@@ -1449,25 +1623,69 @@ Obs: ${of.description || 'Sem observações'}`;
 
                   if (l.km_at_service) {
                     const vehicle = vehicles.find(v => v.id === l.vehicle_id);
-                    if (vehicle && l.km_at_service > vehicle.current_km) {
-                      const { error: kmError } = await supabase.from('vehicles').update({
-                        plate: vehicle.plate,
-                        brand: vehicle.brand,
-                        model: vehicle.model,
-                        year: vehicle.year,
-                        status: vehicle.status,
-                        driver_name: vehicle.driver_name,
-                        current_km: l.km_at_service
-                      }).eq('id', vehicle.id);
-                      if (kmError) console.error('Failed to sync vehicle km:', kmError);
+                    if (vehicle) {
+                      if (l.km_at_service > vehicle.current_km) {
+                        const { error: kmError } = await supabase.from('vehicles').update({
+                          plate: vehicle.plate,
+                          brand: vehicle.brand,
+                          model: vehicle.model,
+                          year: vehicle.year,
+                          status: vehicle.status,
+                          driver_name: vehicle.driver_name,
+                          driver_id: vehicle.driver_id,
+                          current_km: l.km_at_service
+                        }).eq('id', vehicle.id);
+                        if (kmError) console.error('Failed to sync vehicle km:', kmError);
+                      }
+                      await supabase.from('vehicle_odometer_readings').insert([{
+                        user_id: currentUser.id,
+                        vehicle_id: l.vehicle_id,
+                        km: l.km_at_service,
+                        reading_date: l.date,
+                        source: 'maintenance',
+                      }]);
                     }
+                  }
+
+                  // Atualiza o vencimento de revisao do veiculo (1 por
+                  // veiculo) so quando esta manutencao informou um proximo
+                  // vencimento - se nao informou, o vencimento anterior
+                  // continua valendo.
+                  if (l.next_revision_km || l.next_revision_date) {
+                    await supabase.from('vehicle_maintenance_plans').upsert({
+                      user_id: currentUser.id,
+                      vehicle_id: l.vehicle_id,
+                      next_revision_km: l.next_revision_km ?? null,
+                      next_revision_date: l.next_revision_date ?? null,
+                      updated_at: new Date().toISOString(),
+                    }, { onConflict: 'vehicle_id' });
                   }
 
                   fetchData();
                 }}
                 onDeleteLog={async (id) => {
+                  const deletedLog = maintenanceLogs.find(l => l.id === id);
                   const { error } = await supabase.from('maintenance_logs').delete().eq('id', id);
                   if (error) throw error;
+
+                  // Se o log excluido era a fonte do vencimento atual,
+                  // recalcula a partir do log restante mais recente que
+                  // ainda tenha vencimento informado (mesma regra do
+                  // backfill), em vez de deixar o plano desatualizado.
+                  if (currentUser && deletedLog && (deletedLog.next_revision_km || deletedLog.next_revision_date)) {
+                    const remaining = maintenanceLogs
+                      .filter(l => l.vehicle_id === deletedLog.vehicle_id && l.id !== id && (l.next_revision_km || l.next_revision_date))
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    const next = remaining[0];
+                    await supabase.from('vehicle_maintenance_plans').upsert({
+                      user_id: currentUser.id,
+                      vehicle_id: deletedLog.vehicle_id,
+                      next_revision_km: next?.next_revision_km ?? null,
+                      next_revision_date: next?.next_revision_date ?? null,
+                      updated_at: new Date().toISOString(),
+                    }, { onConflict: 'vehicle_id' });
+                  }
+
                   fetchData();
                 }}
                 onBack={() => setView('DASHBOARD')}
