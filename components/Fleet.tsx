@@ -4,6 +4,7 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { Truck, Plus, ChevronRight, Search, Hash, Calendar, Fuel, Trash2, Edit3, X, Loader2, User, TrendingUp } from 'lucide-react';
 import { formatCurrency, normalizePlate } from '../utils';
+import { VEHICLE_BRANDS, getBrandIcon } from '../utils/vehicleBrands';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -46,6 +47,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
     // Form State
     const [plate, setPlate] = useState('');
     const [brand, setBrand] = useState('');
+    const [isOtherBrand, setIsOtherBrand] = useState(false);
     const [model, setModel] = useState('');
     const [year, setYear] = useState('');
     const [km, setKm] = useState('');
@@ -88,6 +90,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
     const resetForm = () => {
         setPlate('');
         setBrand('');
+        setIsOtherBrand(false);
         setModel('');
         setYear('');
         setKm('');
@@ -144,6 +147,7 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
         setEditingVehicle(v);
         setPlate(v.plate);
         setBrand(v.brand || '');
+        setIsOtherBrand(!!v.brand && !(VEHICLE_BRANDS as readonly string[]).includes(v.brand));
         setModel(v.model);
         setYear(v.year?.toString() || '');
         setKm(v.current_km.toString());
@@ -270,13 +274,36 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Marca</label>
-                                    <input
-                                        type="text"
-                                        value={brand}
-                                        onChange={(e) => setBrand(e.target.value)}
-                                        placeholder="Ex: Volvo"
+                                    <select
+                                        value={isOtherBrand ? '__outra__' : brand}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '__outra__') {
+                                                setIsOtherBrand(true);
+                                                setBrand('');
+                                            } else {
+                                                setIsOtherBrand(false);
+                                                setBrand(val);
+                                            }
+                                        }}
                                         className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:border-brand-secondary font-bold"
-                                    />
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {VEHICLE_BRANDS.map(b => (
+                                            <option key={b} value={b}>{b}</option>
+                                        ))}
+                                        <option value="__outra__">Outra</option>
+                                    </select>
+                                    {isOtherBrand && (
+                                        <input
+                                            type="text"
+                                            value={brand}
+                                            onChange={(e) => setBrand(e.target.value)}
+                                            placeholder="Digite a marca"
+                                            autoFocus
+                                            className="w-full mt-2 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:border-brand-secondary font-bold"
+                                        />
+                                    )}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Ano</label>
@@ -347,8 +374,12 @@ export const Fleet: React.FC<FleetProps> = ({ vehicles, maintenanceLogs, expense
                         onClick={() => onViewDetails(vehicle)}
                     >
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-14 h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-brand transition-colors group-hover:bg-brand group-hover:text-white">
-                                <Truck className="w-7 h-7" />
+                            <div className={`w-28 h-[88px] rounded-2xl flex items-center justify-center shrink-0 transition-colors ${getBrandIcon(vehicle.brand) ? 'bg-white p-3' : 'bg-slate-50 dark:bg-slate-800 text-brand group-hover:bg-brand group-hover:text-white'}`}>
+                                {getBrandIcon(vehicle.brand) ? (
+                                    <img src={getBrandIcon(vehicle.brand)!} alt={vehicle.brand || ''} className="max-w-full max-h-full object-contain" />
+                                ) : (
+                                    <Truck className="w-10 h-10" />
+                                )}
                             </div>
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
