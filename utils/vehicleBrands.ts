@@ -14,7 +14,6 @@ export const VEHICLE_BRANDS = [
 ] as const;
 
 // Marcas sem entrada aqui ainda (pendente a logo real) caem no ícone genérico de caminhão.
-// Scania ainda não tem logo cadastrada.
 const BRAND_ICONS: Record<string, string> = {
     IVECO: '/assets/brand-icons/iveco.webp',
     VOLVO: '/assets/brand-icons/volvo.webp',
@@ -27,6 +26,7 @@ const BRAND_ICONS: Record<string, string> = {
     KIA: '/assets/brand-icons/kia.webp',
     RENAULT: '/assets/brand-icons/renault.webp',
     FIAT: '/assets/brand-icons/fiat.webp',
+    SCANIA: '/assets/brand-icons/scania.webp',
 };
 
 const normalizeBrandKey = (brand: string) =>
