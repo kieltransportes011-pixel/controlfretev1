@@ -33,6 +33,7 @@ import { MandatoryNoticeModal } from './components/MandatoryNoticeModal';
 import { NoticesCenter } from './components/NoticesCenter';
 
 import { UpgradeModal } from './components/UpgradeModal';
+import { FREE_MONTHLY_FREIGHTS, countFreightsThisMonth } from './utils/freePlan';
 import { FreightIntegration } from './components/FreightIntegration';
 import { FreightNoticeModal } from './components/FreightNoticeModal';
 import { Clients } from './components/Clients';
@@ -242,7 +243,7 @@ export default function App() {
 
     if (reason === 'LIMIT') {
       title = 'Limite Atingido';
-      description = 'Você atingiu o limite de fretes do plano gratuito. Vire PRO para registros ilimitados.';
+      description = `Você já cadastrou os ${FREE_MONTHLY_FREIGHTS} fretes do mês do plano gratuito. Vire PRO para lançar fretes ilimitados.`;
     } else if (reason === 'FEATURE') {
       title = 'Recurso Exclusivo';
       description = 'Esta funcionalidade está disponível apenas para assinantes PRO.';
@@ -318,7 +319,8 @@ export default function App() {
         ...data,
         email: data.email || '',
         createdAt: data.created_at || new Date().toISOString(),
-        isPremium: data.is_premium || data.plano === 'pro',
+        // PRO vale até premium_until (sem data = não vence)
+        isPremium: (data.is_premium || data.plano === 'pro') && (!data.premium_until || new Date() <= new Date(data.premium_until)),
         plano: data.plano || 'free',
         status_assinatura: data.status_assinatura || 'ativa',
         premiumUntil: data.premium_until,
@@ -986,7 +988,10 @@ Obs: ${of.description || 'Sem observações'}`;
                 maintenanceLogs={maintenanceLogs}
                 maintenancePlans={maintenancePlans}
                 loading={loadingData}
-                onAddFreight={() => { setFormData(undefined); setView('ADD_FREIGHT'); }}
+                onAddFreight={() => {
+                  if (!isActive && countFreightsThisMonth(freights) >= FREE_MONTHLY_FREIGHTS) return handleOpenUpgrade('LIMIT');
+                  setFormData(undefined); setView('ADD_FREIGHT');
+                }}
                 onAddExpense={() => setView('ADD_EXPENSE')}
                 onViewSchedule={() => setView('RECEIVABLES')}
                 onOpenCalculator={() => setView('CALCULATOR')}
@@ -1093,6 +1098,11 @@ Obs: ${of.description || 'Sem observações'}`;
                       }).eq('id', f.id);
                       if (error) throw error;
                     } else {
+                      // Plano gratuito: limite de fretes por mês
+                      if (!isActive && countFreightsThisMonth(freights) >= FREE_MONTHLY_FREIGHTS) {
+                        handleOpenUpgrade('LIMIT');
+                        return;
+                      }
                       // Insert new freight
                       const { error } = await supabase.from('freights').insert([{
                         user_id: currentUser.id,

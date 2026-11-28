@@ -32,6 +32,7 @@ import {
 import { CardSkeleton } from './Skeleton';
 import { useSubscription } from '../hooks/useSubscription';
 import { getPlanPrices } from '../utils/blackFriday';
+import { FREE_MONTHLY_FREIGHTS, countFreightsThisMonth } from '../utils/freePlan';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LineChart, Line
@@ -356,6 +357,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, freights, expenses, 
           </button>
         </div>
       )}
+
+      {/* Plano gratuito: contador de fretes do mês */}
+      {!isActive && (() => {
+        const used = Math.min(countFreightsThisMonth(freights), FREE_MONTHLY_FREIGHTS);
+        const full = used >= FREE_MONTHLY_FREIGHTS;
+        return (
+          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${full ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800'}`}>
+            <div className="flex-1">
+              <p className="text-xs font-black uppercase tracking-tight text-slate-700 dark:text-slate-200">
+                Plano gratuito: {used} de {FREE_MONTHLY_FREIGHTS} fretes este mês
+              </p>
+              <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <div className={`h-full rounded-full ${full ? 'bg-amber-500' : 'bg-brand'}`} style={{ width: `${(used / FREE_MONTHLY_FREIGHTS) * 100}%` }} />
+              </div>
+              {full && <p className="text-[10px] font-bold text-amber-700 dark:text-amber-300 mt-1.5">Limite do mês atingido. Vire PRO para lançar fretes ilimitados.</p>}
+            </div>
+            <button onClick={onUpgrade} className="bg-brand text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shrink-0">
+              Virar PRO
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Usage Banner */}
       {showUsageBanner && (
