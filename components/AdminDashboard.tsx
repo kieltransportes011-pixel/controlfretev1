@@ -48,6 +48,16 @@ const LEAD_STATUS_LABELS: Record<string, string> = {
 
 const PARTNER_CATEGORY_OPTIONS = ['Pneus', 'Peças', 'Combustível', 'Alimentação', 'Hospedagem', 'Oficina Mecânica', 'Documentação', 'Outros'];
 
+type UserFilter = 'all' | 'pro' | 'expiring' | 'expired' | 'free' | 'banned';
+const USER_FILTER_LABELS: Record<UserFilter, string> = {
+    all: 'Todos',
+    pro: 'PRO em dia',
+    expiring: 'PRO vencendo (7 dias)',
+    expired: 'PRO vencido',
+    free: 'FREE',
+    banned: 'Banidos',
+};
+
 type PushAudience = 'all' | 'free' | 'pro' | 'expiring' | 'expired' | 'free_limit' | 'trial_ending' | 'pending_payment';
 
 const PUSH_AUDIENCE_LABELS: Record<PushAudience, string> = {
@@ -92,6 +102,8 @@ const TICKET_PRIORITY_LABELS: Record<string, string> = {
 const isProActive = (u: any) =>
     (u?.is_premium || String(u?.plano || '').toLowerCase() === 'pro') &&
     (!u?.premium_until || new Date(u.premium_until) > new Date());
+const isProExpiringSoon = (u: any) =>
+    isProActive(u) && !!u?.premium_until && new Date(u.premium_until).getTime() - Date.now() <= 7 * 24 * 60 * 60 * 1000;
 const isProExpired = (u: any) =>
     (u?.is_premium || String(u?.plano || '').toLowerCase() === 'pro') && !isProActive(u);
 
@@ -125,6 +137,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [partnerOffers, setPartnerOffers] = useState<PartnerOffer[]>([]);
     const [partnerLeads, setPartnerLeads] = useState<PartnerLead[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [userFilter, setUserFilter] = useState<UserFilter>('all');
     const [usersPage, setUsersPage] = useState(1);
     const [ticketStatusFilter, setTicketStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
     const [partnersSubTab, setPartnersSubTab] = useState<PartnersSubTab>('PARTNERS');
@@ -409,7 +422,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const handleUpdatePlan = async (user: any) => {
         let premiumUntil: string | null = null;
         if (selectedPlan === 'pro' && selectedValidity !== 'none') {
-            const d = new Date();
+            // Se ainda tem PRO em dia, soma a partir do vencimento atual (não perde dias).
+            const current = user.premium_until ? new Date(user.premium_until) : null;
+            const d = current && current > new Date() ? new Date(current) : new Date();
             if (selectedValidity === '1m') d.setMonth(d.getMonth() + 1);
             else d.setFullYear(d.getFullYear() + 1);
             premiumUntil = d.toISOString();
@@ -786,9 +801,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         };
     }, [commissions]);
 
+    const matchesUserFilter = (u: any) => {
+        switch (userFilter) {
+            case 'pro': return isProActive(u);
+            case 'expiring': return isProExpiringSoon(u);
+            case 'expired': return isProExpired(u);
+            case 'free': return !isProActive(u) && !isProExpired(u);
+            case 'banned': return u.account_status === 'banned';
+            default: return true;
+        }
+    };
     const filteredUsers = users.filter(u =>
-        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        matchesUserFilter(u) && (
+            u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
     );
 
     const USERS_PAGE_SIZE = 20;
@@ -797,7 +824,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     React.useEffect(() => {
         setUsersPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, userFilter]);
 
     const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
@@ -948,6 +975,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Usuários Cadastrados</h2>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
+                                    <select
+                                        value={userFilter}
+                                        onChange={e => setUserFilter(e.target.value as UserFilter)}
+                                        className="bg-[#0B1F33] border border-white/10 text-[11px] text-white px-2 py-2 outline-none rounded-md"
+                                        aria-label="Filtrar usuários"
+                                    >
+                                        {(Object.keys(USER_FILTER_LABELS) as UserFilter[]).map(f => (
+                                            <option key={f} value={f}>{USER_FILTER_LABELS[f]}</option>
+                                        ))}
+                                    </select>
                                     <button
                                         onClick={handleExportUsersCSV}
                                         className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase font-bold border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors rounded-md"
@@ -1002,7 +1039,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        {isProActive(user) ? (
+                                                        {isProExpiringSoon(user) ? (
+                                                            <span className="text-[10px] font-bold bg-amber-500/10 text-amber-400 px-2 py-1 border border-amber-500/20 rounded-sm">PRO até {new Date(user.premium_until).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                                                        ) : isProActive(user) ? (
                                                             <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-2 py-1 border border-blue-500/20 rounded-sm">PRO</span>
                                                         ) : isProExpired(user) ? (
                                                             <span className="text-[10px] font-bold text-amber-400/80" title={user.premium_until ? `Venceu em ${formatDate(user.premium_until)}` : undefined}>PRO VENCIDO</span>
@@ -1927,8 +1966,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <div className="text-white font-bold text-sm">{editingUser.name}</div>
                             <div className="text-[10px] text-slate-500">{editingUser.email}</div>
                             <div className="flex gap-4 mt-3 text-[10px] text-slate-400 flex-wrap">
-                                <span>Fretes: {editingUser.total_freights ?? 0}</span>
+                                <span>Fretes: {editingUser.total_freights ?? 0}{monthFreights ? ` (${monthFreights.get(editingUser.id) || 0} este mês)` : ''}</span>
                                 <span>Desde: {formatDate(editingUser.created_at)}</span>
+                                {profileExtras.get(editingUser.id)?.last_login && (
+                                    <span>Último acesso: {formatDate(profileExtras.get(editingUser.id)!.last_login!)}</span>
+                                )}
                                 {(isProActive(editingUser) || isProExpired(editingUser)) && (
                                     <span className={isProActive(editingUser) ? 'text-blue-400' : 'text-amber-400'}>
                                         PRO {editingUser.premium_until ? `${isProActive(editingUser) ? 'até' : 'venceu em'} ${formatDate(editingUser.premium_until)}` : 'sem prazo'}
@@ -1960,8 +2002,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             title="Validade do PRO"
                                         >
                                             <option value="none">Sem prazo</option>
-                                            <option value="1m">1 mês</option>
-                                            <option value="1y">1 ano</option>
+                                            <option value="1m">{isProActive(editingUser) && editingUser.premium_until ? '+1 mês' : '1 mês'}</option>
+                                            <option value="1y">{isProActive(editingUser) && editingUser.premium_until ? '+1 ano' : '1 ano'}</option>
                                         </select>
                                     )}
                                     <button
