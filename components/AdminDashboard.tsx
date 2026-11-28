@@ -6,10 +6,12 @@ import {
     AlertTriangle, FileText, Activity, Bell, Trash2, Tag,
     Eye, Megaphone, Plus, DollarSign, Calendar, Zap,
     TrendingUp, TrendingDown, BarChart3, Terminal, Cpu,
-    Crosshair, Signal, Handshake, Star, Sparkles
+    Crosshair, Signal, Handshake, Star, Sparkles, RefreshCw
 } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice, Partner, PartnerOffer, PartnerLead } from '../types';
 import { formatCurrency } from '../utils';
+import { isBlackFridayActive } from '../utils/blackFriday';
+import { FREE_MONTHLY_FREIGHTS } from '../utils/freePlan';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -34,7 +36,7 @@ interface AdminStats {
     leadsLast30d: number;
 }
 
-type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE' | 'PARTNERS';
+type TabView = 'SALES' | 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE' | 'PARTNERS';
 type PartnersSubTab = 'PARTNERS' | 'OFFERS' | 'LEADS';
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
@@ -45,6 +47,41 @@ const LEAD_STATUS_LABELS: Record<string, string> = {
 };
 
 const PARTNER_CATEGORY_OPTIONS = ['Pneus', 'Peças', 'Combustível', 'Alimentação', 'Hospedagem', 'Oficina Mecânica', 'Documentação', 'Outros'];
+
+type UserFilter = 'all' | 'pro' | 'expiring' | 'expired' | 'free' | 'banned';
+const USER_FILTER_LABELS: Record<UserFilter, string> = {
+    all: 'Todos',
+    pro: 'PRO em dia',
+    expiring: 'PRO vencendo (7 dias)',
+    expired: 'PRO vencido',
+    free: 'FREE',
+    banned: 'Banidos',
+};
+
+type PushAudience = 'all' | 'free' | 'pro' | 'expiring' | 'expired' | 'free_limit' | 'trial_ending' | 'pending_payment';
+
+const PUSH_AUDIENCE_LABELS: Record<PushAudience, string> = {
+    all: 'Todos',
+    free: 'Só FREE',
+    pro: 'Só PRO',
+    expiring: 'PRO vencendo em 7 dias',
+    expired: 'PRO vencido',
+    free_limit: 'Perto ou no limite do gratuito',
+    trial_ending: 'Teste grátis acabando (3 dias)',
+    pending_payment: 'Pagamento não concluído',
+};
+
+// A fila de push agendado do servidor só entende "todos" e "só FREE".
+const SCHEDULABLE_AUDIENCES: PushAudience[] = ['all', 'free'];
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+    approved: 'Aprovado',
+    pending: 'Pendente',
+    in_process: 'Em análise',
+    rejected: 'Recusado',
+    cancelled: 'Cancelado',
+    refunded: 'Estornado',
+};
 
 const TICKET_STATUS_LABELS: Record<string, string> = {
     all: 'Todos',
@@ -59,6 +96,16 @@ const TICKET_PRIORITY_LABELS: Record<string, string> = {
     medium: 'Média',
     low: 'Baixa',
 };
+
+// PRO de verdade: marcado como PRO e dentro da validade (sem data = não vence).
+// Igual à regra do app (hooks/useSubscription.ts).
+const isProActive = (u: any) =>
+    (u?.is_premium || String(u?.plano || '').toLowerCase() === 'pro') &&
+    (!u?.premium_until || new Date(u.premium_until) > new Date());
+const isProExpiringSoon = (u: any) =>
+    isProActive(u) && !!u?.premium_until && new Date(u.premium_until).getTime() - Date.now() <= 7 * 24 * 60 * 60 * 1000;
+const isProExpired = (u: any) =>
+    (u?.is_premium || String(u?.plano || '').toLowerCase() === 'pro') && !isProActive(u);
 
 // Cada seção do painel é buscada de forma independente (Promise.allSettled):
 // se uma falhar (ex: RPC quebrada), as outras continuam aparecendo em vez de
@@ -78,7 +125,7 @@ function unwrapSettled<T>(result: PromiseSettledResult<{ data: T[] | null; error
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
     const { success: toastSuccess, error: toastError } = useToast();
     const confirmDialog = useConfirm();
-    const [activeTab, setActiveTab] = useState<TabView>('USERS');
+    const [activeTab, setActiveTab] = useState<TabView>('SALES');
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<any[]>([]);
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -90,6 +137,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [partnerOffers, setPartnerOffers] = useState<PartnerOffer[]>([]);
     const [partnerLeads, setPartnerLeads] = useState<PartnerLead[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [userFilter, setUserFilter] = useState<UserFilter>('all');
     const [usersPage, setUsersPage] = useState(1);
     const [ticketStatusFilter, setTicketStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
     const [partnersSubTab, setPartnersSubTab] = useState<PartnersSubTab>('PARTNERS');
@@ -98,6 +146,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [editingUser, setEditingUser] = useState<any | null>(null);
     const [userAction, setUserAction] = useState<string | null>(null);
     const [selectedPlan, setSelectedPlan] = useState<'free' | 'pro'>('free');
+    const [selectedValidity, setSelectedValidity] = useState<'none' | '1m' | '1y'>('none');
+    const [payingCommissionId, setPayingCommissionId] = useState<string | null>(null);
     const [adminNotesInput, setAdminNotesInput] = useState('');
     const [editingTicket, setEditingTicket] = useState<SupportTicket | null>(null);
     const [ticketReply, setTicketReply] = useState('');
@@ -115,6 +165,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [editingLead, setEditingLead] = useState<PartnerLead | null>(null);
     const [isSavingLead, setIsSavingLead] = useState(false);
     const [isReprocessingPayments, setIsReprocessingPayments] = useState(false);
+    // Dados extras para a aba Vendas e o push segmentado (só leitura).
+    const [profileExtras, setProfileExtras] = useState<Map<string, { trial_end?: string | null; last_login?: string | null }>>(new Map());
+    const [phones, setPhones] = useState<Map<string, string>>(new Map());
+    const [monthFreights, setMonthFreights] = useState<Map<string, number> | null>(null);
+    const [scheduledPushes, setScheduledPushes] = useState<any[]>([]);
+    const [pushAudience, setPushAudience] = useState<PushAudience>('all');
+    const [pushScheduleAt, setPushScheduleAt] = useState('');
 
     const handleSaveTicketResponse = async () => {
         if (!editingTicket) {
@@ -179,7 +236,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     });
 
     useEffect(() => {
-        fetchDashboardData();
+        fetchDashboardData(true);
         // Setup Realtime Subscription
         const channel = supabase
             .channel('admin_dashboard')
@@ -196,8 +253,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         };
     }, []);
 
-    const fetchDashboardData = async () => {
-        setLoading(true);
+    // showSpinner só na primeira carga: as atualizações seguintes (tempo real,
+    // depois de salvar algo) acontecem em segundo plano, sem a tela piscar.
+    const fetchDashboardData = async (showSpinner = false) => {
+        if (showSpinner) setLoading(true);
 
         // Busca tudo em paralelo e isolado: uma seção quebrada não pode mais
         // zerar o painel inteiro (era o que acontecia antes — a RPC de
@@ -241,6 +300,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         setPartnerOffers(partnerOffersData);
         setPartnerLeads(partnerLeadsData);
 
+        // Dados extras (só leitura): fim do teste, último acesso, telefone,
+        // fretes do mês e pushes agendados. Se algum falhar, o resto do painel segue.
+        const [extrasRes, phonesRes, monthRes, queueRes] = await Promise.allSettled([
+            supabase.from('profiles').select('id, trial_end, last_login'),
+            supabase.from('settings').select('user_id, issuer_phone'),
+            supabase.rpc('get_admin_monthly_freight_counts'),
+            supabase.from('push_campaign_queue').select('*').is('sent_at', null).order('scheduled_at', { ascending: true }).limit(20),
+        ]);
+        const extrasMap = new Map<string, any>();
+        unwrapSettled<any>(extrasRes, 'perfis').forEach(r => extrasMap.set(r.id, r));
+        setProfileExtras(extrasMap);
+        const phonesMap = new Map<string, string>();
+        unwrapSettled<any>(phonesRes, 'telefones').forEach(r => {
+            const digits = String(r.issuer_phone || '').replace(/\D/g, '');
+            if (digits.length >= 10) phonesMap.set(r.user_id, digits);
+        });
+        setPhones(phonesMap);
+        if (monthRes.status === 'fulfilled' && !monthRes.value.error) {
+            const m = new Map<string, number>();
+            (monthRes.value.data || []).forEach((r: any) => m.set(r.user_id, Number(r.month_freights) || 0));
+            setMonthFreights(m);
+        } else {
+            setMonthFreights(null);
+        }
+        setScheduledPushes(unwrapSettled<any>(queueRes, 'pushes agendados').filter(q => !q.expires_at || new Date(q.expires_at) > new Date()));
+
         // 4. Calculate Stats
         const now = new Date();
         const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
@@ -252,7 +337,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             newUsersToday: usersData.filter(u => u.created_at >= startOfDay).length,
             newUsersWeek: usersData.filter(u => u.created_at >= startOfWeek).length,
             newUsersMonth: usersData.filter(u => u.created_at >= startOfMonth).length,
-            activeProUsers: usersData.filter(u => u.is_premium).length,
+            activeProUsers: usersData.filter(isProActive).length,
             bannedUsers: usersData.filter(u => u.account_status === 'banned').length,
             openTickets: ticketsData.filter(t => t.status === 'open').length,
             activeNotices: noticesData.filter(n => n.is_active).length,
@@ -335,11 +420,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     };
 
     const handleUpdatePlan = async (user: any) => {
-        const ok = await callAdminAction('update_plan', user.id, { plano: selectedPlan });
+        let premiumUntil: string | null = null;
+        if (selectedPlan === 'pro' && selectedValidity !== 'none') {
+            // Se ainda tem PRO em dia, soma a partir do vencimento atual (não perde dias).
+            const current = user.premium_until ? new Date(user.premium_until) : null;
+            const d = current && current > new Date() ? new Date(current) : new Date();
+            if (selectedValidity === '1m') d.setMonth(d.getMonth() + 1);
+            else d.setFullYear(d.getFullYear() + 1);
+            premiumUntil = d.toISOString();
+        }
+        const ok = await callAdminAction('update_plan', user.id, { plano: selectedPlan, premiumUntil });
         if (ok) setEditingUser(null);
     };
 
     const handleSaveAdminNotes = async (user: any) => {
+        if ((adminNotesInput || '') === (user.admin_notes || '')) return;
         await callAdminAction('update_admin_notes', user.id, { notes: adminNotesInput });
     };
 
@@ -357,7 +452,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     const handleDeleteNotice = async (id: string) => {
         if (!(await confirmDialog({ message: "Deletar aviso?", danger: true }))) return;
-        await supabase.from('platform_notices').delete().eq('id', id);
+        const { error } = await supabase.from('platform_notices').delete().eq('id', id);
+        if (error) {
+            toastError(`Erro ao deletar aviso: ${error.message}`);
+            return;
+        }
         fetchDashboardData();
     };
 
@@ -450,8 +549,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     const handleSendBroadcastPush = async () => {
         if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
+        const title = broadcastTitle.trim();
+        const body = broadcastBody.trim();
+        const label = PUSH_AUDIENCE_LABELS[pushAudience];
+
+        // Agendado: vai para a fila que o servidor já processa (só Todos ou Só FREE).
+        if (pushScheduleAt) {
+            if (!SCHEDULABLE_AUDIENCES.includes(pushAudience)) {
+                toastError('Agendamento só funciona para "Todos" ou "Só FREE". Para os outros grupos, envie agora.');
+                return;
+            }
+            const when = new Date(pushScheduleAt);
+            if (isNaN(when.getTime()) || when.getTime() < Date.now() - 60000) {
+                toastError('Escolha uma data e hora no futuro.');
+                return;
+            }
+            const confirmed = await confirmDialog(`Agendar este push para "${label}" em ${when.toLocaleString('pt-BR')}?`);
+            if (!confirmed) return;
+            setIsSendingBroadcast(true);
+            try {
+                const { error } = await supabase.from('push_campaign_queue').insert([{
+                    title, body,
+                    scheduled_at: when.toISOString(),
+                    expires_at: new Date(when.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+                    audience: pushAudience,
+                }]);
+                if (error) throw error;
+                toastSuccess('Push agendado.');
+                setBroadcastTitle('');
+                setBroadcastBody('');
+                setPushScheduleAt('');
+                fetchDashboardData();
+            } catch (e: any) {
+                console.error(e);
+                toastError(`Erro ao agendar push: ${e.message}`);
+            } finally {
+                setIsSendingBroadcast(false);
+            }
+            return;
+        }
+
+        const ids = pushAudience === 'all' ? null : (segments[pushAudience] || []).map(u => u.id);
+        if (ids && ids.length === 0) {
+            toastError(`Nenhum usuário no grupo "${label}".`);
+            return;
+        }
         const confirmed = await confirmDialog({
-            message: `Enviar essa notificação push para TODOS os usuários com o app instalado? Essa ação não pode ser desfeita.`,
+            message: ids
+                ? `Enviar este push para o grupo "${label}" (${ids.length} usuário(s))? Só recebe quem tem o app instalado. Essa ação não pode ser desfeita.`
+                : `Enviar essa notificação push para TODOS os usuários com o app instalado? Essa ação não pode ser desfeita.`,
             danger: true
         });
         if (!confirmed) return;
@@ -459,10 +605,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         setIsSendingBroadcast(true);
         try {
             const { data, error } = await supabase.functions.invoke('send-push-notification', {
-                body: { broadcast: true, title: broadcastTitle.trim(), body: broadcastBody.trim() }
+                body: ids ? { user_ids: ids, title, body } : { broadcast: true, title, body }
             });
             if (error || data?.error) throw new Error(data?.error || error?.message || 'Erro desconhecido');
-            toastSuccess(`Push enviado: ${data.sent} de ${data.total} dispositivo(s).`);
+            toastSuccess(data.total ? `Push enviado: ${data.sent} de ${data.total} dispositivo(s).` : 'Ninguém desse grupo tem o app instalado com push ativo.');
             setBroadcastTitle('');
             setBroadcastBody('');
         } catch (e: any) {
@@ -471,6 +617,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         } finally {
             setIsSendingBroadcast(false);
         }
+    };
+
+    const openPushFor = (audience: PushAudience) => {
+        setPushAudience(audience);
+        setPushScheduleAt('');
+        setActiveTab('NOTICES');
     };
 
     const handleExportUsersCSV = () => {
@@ -491,6 +643,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+    };
+
+    const handleMarkCommissionPaid = async (c: any) => {
+        const referrer = userLookup.get(c.referrer_id);
+        const confirmed = await confirmDialog(`Marcar como paga a comissão de ${formatCurrency(c.amount)} para ${referrer?.name || 'o indicador'}? Faça o pagamento (Pix) antes de confirmar.`);
+        if (!confirmed) return;
+        setPayingCommissionId(c.id);
+        try {
+            const { error } = await supabase.from('referral_commissions')
+                .update({ status: 'paid', updated_at: new Date().toISOString() })
+                .eq('id', c.id);
+            if (error) throw error;
+            await supabase.from('admin_logs').insert([{
+                admin_id: currentUser.id,
+                action: 'PAY_COMMISSION',
+                target_type: 'referral_commission',
+                target_id: c.id,
+                description: `Marcou comissão de ${formatCurrency(c.amount)} como paga`,
+            }]);
+            toastSuccess('Comissão marcada como paga.');
+            await fetchDashboardData();
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro ao marcar comissão: ${e.message}`);
+        } finally {
+            setPayingCommissionId(null);
+        }
     };
 
     const handleReprocessPayments = async () => {
@@ -516,6 +695,78 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         users.forEach(u => map.set(u.id, u));
         return map;
     }, [users]);
+
+    // Grupos de usuários para a aba Vendas e o push segmentado.
+    const segments = React.useMemo(() => {
+        const now = Date.now();
+        const DAY = 24 * 60 * 60 * 1000;
+        const active = users.filter(u => u.account_status !== 'banned' && u.role !== 'admin');
+        const time = (d?: string | null) => (d ? new Date(d).getTime() : NaN);
+
+        const expiring = active
+            .filter(u => isProActive(u) && u.premium_until && time(u.premium_until) - now <= 7 * DAY)
+            .sort((a, b) => time(a.premium_until) - time(b.premium_until));
+        const expired = active
+            .filter(isProExpired)
+            .sort((a, b) => time(b.premium_until) - time(a.premium_until));
+        const freeLimit = monthFreights
+            ? active
+                .filter(u => !isProActive(u) && (monthFreights.get(u.id) || 0) >= FREE_MONTHLY_FREIGHTS - 2)
+                .sort((a, b) => (monthFreights.get(b.id) || 0) - (monthFreights.get(a.id) || 0))
+            : [];
+        const trialEnding = active
+            .filter(u => {
+                if (isProActive(u)) return false;
+                const end = time(profileExtras.get(u.id)?.trial_end);
+                return end > now && end - now <= 3 * DAY;
+            })
+            .sort((a, b) => time(profileExtras.get(a.id)?.trial_end) - time(profileExtras.get(b.id)?.trial_end));
+
+        // Pagamento pendente que nunca foi concluído: a pessoa tentou pagar,
+        // não tem pagamento aprovado depois disso e não está com PRO em dia.
+        const approvedAfter = (userId: string, date: string) =>
+            payments.some(p => p.user_id === userId && p.status === 'approved' && (p.processed_at || p.created_at) >= date);
+        const pendingMap = new Map<string, any>();
+        payments
+            .filter(p => ['pending', 'in_process'].includes(p.status))
+            .forEach(p => {
+                const u = userLookup.get(p.user_id);
+                if (!u || isProActive(u) || u.account_status === 'banned') return;
+                if (approvedAfter(p.user_id, p.processed_at || p.created_at)) return;
+                const prev = pendingMap.get(p.user_id);
+                if (!prev || (p.processed_at || p.created_at) > (prev.processed_at || prev.created_at)) pendingMap.set(p.user_id, p);
+            });
+        const pending = Array.from(pendingMap.values())
+            .sort((a, b) => time(b.processed_at || b.created_at) - time(a.processed_at || a.created_at))
+            .map(p => ({ ...userLookup.get(p.user_id), _payment: p }));
+
+        return {
+            all: active,
+            free: active.filter(u => !isProActive(u)),
+            pro: active.filter(isProActive),
+            expiring,
+            expired,
+            free_limit: freeLimit,
+            trial_ending: trialEnding,
+            pending_payment: pending,
+        } as Record<PushAudience, any[]>;
+    }, [users, monthFreights, profileExtras, payments, userLookup]);
+
+    const whatsappLink = (u: any, kind: 'expiring' | 'expired' | 'free_limit' | 'pending_payment') => {
+        const phone = phones.get(u.id);
+        if (!phone) return null;
+        const number = phone.startsWith('55') && phone.length >= 12 ? phone : `55${phone}`;
+        const first = String(u.name || '').trim().split(' ')[0] || 'tudo bem';
+        const bf = isBlackFridayActive();
+        const offer = bf ? ' Até 30/11 o PRO está pela metade do preço na Black Friday.' : '';
+        const texts: Record<string, string> = {
+            expiring: `Olá, ${first}! Aqui é do Control Frete. Seu plano PRO vence em breve. Para não perder o acesso, é só renovar pelo app.${offer}`,
+            expired: `Olá, ${first}! Aqui é do Control Frete. Vi que seu plano PRO venceu. Quer voltar a ter fretes ilimitados e o histórico completo?${offer}`,
+            free_limit: `Olá, ${first}! Aqui é do Control Frete. Vi que você está usando bastante o app este mês. Com o PRO você lança fretes ilimitados e vê todo o histórico.${offer}`,
+            pending_payment: `Olá, ${first}! Aqui é do Control Frete. Vi que você começou a assinar o PRO mas o pagamento não foi concluído. Posso te ajudar?${offer}`,
+        };
+        return `https://wa.me/${number}?text=${encodeURIComponent(texts[kind])}`;
+    };
 
     const partnerLookup = React.useMemo(() => {
         const map = new Map<string, Partner>();
@@ -550,9 +801,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         };
     }, [commissions]);
 
+    const matchesUserFilter = (u: any) => {
+        switch (userFilter) {
+            case 'pro': return isProActive(u);
+            case 'expiring': return isProExpiringSoon(u);
+            case 'expired': return isProExpired(u);
+            case 'free': return !isProActive(u) && !isProExpired(u);
+            case 'banned': return u.account_status === 'banned';
+            default: return true;
+        }
+    };
     const filteredUsers = users.filter(u =>
-        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        matchesUserFilter(u) && (
+            u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
     );
 
     const USERS_PAGE_SIZE = 20;
@@ -561,7 +824,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     React.useEffect(() => {
         setUsersPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, userFilter]);
 
     const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
@@ -575,6 +838,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         });
 
     const NAV_ITEMS: { id: TabView; label: string; icon: any; badge?: number | null }[] = [
+        { id: 'SALES', label: 'Vendas', icon: Star, badge: (segments.expiring.length + segments.free_limit.filter(u => (monthFreights?.get(u.id) || 0) >= FREE_MONTHLY_FREIGHTS).length) || null },
         { id: 'USERS', label: 'Usuários', icon: Users },
         { id: 'SUPPORT', label: 'Suporte', icon: MessageCircle, badge: stats.openTickets > 0 ? stats.openTickets : null },
         { id: 'REVENUE', label: 'Receita', icon: DollarSign },
@@ -650,9 +914,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         </div>
                         <span className="text-sm font-bold text-white tracking-wide">CONTROL <span className="text-blue-400 font-normal">Admin</span></span>
                     </div>
-                    <button onClick={onBack} className="flex items-center gap-1 text-red-400 text-[11px] font-bold uppercase px-2 py-1">
-                        <ArrowLeft className="w-3.5 h-3.5" /> Sair
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button onClick={() => fetchDashboardData()} aria-label="Atualizar" className="text-slate-300 p-2">
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+                        <button onClick={onBack} className="flex items-center gap-1 text-red-400 text-[11px] font-bold uppercase px-2 py-1">
+                            <ArrowLeft className="w-3.5 h-3.5" /> Sair
+                        </button>
+                    </div>
                 </div>
                 <nav className="flex overflow-x-auto gap-1 px-3 pb-3 -mt-0.5">
                     {NAV_ITEMS.map(item => (
@@ -682,6 +951,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             Status do sistema: <span className="text-white">Online</span>
                         </span>
                     </div>
+                    <button onClick={() => fetchDashboardData()} className="flex items-center gap-2 text-xs font-bold uppercase text-slate-300 hover:text-white border border-white/10 px-3 py-1.5 rounded-md">
+                        <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+                    </button>
                 </header>
 
                 <div className="flex-1 overflow-auto p-4 md:p-8">
@@ -703,6 +975,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-white">Usuários Cadastrados</h2>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
+                                    <select
+                                        value={userFilter}
+                                        onChange={e => setUserFilter(e.target.value as UserFilter)}
+                                        className="bg-[#0B1F33] border border-white/10 text-[11px] text-white px-2 py-2 outline-none rounded-md"
+                                        aria-label="Filtrar usuários"
+                                    >
+                                        {(Object.keys(USER_FILTER_LABELS) as UserFilter[]).map(f => (
+                                            <option key={f} value={f}>{USER_FILTER_LABELS[f]}</option>
+                                        ))}
+                                    </select>
                                     <button
                                         onClick={handleExportUsersCSV}
                                         className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase font-bold border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors rounded-md"
@@ -740,7 +1022,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                     className="hover:bg-white/5 transition-colors group cursor-pointer"
                                                     onClick={() => {
                                                         setEditingUser(user);
-                                                        setSelectedPlan(user.is_premium ? 'pro' : 'free');
+                                                        setSelectedPlan(isProActive(user) ? 'pro' : 'free');
+                                                        setSelectedValidity('none');
                                                         setAdminNotesInput(user.admin_notes || '');
                                                     }}
                                                 >
@@ -756,8 +1039,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        {user.is_premium ? (
+                                                        {isProExpiringSoon(user) ? (
+                                                            <span className="text-[10px] font-bold bg-amber-500/10 text-amber-400 px-2 py-1 border border-amber-500/20 rounded-sm">PRO até {new Date(user.premium_until).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                                                        ) : isProActive(user) ? (
                                                             <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-2 py-1 border border-blue-500/20 rounded-sm">PRO</span>
+                                                        ) : isProExpired(user) ? (
+                                                            <span className="text-[10px] font-bold text-amber-400/80" title={user.premium_until ? `Venceu em ${formatDate(user.premium_until)}` : undefined}>PRO VENCIDO</span>
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-slate-500">FREE</span>
                                                         )}
@@ -835,6 +1122,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             <div className={`w-2 h-2 rounded-full ${ticket.status === 'open' ? 'bg-red-400 animate-pulse' : 'bg-green-400'}`} />
                                             <div>
                                                 <div className="text-white font-bold text-sm group-hover:text-blue-400 transition-colors">{ticket.title}</div>
+                                                <div className="text-[11px] text-slate-300">
+                                                    {userLookup.get(ticket.user_id)?.name || 'Usuário desconhecido'}
+                                                    <span className="text-slate-500"> • {userLookup.get(ticket.user_id)?.email || ticket.user_id}</span>
+                                                </div>
                                                 <div className="text-[10px] text-slate-500">{ticket.category} • #{ticket.id.slice(0, 8)}</div>
                                             </div>
                                         </div>
@@ -857,6 +1148,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {/* --- TAB CONTENT: SALES (oportunidades de venda) --- */}
+                    {activeTab === 'SALES' && (
+                        <div className="space-y-6 animate-in slide-in-from-bottom-5 duration-300">
+                            <div className="bg-[#12283F] p-4 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-2 text-amber-400 mb-1">
+                                    <Star className="w-5 h-5" />
+                                    <h2 className="text-sm font-bold uppercase tracking-widest text-white">Oportunidades de venda</h2>
+                                </div>
+                                <p className="text-[11px] text-slate-400">
+                                    Quem está mais perto de assinar ou renovar. O botão do WhatsApp aparece quando o usuário cadastrou telefone nas configurações do app.
+                                    {isBlackFridayActive() && ' A mensagem pronta já cita o preço de Black Friday.'}
+                                </p>
+                            </div>
+
+                            <SalesSection
+                                title="PRO vencendo nos próximos 7 dias"
+                                empty="Ninguém com PRO vencendo nesta semana."
+                                items={segments.expiring}
+                                accent="text-amber-400"
+                                onPush={() => openPushFor('expiring')}
+                                detail={u => `Vence em ${formatDate(u.premium_until)}`}
+                                whatsapp={u => whatsappLink(u, 'expiring')}
+                            />
+                            <SalesSection
+                                title="Bateram ou estão perto do limite do gratuito"
+                                empty={monthFreights ? 'Ninguém do plano gratuito chegou perto do limite este mês.' : 'Não foi possível carregar os fretes do mês.'}
+                                items={segments.free_limit}
+                                accent="text-blue-400"
+                                onPush={() => openPushFor('free_limit')}
+                                detail={u => {
+                                    const c = monthFreights?.get(u.id) || 0;
+                                    return c >= FREE_MONTHLY_FREIGHTS ? `${c} de ${FREE_MONTHLY_FREIGHTS} fretes: bateu o limite` : `${c} de ${FREE_MONTHLY_FREIGHTS} fretes este mês`;
+                                }}
+                                whatsapp={u => whatsappLink(u, 'free_limit')}
+                            />
+                            <SalesSection
+                                title="Pagamento iniciado e não concluído"
+                                empty="Nenhum pagamento pendente sem conclusão."
+                                items={segments.pending_payment}
+                                accent="text-purple-400"
+                                onPush={() => openPushFor('pending_payment')}
+                                detail={u => `Tentou pagar ${formatCurrency(u._payment?.amount || 0)} em ${formatDate(u._payment?.processed_at || u._payment?.created_at)}`}
+                                whatsapp={u => whatsappLink(u, 'pending_payment')}
+                            />
+                            <SalesSection
+                                title="PRO vencido"
+                                empty="Nenhum PRO vencido."
+                                items={segments.expired}
+                                accent="text-red-400"
+                                onPush={() => openPushFor('expired')}
+                                detail={u => `Venceu em ${formatDate(u.premium_until)}`}
+                                whatsapp={u => whatsappLink(u, 'expired')}
+                            />
                         </div>
                     )}
 
@@ -899,7 +1246,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             <div className="text-right">
                                                 <div className="text-white text-sm font-mono font-bold">{formatCurrency(p.amount)}</div>
                                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase rounded-sm ${p.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/5 text-slate-400 border-white/10'}`}>
-                                                    {p.status}
+                                                    {PAYMENT_STATUS_LABELS[p.status] || p.status}
                                                 </span>
                                             </div>
                                         </div>
@@ -940,11 +1287,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                 <div className="text-white text-xs font-bold">{referrer?.name || 'Desconhecido'} <span className="text-slate-500">indicou</span> {referred?.name || 'Desconhecido'}</div>
                                                 <div className="text-[10px] text-slate-500">{c.commission_percentage}% de {formatCurrency(c.base_amount)}</div>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right flex flex-col items-end gap-1.5">
                                                 <div className="text-white text-sm font-mono font-bold">{formatCurrency(c.amount)}</div>
                                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase rounded-sm ${c.status === 'paid' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                                                    {c.status}
+                                                    {c.status === 'paid' ? 'Paga' : 'Pendente'}
                                                 </span>
+                                                {c.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => handleMarkCommissionPaid(c)}
+                                                        disabled={payingCommissionId === c.id}
+                                                        className="text-[9px] uppercase font-bold px-2 py-1 border border-green-500/30 text-green-400 hover:bg-green-500/10 rounded-sm disabled:opacity-50"
+                                                    >
+                                                        {payingCommissionId === c.id ? 'Salvando...' : 'Marcar como paga'}
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1113,7 +1469,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <div className="bg-[#12283F] border border-blue-500/20 p-4 md:p-6 rounded-md">
                                 <div className="flex items-center gap-2 text-blue-400 mb-4">
                                     <Zap className="w-4 h-4" />
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-white">Push Manual (Todos os Usuários)</h3>
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-white">Push Manual</h3>
                                 </div>
                                 <div className="space-y-3">
                                     <input
@@ -1131,15 +1487,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         onChange={e => setBroadcastBody(e.target.value)}
                                         maxLength={180}
                                     />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label className="text-[10px] uppercase font-bold text-slate-500 flex flex-col gap-1">
+                                            Para quem
+                                            <select
+                                                value={pushAudience}
+                                                onChange={e => setPushAudience(e.target.value as PushAudience)}
+                                                className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2.5 outline-none rounded-md normal-case font-normal"
+                                            >
+                                                {(Object.keys(PUSH_AUDIENCE_LABELS) as PushAudience[]).map(a => (
+                                                    <option key={a} value={a}>
+                                                        {PUSH_AUDIENCE_LABELS[a]}{a === 'all' ? '' : ` (${segments[a]?.length ?? 0})`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="text-[10px] uppercase font-bold text-slate-500 flex flex-col gap-1">
+                                            Quando
+                                            <input
+                                                type="datetime-local"
+                                                value={pushScheduleAt}
+                                                onChange={e => setPushScheduleAt(e.target.value)}
+                                                disabled={!SCHEDULABLE_AUDIENCES.includes(pushAudience)}
+                                                className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2 outline-none rounded-md disabled:opacity-40 [color-scheme:dark]"
+                                            />
+                                            <span className="normal-case font-normal text-slate-500">
+                                                {SCHEDULABLE_AUDIENCES.includes(pushAudience)
+                                                    ? 'Deixe em branco para enviar agora.'
+                                                    : 'Este grupo muda com o tempo, então o envio é só na hora.'}
+                                            </span>
+                                        </label>
+                                    </div>
                                     <div className="flex justify-end">
                                         <button
                                             onClick={handleSendBroadcastPush}
                                             disabled={isSendingBroadcast || !broadcastTitle.trim() || !broadcastBody.trim()}
                                             className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-md"
                                         >
-                                            {isSendingBroadcast ? 'Enviando...' : 'Enviar Push para Todos'}
+                                            {isSendingBroadcast ? 'Enviando...' : pushScheduleAt && SCHEDULABLE_AUDIENCES.includes(pushAudience) ? 'Agendar Push' : 'Enviar Push Agora'}
                                         </button>
                                     </div>
+                                    {scheduledPushes.length > 0 && (
+                                        <div className="border-t border-white/10 pt-3">
+                                            <p className="text-[10px] uppercase font-bold text-slate-500 mb-2">Agendados ({scheduledPushes.length})</p>
+                                            <div className="space-y-1.5">
+                                                {scheduledPushes.map(q => (
+                                                    <div key={q.id} className="flex justify-between gap-3 text-xs bg-[#0B1F33] border border-white/5 rounded-md px-3 py-2">
+                                                        <span className="text-white truncate">{q.title}</span>
+                                                        <span className="text-slate-500 shrink-0">
+                                                            {PUSH_AUDIENCE_LABELS[q.audience as PushAudience] || q.audience} • {q.scheduled_at ? new Date(q.scheduled_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -1221,6 +1623,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <MessageCircle className="w-4 h-4 text-blue-400" /> Responder Chamado
                         </h3>
 
+                        <div className="mb-3 text-xs text-slate-300">
+                            <span className="font-bold text-white">{userLookup.get(editingTicket.user_id)?.name || 'Usuário desconhecido'}</span>
+                            <span className="text-slate-500"> • {userLookup.get(editingTicket.user_id)?.email || editingTicket.user_id}</span>
+                            {(() => {
+                                const u = userLookup.get(editingTicket.user_id);
+                                return u ? <span className={`ml-2 text-[9px] font-bold px-1.5 py-0.5 border rounded-sm ${isProActive(u) ? 'text-blue-400 border-blue-500/30' : 'text-slate-400 border-white/10'}`}>{isProActive(u) ? 'PRO' : 'FREE'}</span> : null;
+                            })()}
+                        </div>
                         <div className="bg-[#0B1F33] p-4 border border-white/5 mb-4 text-xs text-slate-400 rounded-md">
                             <p className="mb-2 text-slate-500 uppercase text-[10px] font-bold">Mensagem do usuário:</p>
                             {editingTicket.description}
@@ -1245,6 +1655,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <option value="open">Aberto</option>
                                     <option value="in_progress">Em andamento</option>
                                     <option value="resolved">Resolvido</option>
+                                    <option value="closed">Fechado</option>
                                 </select>
                                 <div className="flex gap-2 justify-end">
                                     <button onClick={() => setEditingTicket(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white" disabled={isSavingTicket}>Cancelar</button>
@@ -1263,7 +1674,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-4 md:p-6 shadow-2xl rounded-lg max-h-[90vh] overflow-y-auto">
                         <h3 className="text-white font-bold mb-6 flex items-center gap-2">
-                            <Megaphone className="w-4 h-4 text-blue-400" /> Novo Aviso da Plataforma
+                            <Megaphone className="w-4 h-4 text-blue-400" /> {editingNotice.id ? 'Editar Aviso' : 'Novo Aviso da Plataforma'}
                         </h3>
                         <div className="space-y-4">
                             <input
@@ -1555,8 +1966,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <div className="text-white font-bold text-sm">{editingUser.name}</div>
                             <div className="text-[10px] text-slate-500">{editingUser.email}</div>
                             <div className="flex gap-4 mt-3 text-[10px] text-slate-400 flex-wrap">
-                                <span>Fretes: {editingUser.total_freights ?? 0}</span>
+                                <span>Fretes: {editingUser.total_freights ?? 0}{monthFreights ? ` (${monthFreights.get(editingUser.id) || 0} este mês)` : ''}</span>
                                 <span>Desde: {formatDate(editingUser.created_at)}</span>
+                                {profileExtras.get(editingUser.id)?.last_login && (
+                                    <span>Último acesso: {formatDate(profileExtras.get(editingUser.id)!.last_login!)}</span>
+                                )}
+                                {(isProActive(editingUser) || isProExpired(editingUser)) && (
+                                    <span className={isProActive(editingUser) ? 'text-blue-400' : 'text-amber-400'}>
+                                        PRO {editingUser.premium_until ? `${isProActive(editingUser) ? 'até' : 'venceu em'} ${formatDate(editingUser.premium_until)}` : 'sem prazo'}
+                                    </span>
+                                )}
                                 <span className={editingUser.account_status === 'banned' ? 'text-red-400' : 'text-green-400'}>
                                     {editingUser.account_status === 'banned' ? 'Banido' : 'Ativo'}
                                 </span>
@@ -1575,6 +1994,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         <option value="free">FREE</option>
                                         <option value="pro">PRO</option>
                                     </select>
+                                    {selectedPlan === 'pro' && (
+                                        <select
+                                            value={selectedValidity}
+                                            onChange={e => setSelectedValidity(e.target.value as 'none' | '1m' | '1y')}
+                                            className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2 outline-none flex-1 rounded-md"
+                                            title="Validade do PRO"
+                                        >
+                                            <option value="none">Sem prazo</option>
+                                            <option value="1m">{isProActive(editingUser) && editingUser.premium_until ? '+1 mês' : '1 mês'}</option>
+                                            <option value="1y">{isProActive(editingUser) && editingUser.premium_until ? '+1 ano' : '1 ano'}</option>
+                                        </select>
+                                    )}
                                     <button
                                         onClick={() => handleUpdatePlan(editingUser)}
                                         disabled={!!userAction}
@@ -1653,6 +2084,55 @@ const StatBox = ({ label, value, icon: Icon, trend, unit, color = "text-white" }
         </div>
     </div>
 );
+
+function SalesSection({ title, empty, items, accent, onPush, detail, whatsapp }: {
+    title: string;
+    empty: string;
+    items: any[];
+    accent: string;
+    onPush: () => void;
+    detail: (u: any) => string;
+    whatsapp: (u: any) => string | null;
+}) {
+    return (
+        <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F]">
+            <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-white/10">
+                <h3 className={`text-xs font-bold uppercase tracking-widest ${accent}`}>
+                    {title} <span className="text-slate-500">({items.length})</span>
+                </h3>
+                {items.length > 0 && (
+                    <button onClick={onPush} className="self-start sm:self-auto text-[10px] uppercase font-bold border border-white/10 text-slate-300 hover:text-white px-3 py-1.5 rounded-md">
+                        Mandar push para este grupo
+                    </button>
+                )}
+            </div>
+            <div className="divide-y divide-white/5">
+                {items.map(u => {
+                    const wa = whatsapp(u);
+                    return (
+                        <div key={u.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-white text-xs font-bold truncate">{u.name || 'Sem nome'}</div>
+                                <div className="text-[10px] text-slate-500 truncate">{u.email}</div>
+                                <div className="text-[10px] text-slate-300 mt-0.5">{detail(u)}</div>
+                            </div>
+                            {wa ? (
+                                <a href={wa} target="_blank" rel="noopener noreferrer" className="shrink-0 flex items-center gap-1.5 text-[10px] uppercase font-bold bg-green-600/15 text-green-400 border border-green-500/30 hover:bg-green-600/25 px-3 py-1.5 rounded-md">
+                                    <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                                </a>
+                            ) : (
+                                <span className="shrink-0 text-[10px] text-slate-600">sem telefone</span>
+                            )}
+                        </div>
+                    );
+                })}
+                {items.length === 0 && (
+                    <div className="px-4 py-8 text-center text-slate-500 text-xs">{empty}</div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function formatDate(dateString: string) {
     if (!dateString) return '--';
