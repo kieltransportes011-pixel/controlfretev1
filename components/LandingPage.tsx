@@ -28,8 +28,10 @@ import {
     Smartphone,
     Sparkles,
     Tag,
+    XCircle,
 } from 'lucide-react';
 import { BLACK_FRIDAY_END } from '../utils/blackFriday';
+import { FREE_MONTHLY_FREIGHTS, FREE_HISTORY_DAYS } from '../utils/freePlan';
 
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.controlfrete.app&hl=pt_BR';
 
@@ -190,7 +192,7 @@ const novidadesData = [
 const faqData = [
     {
         q: 'O Control Frete é gratuito?',
-        a: 'Sim. O plano gratuito é para sempre e não pede cartão. Fretes e despesas são ilimitados. Quem quiser a Gestão de Frota, Agenda e Metas pode assinar o PRO, e ainda ganha 7 dias de teste grátis.',
+        a: `Sim. O plano gratuito é para sempre e não pede cartão, mas é básico: até ${FREE_MONTHLY_FREIGHTS} fretes por mês e histórico dos últimos ${FREE_HISTORY_DAYS} dias. Para fretes ilimitados, histórico completo, Gestão de Frota, Agenda, Metas e recibos em PDF, assine o PRO. Toda conta nova ganha 7 dias de PRO grátis para testar.`,
     },
     {
         q: 'Funciona no iPhone?',
@@ -579,7 +581,7 @@ const Highlights = () => (
         {[
             { value: 'R$ 0', label: 'para começar a usar' },
             { value: <CountUp to={7} suffix=" dias" />, label: 'de PRO grátis para testar' },
-            { value: 'Ilimitados', label: 'fretes e despesas, até no grátis' },
+            { value: 'Ilimitados', label: 'fretes no PRO, com histórico completo' },
             { value: 'Celular e PC', label: 'a mesma conta em qualquer aparelho' },
         ].map((s, i) => (
             <motion.div
@@ -752,11 +754,16 @@ const Novidades = () => (
     </section>
 );
 
-const PlanList = ({ items, highlight = false }: { items: string[]; highlight?: boolean }) => (
+const PlanList = ({ items, excluded = [], highlight = false }: { items: string[]; excluded?: string[]; highlight?: boolean }) => (
     <ul className="space-y-3.5 mb-8 flex-1">
         {items.map((i) => (
             <li key={i} className={`flex items-start gap-3 text-sm ${highlight ? 'text-white' : 'text-slate-300'}`}>
                 <CheckCircle className={`w-5 h-5 shrink-0 ${highlight ? 'text-emerald-400' : 'text-slate-500'}`} /> {i}
+            </li>
+        ))}
+        {excluded.map((i) => (
+            <li key={i} className="flex items-start gap-3 text-sm text-slate-500">
+                <XCircle className="w-5 h-5 shrink-0 text-red-500/60" /> <span className="line-through decoration-red-500/50">{i}</span>
             </li>
         ))}
     </ul>
@@ -802,7 +809,10 @@ const Plans = ({ onLogin, blackFriday }: { onLogin: () => void; blackFriday: boo
                     <div className="text-sm font-bold text-slate-400 mb-4">Gratuito</div>
                     <div className="text-4xl font-extrabold text-white mb-1">R$ 0</div>
                     <div className="text-slate-500 text-sm mb-7">Para sempre, sem cartão</div>
-                    <PlanList items={['Fretes e despesas ilimitados', 'Calculadora com endereço automático', 'Painel financeiro completo', 'Controle de clientes', 'Control Frete Parceiros', '7 dias de teste PRO grátis']} />
+                    <PlanList
+                        items={[`Até ${FREE_MONTHLY_FREIGHTS} fretes por mês`, `Histórico dos últimos ${FREE_HISTORY_DAYS} dias`, 'Calculadora com endereço automático', 'Controle de despesas e clientes', '7 dias de teste PRO grátis']}
+                        excluded={['Fretes ilimitados', 'Histórico completo', 'Gestão de Frota e Manutenção', 'Agenda e Metas', 'Recibos e relatórios em PDF']}
+                    />
                     <button onClick={onLogin} className="w-full rounded-2xl py-4 border border-white/15 text-white font-bold hover:bg-white hover:text-[#05070d] transition-colors">
                         Começar grátis
                     </button>
@@ -815,7 +825,7 @@ const Plans = ({ onLogin, blackFriday }: { onLogin: () => void; blackFriday: boo
                     </div>
                     {blackFriday ? <Price reais="4" cents="95" oldPrice="9,90" /> : <Price reais="9" cents="90" />}
                     <div className="text-slate-500 text-sm mb-7">Cobrado mensalmente</div>
-                    <PlanList items={['Tudo do plano gratuito', 'Gestão de Frota completa', 'Alertas de revisão e lucro por caminhão', 'Agenda e Metas', 'Suporte dedicado']} />
+                    <PlanList items={['Fretes ilimitados e histórico completo', 'Gestão de Frota completa', 'Alertas de revisão e lucro por caminhão', 'Agenda e Metas', 'Suporte dedicado']} />
                     <button onClick={onLogin} className="w-full rounded-2xl py-4 border border-white/15 text-white font-bold hover:bg-white hover:text-[#05070d] transition-colors">
                         {blackFriday ? 'Assinar com 50% off' : 'Assinar mensal'}
                     </button>
@@ -837,7 +847,7 @@ const Plans = ({ onLogin, blackFriday }: { onLogin: () => void; blackFriday: boo
                         <div className="text-sm font-bold text-blue-400 mb-4">Anual PRO</div>
                         {blackFriday ? <Price big reais="24" cents="99" oldPrice="49,99" /> : <Price big reais="49" cents="99" />}
                         <div className="text-emerald-400 text-sm font-semibold mb-7">Equivale a R$ {blackFriday ? '2,08' : '4,17'}/mês</div>
-                        <PlanList highlight items={['Economia de mais de 50% vs. mensal', 'Gestão de Frota completa', 'Alertas de revisão e lucro por caminhão', 'Agenda, Metas e Suporte dedicado']} />
+                        <PlanList highlight items={['Economia de mais de 50% vs. mensal', 'Fretes ilimitados e histórico completo', 'Gestão de Frota completa', 'Alertas de revisão e lucro por caminhão', 'Agenda, Metas e Suporte dedicado']} />
                         <button
                             onClick={onLogin}
                             className="relative overflow-hidden w-full rounded-2xl py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/30 transition-colors"

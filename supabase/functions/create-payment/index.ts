@@ -1,84 +1,18 @@
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { MercadoPagoConfig, Payment } from 'npm:mercadopago';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
+// Desativada em 28/11/2026.
+// Esta função antiga aceitava o valor enviado pelo próprio cliente, o que permitia
+// pagar qualquer valor e virar PRO. O app usa somente a create-checkout, que define
+// o preço no servidor (_shared/pricing.ts).
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!;
-
-serve(async (req) => {
+Deno.serve((req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
-
-    try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-        const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-
-        const supabase = createClient(
-            supabaseUrl,
-            supabaseKey,
-            { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-        );
-
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-            throw new Error('User not found');
-        }
-
-        const reqData = await req.json();
-        const email = reqData.email || user.email;
-
-        console.log(`Initializing Payment for User: ${user.id} (${email})`);
-
-        const client = new MercadoPagoConfig({
-            accessToken: MP_ACCESS_TOKEN,
-            options: { timeout: 10000 }
-        });
-
-        const payment = new Payment(client);
-
-        const notification_url = `${supabaseUrl}/functions/v1/mercado-pago-webhook`;
-        console.log(`Webhook URL: ${notification_url}`);
-
-        const body = {
-            transaction_amount: reqData.transaction_amount,
-            description: reqData.description || 'Pagamento Control Frete',
-            payment_method_id: reqData.payment_method_id,
-            payer: {
-                email: reqData.payer.email,
-                first_name: reqData.payer.first_name || 'User',
-                identification: reqData.payer.identification
-            },
-            token: reqData.token,
-            installments: reqData.installments,
-            issuer_id: reqData.issuer_id,
-            metadata: {
-                user_id: user.id
-            },
-            notification_url: notification_url
-        };
-
-        const response = await payment.create({ body });
-        console.log("Payment Created Successfully:", response.id);
-
-        return new Response(
-            JSON.stringify(response),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-
-    } catch (error) {
-        console.error("Create Payment Error:", error);
-        return new Response(
-            JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
-        );
-    }
+    return new Response(
+        JSON.stringify({ error: 'Esta forma de pagamento foi desativada. Use a assinatura pelo app.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 410 },
+    );
 });

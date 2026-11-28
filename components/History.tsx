@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Freight, Expense, AppSettings, ExpenseCategory, ExtraIncome, AccountPayable } from '../types';
 import { formatCurrency, formatDate, getWeekNumber } from '../utils';
+import { FREE_HISTORY_DAYS, freeHistoryCutoff } from '../utils/freePlan';
 import { CalendarRange, ArrowDownCircle, ArrowUpCircle, Trash2, AlertTriangle, X, Printer, Pencil, Filter, Fuel, Wrench, Receipt, Utensils, Tag, CalendarDays, FileText } from 'lucide-react';
 import { Button } from './Button';
 import { ReceiptModal } from './ReceiptModal';
@@ -45,6 +46,8 @@ export const History: React.FC<HistoryProps> = ({
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'INCOME' | 'EXPENSE' } | null>(null);
   const [receiptFreight, setReceiptFreight] = useState<Freight | null>(null);
   const [showClosure, setShowClosure] = useState(false);
+
+  const freeCutoff = useMemo(() => freeHistoryCutoff(), []);
 
   const filteredItems = useMemo(() => {
     const now = new Date();
@@ -94,9 +97,23 @@ export const History: React.FC<HistoryProps> = ({
         }
       }
 
-      return matchesDate && matchesStatus;
+      // Plano gratuito: só os últimos 30 dias
+      const withinFreeWindow = isPremium || !dateStr || dateStr >= freeCutoff;
+
+      return matchesDate && matchesStatus && withinFreeWindow;
     }).sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
-  }, [freights, expenses, extraIncomes, accountsPayable, filter, statusFilter, customStart, customEnd]);
+  }, [freights, expenses, extraIncomes, accountsPayable, filter, statusFilter, customStart, customEnd, isPremium, freeCutoff]);
+
+  // Quantos lançamentos ficaram escondidos pelo limite do plano gratuito
+  const hiddenOldCount = useMemo(() => {
+    if (isPremium) return 0;
+    return [
+      ...freights.map(f => f.date),
+      ...extraIncomes.map(e => e.date),
+      ...expenses.map(e => e.date),
+      ...accountsPayable.filter(p => p.status === 'pago').map(p => p.due_date),
+    ].filter(d => d && d < freeCutoff).length;
+  }, [isPremium, freights, extraIncomes, expenses, accountsPayable, freeCutoff]);
 
   const confirmDelete = () => {
     if (itemToDelete) {
@@ -417,7 +434,7 @@ export const History: React.FC<HistoryProps> = ({
         )}
 
         {/* Helper for Limited History (Free Plan) */}
-        {!isPremium && freights.length > 0 && filter === 'ALL' && (
+        {!isPremium && hiddenOldCount > 0 && (
           <div
             onClick={onRequestUpgrade}
             className="bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
@@ -426,7 +443,7 @@ export const History: React.FC<HistoryProps> = ({
               <CalendarDays className="w-6 h-6 text-slate-400" />
             </div>
             <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">Histórico Antigo Bloqueado</h3>
-            <p className="text-xs text-slate-500 mt-1 mb-3">O plano gratuito exibe apenas os últimos 7 dias.</p>
+            <p className="text-xs text-slate-500 mt-1 mb-3">O plano gratuito mostra só os últimos {FREE_HISTORY_DAYS} dias. {hiddenOldCount} lançamento(s) mais antigo(s) estão guardados e aparecem quando você virar PRO.</p>
             <span className="text-xs font-black text-brand uppercase tracking-widest">Desbloquear Agora</span>
           </div>
         )}

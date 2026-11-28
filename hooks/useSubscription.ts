@@ -7,17 +7,10 @@ export const useSubscription = (user: User | null) => {
 
         const now = new Date();
 
-        // Priority to new SaaS fields
-        const isPro = user.plano === 'pro' && user.status_assinatura === 'ativa';
-        let isPremium = user.isPremium || isPro;
-
-        // Compatibility with old date-based logic
-        if (isPremium && user.premiumUntil && !isPro) {
-            const premiumUntilDate = new Date(user.premiumUntil);
-            if (now > premiumUntilDate) {
-                isPremium = false;
-            }
-        }
+        // O PRO vale até premium_until. Sem data (PRO liberado manualmente), não vence.
+        const notExpired = !user.premiumUntil || now <= new Date(user.premiumUntil);
+        const isPro = user.plano === 'pro' && user.status_assinatura === 'ativa' && notExpired;
+        const isPremium = (user.isPremium || isPro) && notExpired;
 
         // Trial Logic (7 days for Free users)
         let trialEndDate: Date;
