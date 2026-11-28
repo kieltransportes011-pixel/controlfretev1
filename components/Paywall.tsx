@@ -6,6 +6,7 @@ import { Shield, Crown, ExternalLink } from 'lucide-react';
 import { supabase } from '../supabase';
 import { PricingCard } from './PricingCard';
 import { useToast } from '../contexts/ToastContext';
+import { getPlanPrices } from '../utils/blackFriday';
 
 interface PaywallProps {
   user: User;
@@ -22,6 +23,8 @@ const IS_NATIVE_ANDROID = Capacitor.isNativePlatform() && Capacitor.getPlatform(
 export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
   const { error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
+
+  const prices = getPlanPrices();
 
   const handleCheckout = async (planType: string = 'annual_promo') => {
     setLoading(true);
@@ -87,7 +90,8 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
             {/* Mensal */}
             <PricingCard
               title="Mensal"
-              price="R$ 9,90"
+              price={prices.monthly}
+              oldPrice={prices.monthlyOld}
               period="mês"
               description="Flexibilidade total para testar."
               features={[
@@ -102,9 +106,10 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
             {/* Anual */}
             <PricingCard
               title="Anual Pro"
-              price="R$ 49,99"
+              price={prices.annual}
+              oldPrice={prices.annualOld}
               period="ano"
-              description="Melhor custo-benefício. Apenas R$ 4,17/mês."
+              description={`Melhor custo-benefício. Apenas ${prices.annualPerMonth}/mês.`}
               features={[
                 "Tudo do Plano Mensal",
                 "Prioridade no Suporte",
@@ -112,7 +117,7 @@ export const Paywall: React.FC<PaywallProps> = ({ user, onCancel }) => {
                 "Economia de mais de 50%"
               ]}
               highlight={true}
-              tag="MAIS POPULAR"
+              tag={prices.blackFriday ? 'BLACK FRIDAY -50%' : 'MAIS POPULAR'}
               onSelect={() => handleCheckout('annual_promo')}
             />
           </div>
