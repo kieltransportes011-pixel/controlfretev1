@@ -1,6 +1,7 @@
 import React from 'react';
 import { Crown, X, Check } from 'lucide-react';
 import { Button } from './Button';
+import { getPlanPrices } from '../utils/blackFriday';
 
 interface UpgradeModalProps {
     isOpen: boolean;
@@ -54,7 +55,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
                     </div>
 
                     <Button onClick={onUpgrade} fullWidth className="h-14 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand/20">
-                        Quero ser PRO (R$ 49,99/ano)
+                        {getPlanPrices().blackFriday ? `Black Friday: PRO por ${getPlanPrices().annual}/ano` : `Quero ser PRO (${getPlanPrices().annual}/ano)`}
                     </Button>
 
                     <button

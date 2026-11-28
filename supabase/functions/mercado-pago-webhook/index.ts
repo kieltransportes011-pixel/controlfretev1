@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { MercadoPagoConfig, Payment } from 'npm:mercadopago';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getPaidPlan, getPremiumUntil } from '../_shared/pricing.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -85,8 +86,9 @@ serve(async (req) => {
 
                 // 3. Update PRO Profile
                 if (paymentStatus === 'approved') {
-                    const premiumUntil = new Date();
-                    premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
+                    // Mensal = 1 mês, anual = 1 ano (antes, qualquer pagamento dava 1 ano).
+                    const paidPlan = getPaidPlan(paymentData);
+                    const premiumUntil = getPremiumUntil(paymentData);
 
                     const { data: updatedProfile, error: updateError } = await supabase
                         .from('profiles')
@@ -117,9 +119,9 @@ serve(async (req) => {
                         });
 
                         if (insertError) console.error("Error creating missing profile:", insertError);
-                        else console.log(`SUCCESS: Created and Upgraded User ${userId} to PRO ANUAL.`);
+                        else console.log(`SUCCESS: Created and Upgraded User ${userId} to PRO (${paidPlan}).`);
                     } else {
-                        console.log(`SUCCESS: User ${userId} upgraded to PRO ANUAL (Payment ${paymentId}).`);
+                        console.log(`SUCCESS: User ${userId} upgraded to PRO (${paidPlan}) until ${premiumUntil.toISOString()} (Payment ${paymentId}).`);
                     }
 
                     // 3b. Push notification — melhor esforço, não deve travar o webhook se falhar.

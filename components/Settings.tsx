@@ -4,6 +4,7 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { Settings as SettingsIcon, Info, FileText, Moon, Sun, MapPin, Crown, CheckCircle, Zap, Shield, Camera, Loader2, User as UserIcon, MessageCircle, Megaphone, Users, DollarSign, AlertTriangle, Upload, Share, Copy, Handshake } from 'lucide-react';
 import { supabase } from '../supabase';
+import { getPlanPrices } from '../utils/blackFriday';
 import { maskPhone } from '../utils';
 
 import { useSubscription } from '../hooks/useSubscription';
@@ -332,7 +333,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, user, onSave, onNa
               <Button onClick={() => onNavigate('PAYMENT')} className="w-full sm:w-auto bg-brand hover:bg-brand-600 text-white shadow-lg shadow-brand/20">
                 <div className="flex items-center gap-2">
                   <Crown className="w-4 h-4" />
-                  <span>Fazer Upgrade (R$ 49,99/ano)</span>
+                  <span>{getPlanPrices().blackFriday ? `Black Friday: ${getPlanPrices().annual}/ano` : `Fazer Upgrade (${getPlanPrices().annual}/ano)`}</span>
                 </div>
               </Button>
             )}

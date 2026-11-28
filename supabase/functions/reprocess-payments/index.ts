@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getPremiumUntil } from '../_shared/pricing.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -82,9 +83,15 @@ serve(async (req) => {
             if (!user.is_premium || user.plano !== 'pro') {
                 console.log(`User ${userId} found with APPROVED payment but FREE plan. Fix it.`);
 
+                // Mensal = 1 mês, anual = 1 ano, contando da aprovação.
+                // Se o prazo desse pagamento já acabou, não reativa.
+                const premiumUntil = getPremiumUntil(payment.metadata);
+                if (premiumUntil.getTime() < Date.now()) {
+                    results.push({ userId, status: 'expired', until: premiumUntil.toISOString() });
+                    continue;
+                }
+
                 // Fix User
-                const premiumUntil = new Date();
-                premiumUntil.setFullYear(premiumUntil.getFullYear() + 1);
 
                 const { error: updateError } = await supabase.from('profiles').update({
                     is_premium: true,
