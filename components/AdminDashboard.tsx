@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice, Partner, PartnerOffer, PartnerLead } from '../types';
 import { formatCurrency } from '../utils';
+import { isBlackFridayActive } from '../utils/blackFriday';
+import { FREE_MONTHLY_FREIGHTS } from '../utils/freePlan';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
@@ -34,7 +36,7 @@ interface AdminStats {
     leadsLast30d: number;
 }
 
-type TabView = 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE' | 'PARTNERS';
+type TabView = 'SALES' | 'USERS' | 'SUPPORT' | 'LOGS' | 'NOTICES' | 'REFERRALS' | 'REVENUE' | 'PARTNERS';
 type PartnersSubTab = 'PARTNERS' | 'OFFERS' | 'LEADS';
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
@@ -45,6 +47,22 @@ const LEAD_STATUS_LABELS: Record<string, string> = {
 };
 
 const PARTNER_CATEGORY_OPTIONS = ['Pneus', 'Peças', 'Combustível', 'Alimentação', 'Hospedagem', 'Oficina Mecânica', 'Documentação', 'Outros'];
+
+type PushAudience = 'all' | 'free' | 'pro' | 'expiring' | 'expired' | 'free_limit' | 'trial_ending' | 'pending_payment';
+
+const PUSH_AUDIENCE_LABELS: Record<PushAudience, string> = {
+    all: 'Todos',
+    free: 'Só FREE',
+    pro: 'Só PRO',
+    expiring: 'PRO vencendo em 7 dias',
+    expired: 'PRO vencido',
+    free_limit: 'Perto ou no limite do gratuito',
+    trial_ending: 'Teste grátis acabando (3 dias)',
+    pending_payment: 'Pagamento não concluído',
+};
+
+// A fila de push agendado do servidor só entende "todos" e "só FREE".
+const SCHEDULABLE_AUDIENCES: PushAudience[] = ['all', 'free'];
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
     approved: 'Aprovado',
@@ -95,7 +113,7 @@ function unwrapSettled<T>(result: PromiseSettledResult<{ data: T[] | null; error
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentUser }) => {
     const { success: toastSuccess, error: toastError } = useToast();
     const confirmDialog = useConfirm();
-    const [activeTab, setActiveTab] = useState<TabView>('USERS');
+    const [activeTab, setActiveTab] = useState<TabView>('SALES');
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<any[]>([]);
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -134,6 +152,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [editingLead, setEditingLead] = useState<PartnerLead | null>(null);
     const [isSavingLead, setIsSavingLead] = useState(false);
     const [isReprocessingPayments, setIsReprocessingPayments] = useState(false);
+    // Dados extras para a aba Vendas e o push segmentado (só leitura).
+    const [profileExtras, setProfileExtras] = useState<Map<string, { trial_end?: string | null; last_login?: string | null }>>(new Map());
+    const [phones, setPhones] = useState<Map<string, string>>(new Map());
+    const [monthFreights, setMonthFreights] = useState<Map<string, number> | null>(null);
+    const [scheduledPushes, setScheduledPushes] = useState<any[]>([]);
+    const [pushAudience, setPushAudience] = useState<PushAudience>('all');
+    const [pushScheduleAt, setPushScheduleAt] = useState('');
 
     const handleSaveTicketResponse = async () => {
         if (!editingTicket) {
@@ -261,6 +286,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         setPartners(partnersData);
         setPartnerOffers(partnerOffersData);
         setPartnerLeads(partnerLeadsData);
+
+        // Dados extras (só leitura): fim do teste, último acesso, telefone,
+        // fretes do mês e pushes agendados. Se algum falhar, o resto do painel segue.
+        const [extrasRes, phonesRes, monthRes, queueRes] = await Promise.allSettled([
+            supabase.from('profiles').select('id, trial_end, last_login'),
+            supabase.from('settings').select('user_id, issuer_phone'),
+            supabase.rpc('get_admin_monthly_freight_counts'),
+            supabase.from('push_campaign_queue').select('*').is('sent_at', null).order('scheduled_at', { ascending: true }).limit(20),
+        ]);
+        const extrasMap = new Map<string, any>();
+        unwrapSettled<any>(extrasRes, 'perfis').forEach(r => extrasMap.set(r.id, r));
+        setProfileExtras(extrasMap);
+        const phonesMap = new Map<string, string>();
+        unwrapSettled<any>(phonesRes, 'telefones').forEach(r => {
+            const digits = String(r.issuer_phone || '').replace(/\D/g, '');
+            if (digits.length >= 10) phonesMap.set(r.user_id, digits);
+        });
+        setPhones(phonesMap);
+        if (monthRes.status === 'fulfilled' && !monthRes.value.error) {
+            const m = new Map<string, number>();
+            (monthRes.value.data || []).forEach((r: any) => m.set(r.user_id, Number(r.month_freights) || 0));
+            setMonthFreights(m);
+        } else {
+            setMonthFreights(null);
+        }
+        setScheduledPushes(unwrapSettled<any>(queueRes, 'pushes agendados').filter(q => !q.expires_at || new Date(q.expires_at) > new Date()));
 
         // 4. Calculate Stats
         const now = new Date();
@@ -483,8 +534,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     const handleSendBroadcastPush = async () => {
         if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
+        const title = broadcastTitle.trim();
+        const body = broadcastBody.trim();
+        const label = PUSH_AUDIENCE_LABELS[pushAudience];
+
+        // Agendado: vai para a fila que o servidor já processa (só Todos ou Só FREE).
+        if (pushScheduleAt) {
+            if (!SCHEDULABLE_AUDIENCES.includes(pushAudience)) {
+                toastError('Agendamento só funciona para "Todos" ou "Só FREE". Para os outros grupos, envie agora.');
+                return;
+            }
+            const when = new Date(pushScheduleAt);
+            if (isNaN(when.getTime()) || when.getTime() < Date.now() - 60000) {
+                toastError('Escolha uma data e hora no futuro.');
+                return;
+            }
+            const confirmed = await confirmDialog(`Agendar este push para "${label}" em ${when.toLocaleString('pt-BR')}?`);
+            if (!confirmed) return;
+            setIsSendingBroadcast(true);
+            try {
+                const { error } = await supabase.from('push_campaign_queue').insert([{
+                    title, body,
+                    scheduled_at: when.toISOString(),
+                    expires_at: new Date(when.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+                    audience: pushAudience,
+                }]);
+                if (error) throw error;
+                toastSuccess('Push agendado.');
+                setBroadcastTitle('');
+                setBroadcastBody('');
+                setPushScheduleAt('');
+                fetchDashboardData();
+            } catch (e: any) {
+                console.error(e);
+                toastError(`Erro ao agendar push: ${e.message}`);
+            } finally {
+                setIsSendingBroadcast(false);
+            }
+            return;
+        }
+
+        const ids = pushAudience === 'all' ? null : (segments[pushAudience] || []).map(u => u.id);
+        if (ids && ids.length === 0) {
+            toastError(`Nenhum usuário no grupo "${label}".`);
+            return;
+        }
         const confirmed = await confirmDialog({
-            message: `Enviar essa notificação push para TODOS os usuários com o app instalado? Essa ação não pode ser desfeita.`,
+            message: ids
+                ? `Enviar este push para o grupo "${label}" (${ids.length} usuário(s))? Só recebe quem tem o app instalado. Essa ação não pode ser desfeita.`
+                : `Enviar essa notificação push para TODOS os usuários com o app instalado? Essa ação não pode ser desfeita.`,
             danger: true
         });
         if (!confirmed) return;
@@ -492,10 +590,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         setIsSendingBroadcast(true);
         try {
             const { data, error } = await supabase.functions.invoke('send-push-notification', {
-                body: { broadcast: true, title: broadcastTitle.trim(), body: broadcastBody.trim() }
+                body: ids ? { user_ids: ids, title, body } : { broadcast: true, title, body }
             });
             if (error || data?.error) throw new Error(data?.error || error?.message || 'Erro desconhecido');
-            toastSuccess(`Push enviado: ${data.sent} de ${data.total} dispositivo(s).`);
+            toastSuccess(data.total ? `Push enviado: ${data.sent} de ${data.total} dispositivo(s).` : 'Ninguém desse grupo tem o app instalado com push ativo.');
             setBroadcastTitle('');
             setBroadcastBody('');
         } catch (e: any) {
@@ -504,6 +602,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         } finally {
             setIsSendingBroadcast(false);
         }
+    };
+
+    const openPushFor = (audience: PushAudience) => {
+        setPushAudience(audience);
+        setPushScheduleAt('');
+        setActiveTab('NOTICES');
     };
 
     const handleExportUsersCSV = () => {
@@ -577,6 +681,78 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         return map;
     }, [users]);
 
+    // Grupos de usuários para a aba Vendas e o push segmentado.
+    const segments = React.useMemo(() => {
+        const now = Date.now();
+        const DAY = 24 * 60 * 60 * 1000;
+        const active = users.filter(u => u.account_status !== 'banned' && u.role !== 'admin');
+        const time = (d?: string | null) => (d ? new Date(d).getTime() : NaN);
+
+        const expiring = active
+            .filter(u => isProActive(u) && u.premium_until && time(u.premium_until) - now <= 7 * DAY)
+            .sort((a, b) => time(a.premium_until) - time(b.premium_until));
+        const expired = active
+            .filter(isProExpired)
+            .sort((a, b) => time(b.premium_until) - time(a.premium_until));
+        const freeLimit = monthFreights
+            ? active
+                .filter(u => !isProActive(u) && (monthFreights.get(u.id) || 0) >= FREE_MONTHLY_FREIGHTS - 2)
+                .sort((a, b) => (monthFreights.get(b.id) || 0) - (monthFreights.get(a.id) || 0))
+            : [];
+        const trialEnding = active
+            .filter(u => {
+                if (isProActive(u)) return false;
+                const end = time(profileExtras.get(u.id)?.trial_end);
+                return end > now && end - now <= 3 * DAY;
+            })
+            .sort((a, b) => time(profileExtras.get(a.id)?.trial_end) - time(profileExtras.get(b.id)?.trial_end));
+
+        // Pagamento pendente que nunca foi concluído: a pessoa tentou pagar,
+        // não tem pagamento aprovado depois disso e não está com PRO em dia.
+        const approvedAfter = (userId: string, date: string) =>
+            payments.some(p => p.user_id === userId && p.status === 'approved' && (p.processed_at || p.created_at) >= date);
+        const pendingMap = new Map<string, any>();
+        payments
+            .filter(p => ['pending', 'in_process'].includes(p.status))
+            .forEach(p => {
+                const u = userLookup.get(p.user_id);
+                if (!u || isProActive(u) || u.account_status === 'banned') return;
+                if (approvedAfter(p.user_id, p.processed_at || p.created_at)) return;
+                const prev = pendingMap.get(p.user_id);
+                if (!prev || (p.processed_at || p.created_at) > (prev.processed_at || prev.created_at)) pendingMap.set(p.user_id, p);
+            });
+        const pending = Array.from(pendingMap.values())
+            .sort((a, b) => time(b.processed_at || b.created_at) - time(a.processed_at || a.created_at))
+            .map(p => ({ ...userLookup.get(p.user_id), _payment: p }));
+
+        return {
+            all: active,
+            free: active.filter(u => !isProActive(u)),
+            pro: active.filter(isProActive),
+            expiring,
+            expired,
+            free_limit: freeLimit,
+            trial_ending: trialEnding,
+            pending_payment: pending,
+        } as Record<PushAudience, any[]>;
+    }, [users, monthFreights, profileExtras, payments, userLookup]);
+
+    const whatsappLink = (u: any, kind: 'expiring' | 'expired' | 'free_limit' | 'pending_payment') => {
+        const phone = phones.get(u.id);
+        if (!phone) return null;
+        const number = phone.startsWith('55') && phone.length >= 12 ? phone : `55${phone}`;
+        const first = String(u.name || '').trim().split(' ')[0] || 'tudo bem';
+        const bf = isBlackFridayActive();
+        const offer = bf ? ' Até 30/11 o PRO está pela metade do preço na Black Friday.' : '';
+        const texts: Record<string, string> = {
+            expiring: `Olá, ${first}! Aqui é do Control Frete. Seu plano PRO vence em breve. Para não perder o acesso, é só renovar pelo app.${offer}`,
+            expired: `Olá, ${first}! Aqui é do Control Frete. Vi que seu plano PRO venceu. Quer voltar a ter fretes ilimitados e o histórico completo?${offer}`,
+            free_limit: `Olá, ${first}! Aqui é do Control Frete. Vi que você está usando bastante o app este mês. Com o PRO você lança fretes ilimitados e vê todo o histórico.${offer}`,
+            pending_payment: `Olá, ${first}! Aqui é do Control Frete. Vi que você começou a assinar o PRO mas o pagamento não foi concluído. Posso te ajudar?${offer}`,
+        };
+        return `https://wa.me/${number}?text=${encodeURIComponent(texts[kind])}`;
+    };
+
     const partnerLookup = React.useMemo(() => {
         const map = new Map<string, Partner>();
         partners.forEach(p => map.set(p.id, p));
@@ -635,6 +811,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         });
 
     const NAV_ITEMS: { id: TabView; label: string; icon: any; badge?: number | null }[] = [
+        { id: 'SALES', label: 'Vendas', icon: Star, badge: (segments.expiring.length + segments.free_limit.filter(u => (monthFreights?.get(u.id) || 0) >= FREE_MONTHLY_FREIGHTS).length) || null },
         { id: 'USERS', label: 'Usuários', icon: Users },
         { id: 'SUPPORT', label: 'Suporte', icon: MessageCircle, badge: stats.openTickets > 0 ? stats.openTickets : null },
         { id: 'REVENUE', label: 'Receita', icon: DollarSign },
@@ -906,6 +1083,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             <div className={`w-2 h-2 rounded-full ${ticket.status === 'open' ? 'bg-red-400 animate-pulse' : 'bg-green-400'}`} />
                                             <div>
                                                 <div className="text-white font-bold text-sm group-hover:text-blue-400 transition-colors">{ticket.title}</div>
+                                                <div className="text-[11px] text-slate-300">
+                                                    {userLookup.get(ticket.user_id)?.name || 'Usuário desconhecido'}
+                                                    <span className="text-slate-500"> • {userLookup.get(ticket.user_id)?.email || ticket.user_id}</span>
+                                                </div>
                                                 <div className="text-[10px] text-slate-500">{ticket.category} • #{ticket.id.slice(0, 8)}</div>
                                             </div>
                                         </div>
@@ -928,6 +1109,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {/* --- TAB CONTENT: SALES (oportunidades de venda) --- */}
+                    {activeTab === 'SALES' && (
+                        <div className="space-y-6 animate-in slide-in-from-bottom-5 duration-300">
+                            <div className="bg-[#12283F] p-4 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-2 text-amber-400 mb-1">
+                                    <Star className="w-5 h-5" />
+                                    <h2 className="text-sm font-bold uppercase tracking-widest text-white">Oportunidades de venda</h2>
+                                </div>
+                                <p className="text-[11px] text-slate-400">
+                                    Quem está mais perto de assinar ou renovar. O botão do WhatsApp aparece quando o usuário cadastrou telefone nas configurações do app.
+                                    {isBlackFridayActive() && ' A mensagem pronta já cita o preço de Black Friday.'}
+                                </p>
+                            </div>
+
+                            <SalesSection
+                                title="PRO vencendo nos próximos 7 dias"
+                                empty="Ninguém com PRO vencendo nesta semana."
+                                items={segments.expiring}
+                                accent="text-amber-400"
+                                onPush={() => openPushFor('expiring')}
+                                detail={u => `Vence em ${formatDate(u.premium_until)}`}
+                                whatsapp={u => whatsappLink(u, 'expiring')}
+                            />
+                            <SalesSection
+                                title="Bateram ou estão perto do limite do gratuito"
+                                empty={monthFreights ? 'Ninguém do plano gratuito chegou perto do limite este mês.' : 'Não foi possível carregar os fretes do mês.'}
+                                items={segments.free_limit}
+                                accent="text-blue-400"
+                                onPush={() => openPushFor('free_limit')}
+                                detail={u => {
+                                    const c = monthFreights?.get(u.id) || 0;
+                                    return c >= FREE_MONTHLY_FREIGHTS ? `${c} de ${FREE_MONTHLY_FREIGHTS} fretes: bateu o limite` : `${c} de ${FREE_MONTHLY_FREIGHTS} fretes este mês`;
+                                }}
+                                whatsapp={u => whatsappLink(u, 'free_limit')}
+                            />
+                            <SalesSection
+                                title="Pagamento iniciado e não concluído"
+                                empty="Nenhum pagamento pendente sem conclusão."
+                                items={segments.pending_payment}
+                                accent="text-purple-400"
+                                onPush={() => openPushFor('pending_payment')}
+                                detail={u => `Tentou pagar ${formatCurrency(u._payment?.amount || 0)} em ${formatDate(u._payment?.processed_at || u._payment?.created_at)}`}
+                                whatsapp={u => whatsappLink(u, 'pending_payment')}
+                            />
+                            <SalesSection
+                                title="PRO vencido"
+                                empty="Nenhum PRO vencido."
+                                items={segments.expired}
+                                accent="text-red-400"
+                                onPush={() => openPushFor('expired')}
+                                detail={u => `Venceu em ${formatDate(u.premium_until)}`}
+                                whatsapp={u => whatsappLink(u, 'expired')}
+                            />
                         </div>
                     )}
 
@@ -1193,7 +1430,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <div className="bg-[#12283F] border border-blue-500/20 p-4 md:p-6 rounded-md">
                                 <div className="flex items-center gap-2 text-blue-400 mb-4">
                                     <Zap className="w-4 h-4" />
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-white">Push Manual (Todos os Usuários)</h3>
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-white">Push Manual</h3>
                                 </div>
                                 <div className="space-y-3">
                                     <input
@@ -1211,15 +1448,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         onChange={e => setBroadcastBody(e.target.value)}
                                         maxLength={180}
                                     />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label className="text-[10px] uppercase font-bold text-slate-500 flex flex-col gap-1">
+                                            Para quem
+                                            <select
+                                                value={pushAudience}
+                                                onChange={e => setPushAudience(e.target.value as PushAudience)}
+                                                className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2.5 outline-none rounded-md normal-case font-normal"
+                                            >
+                                                {(Object.keys(PUSH_AUDIENCE_LABELS) as PushAudience[]).map(a => (
+                                                    <option key={a} value={a}>
+                                                        {PUSH_AUDIENCE_LABELS[a]}{a === 'all' ? '' : ` (${segments[a]?.length ?? 0})`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="text-[10px] uppercase font-bold text-slate-500 flex flex-col gap-1">
+                                            Quando
+                                            <input
+                                                type="datetime-local"
+                                                value={pushScheduleAt}
+                                                onChange={e => setPushScheduleAt(e.target.value)}
+                                                disabled={!SCHEDULABLE_AUDIENCES.includes(pushAudience)}
+                                                className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2 outline-none rounded-md disabled:opacity-40 [color-scheme:dark]"
+                                            />
+                                            <span className="normal-case font-normal text-slate-500">
+                                                {SCHEDULABLE_AUDIENCES.includes(pushAudience)
+                                                    ? 'Deixe em branco para enviar agora.'
+                                                    : 'Este grupo muda com o tempo, então o envio é só na hora.'}
+                                            </span>
+                                        </label>
+                                    </div>
                                     <div className="flex justify-end">
                                         <button
                                             onClick={handleSendBroadcastPush}
                                             disabled={isSendingBroadcast || !broadcastTitle.trim() || !broadcastBody.trim()}
                                             className="px-4 py-2 bg-blue-600 text-white text-xs uppercase font-bold hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-md"
                                         >
-                                            {isSendingBroadcast ? 'Enviando...' : 'Enviar Push para Todos'}
+                                            {isSendingBroadcast ? 'Enviando...' : pushScheduleAt && SCHEDULABLE_AUDIENCES.includes(pushAudience) ? 'Agendar Push' : 'Enviar Push Agora'}
                                         </button>
                                     </div>
+                                    {scheduledPushes.length > 0 && (
+                                        <div className="border-t border-white/10 pt-3">
+                                            <p className="text-[10px] uppercase font-bold text-slate-500 mb-2">Agendados ({scheduledPushes.length})</p>
+                                            <div className="space-y-1.5">
+                                                {scheduledPushes.map(q => (
+                                                    <div key={q.id} className="flex justify-between gap-3 text-xs bg-[#0B1F33] border border-white/5 rounded-md px-3 py-2">
+                                                        <span className="text-white truncate">{q.title}</span>
+                                                        <span className="text-slate-500 shrink-0">
+                                                            {PUSH_AUDIENCE_LABELS[q.audience as PushAudience] || q.audience} • {q.scheduled_at ? new Date(q.scheduled_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -1301,6 +1584,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <MessageCircle className="w-4 h-4 text-blue-400" /> Responder Chamado
                         </h3>
 
+                        <div className="mb-3 text-xs text-slate-300">
+                            <span className="font-bold text-white">{userLookup.get(editingTicket.user_id)?.name || 'Usuário desconhecido'}</span>
+                            <span className="text-slate-500"> • {userLookup.get(editingTicket.user_id)?.email || editingTicket.user_id}</span>
+                            {(() => {
+                                const u = userLookup.get(editingTicket.user_id);
+                                return u ? <span className={`ml-2 text-[9px] font-bold px-1.5 py-0.5 border rounded-sm ${isProActive(u) ? 'text-blue-400 border-blue-500/30' : 'text-slate-400 border-white/10'}`}>{isProActive(u) ? 'PRO' : 'FREE'}</span> : null;
+                            })()}
+                        </div>
                         <div className="bg-[#0B1F33] p-4 border border-white/5 mb-4 text-xs text-slate-400 rounded-md">
                             <p className="mb-2 text-slate-500 uppercase text-[10px] font-bold">Mensagem do usuário:</p>
                             {editingTicket.description}
@@ -1751,6 +2042,55 @@ const StatBox = ({ label, value, icon: Icon, trend, unit, color = "text-white" }
         </div>
     </div>
 );
+
+function SalesSection({ title, empty, items, accent, onPush, detail, whatsapp }: {
+    title: string;
+    empty: string;
+    items: any[];
+    accent: string;
+    onPush: () => void;
+    detail: (u: any) => string;
+    whatsapp: (u: any) => string | null;
+}) {
+    return (
+        <div className="border border-white/10 rounded-md overflow-hidden bg-[#12283F]">
+            <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-white/10">
+                <h3 className={`text-xs font-bold uppercase tracking-widest ${accent}`}>
+                    {title} <span className="text-slate-500">({items.length})</span>
+                </h3>
+                {items.length > 0 && (
+                    <button onClick={onPush} className="self-start sm:self-auto text-[10px] uppercase font-bold border border-white/10 text-slate-300 hover:text-white px-3 py-1.5 rounded-md">
+                        Mandar push para este grupo
+                    </button>
+                )}
+            </div>
+            <div className="divide-y divide-white/5">
+                {items.map(u => {
+                    const wa = whatsapp(u);
+                    return (
+                        <div key={u.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-white text-xs font-bold truncate">{u.name || 'Sem nome'}</div>
+                                <div className="text-[10px] text-slate-500 truncate">{u.email}</div>
+                                <div className="text-[10px] text-slate-300 mt-0.5">{detail(u)}</div>
+                            </div>
+                            {wa ? (
+                                <a href={wa} target="_blank" rel="noopener noreferrer" className="shrink-0 flex items-center gap-1.5 text-[10px] uppercase font-bold bg-green-600/15 text-green-400 border border-green-500/30 hover:bg-green-600/25 px-3 py-1.5 rounded-md">
+                                    <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                                </a>
+                            ) : (
+                                <span className="shrink-0 text-[10px] text-slate-600">sem telefone</span>
+                            )}
+                        </div>
+                    );
+                })}
+                {items.length === 0 && (
+                    <div className="px-4 py-8 text-center text-slate-500 text-xs">{empty}</div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function formatDate(dateString: string) {
     if (!dateString) return '--';
