@@ -6,7 +6,7 @@ import {
     AlertTriangle, FileText, Activity, Bell, Trash2, Tag,
     Eye, Megaphone, Plus, DollarSign, Calendar, Zap,
     TrendingUp, TrendingDown, BarChart3, Terminal, Cpu,
-    Crosshair, Signal, Handshake, Star, Sparkles
+    Crosshair, Signal, Handshake, Star, Sparkles, RefreshCw
 } from 'lucide-react';
 import { SupportTicket, AdminLog, PlatformNotice, Partner, PartnerOffer, PartnerLead } from '../types';
 import { formatCurrency } from '../utils';
@@ -46,6 +46,15 @@ const LEAD_STATUS_LABELS: Record<string, string> = {
 
 const PARTNER_CATEGORY_OPTIONS = ['Pneus', 'Peças', 'Combustível', 'Alimentação', 'Hospedagem', 'Oficina Mecânica', 'Documentação', 'Outros'];
 
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+    approved: 'Aprovado',
+    pending: 'Pendente',
+    in_process: 'Em análise',
+    rejected: 'Recusado',
+    cancelled: 'Cancelado',
+    refunded: 'Estornado',
+};
+
 const TICKET_STATUS_LABELS: Record<string, string> = {
     all: 'Todos',
     open: 'Aberto',
@@ -59,6 +68,14 @@ const TICKET_PRIORITY_LABELS: Record<string, string> = {
     medium: 'Média',
     low: 'Baixa',
 };
+
+// PRO de verdade: marcado como PRO e dentro da validade (sem data = não vence).
+// Igual à regra do app (hooks/useSubscription.ts).
+const isProActive = (u: any) =>
+    (u?.is_premium || String(u?.plano || '').toLowerCase() === 'pro') &&
+    (!u?.premium_until || new Date(u.premium_until) > new Date());
+const isProExpired = (u: any) =>
+    (u?.is_premium || String(u?.plano || '').toLowerCase() === 'pro') && !isProActive(u);
 
 // Cada seção do painel é buscada de forma independente (Promise.allSettled):
 // se uma falhar (ex: RPC quebrada), as outras continuam aparecendo em vez de
@@ -98,6 +115,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     const [editingUser, setEditingUser] = useState<any | null>(null);
     const [userAction, setUserAction] = useState<string | null>(null);
     const [selectedPlan, setSelectedPlan] = useState<'free' | 'pro'>('free');
+    const [selectedValidity, setSelectedValidity] = useState<'none' | '1m' | '1y'>('none');
+    const [payingCommissionId, setPayingCommissionId] = useState<string | null>(null);
     const [adminNotesInput, setAdminNotesInput] = useState('');
     const [editingTicket, setEditingTicket] = useState<SupportTicket | null>(null);
     const [ticketReply, setTicketReply] = useState('');
@@ -179,7 +198,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     });
 
     useEffect(() => {
-        fetchDashboardData();
+        fetchDashboardData(true);
         // Setup Realtime Subscription
         const channel = supabase
             .channel('admin_dashboard')
@@ -196,8 +215,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         };
     }, []);
 
-    const fetchDashboardData = async () => {
-        setLoading(true);
+    // showSpinner só na primeira carga: as atualizações seguintes (tempo real,
+    // depois de salvar algo) acontecem em segundo plano, sem a tela piscar.
+    const fetchDashboardData = async (showSpinner = false) => {
+        if (showSpinner) setLoading(true);
 
         // Busca tudo em paralelo e isolado: uma seção quebrada não pode mais
         // zerar o painel inteiro (era o que acontecia antes — a RPC de
@@ -252,7 +273,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
             newUsersToday: usersData.filter(u => u.created_at >= startOfDay).length,
             newUsersWeek: usersData.filter(u => u.created_at >= startOfWeek).length,
             newUsersMonth: usersData.filter(u => u.created_at >= startOfMonth).length,
-            activeProUsers: usersData.filter(u => u.is_premium).length,
+            activeProUsers: usersData.filter(isProActive).length,
             bannedUsers: usersData.filter(u => u.account_status === 'banned').length,
             openTickets: ticketsData.filter(t => t.status === 'open').length,
             activeNotices: noticesData.filter(n => n.is_active).length,
@@ -335,11 +356,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
     };
 
     const handleUpdatePlan = async (user: any) => {
-        const ok = await callAdminAction('update_plan', user.id, { plano: selectedPlan });
+        let premiumUntil: string | null = null;
+        if (selectedPlan === 'pro' && selectedValidity !== 'none') {
+            const d = new Date();
+            if (selectedValidity === '1m') d.setMonth(d.getMonth() + 1);
+            else d.setFullYear(d.getFullYear() + 1);
+            premiumUntil = d.toISOString();
+        }
+        const ok = await callAdminAction('update_plan', user.id, { plano: selectedPlan, premiumUntil });
         if (ok) setEditingUser(null);
     };
 
     const handleSaveAdminNotes = async (user: any) => {
+        if ((adminNotesInput || '') === (user.admin_notes || '')) return;
         await callAdminAction('update_admin_notes', user.id, { notes: adminNotesInput });
     };
 
@@ -357,7 +386,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
 
     const handleDeleteNotice = async (id: string) => {
         if (!(await confirmDialog({ message: "Deletar aviso?", danger: true }))) return;
-        await supabase.from('platform_notices').delete().eq('id', id);
+        const { error } = await supabase.from('platform_notices').delete().eq('id', id);
+        if (error) {
+            toastError(`Erro ao deletar aviso: ${error.message}`);
+            return;
+        }
         fetchDashboardData();
     };
 
@@ -491,6 +524,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+    };
+
+    const handleMarkCommissionPaid = async (c: any) => {
+        const referrer = userLookup.get(c.referrer_id);
+        const confirmed = await confirmDialog(`Marcar como paga a comissão de ${formatCurrency(c.amount)} para ${referrer?.name || 'o indicador'}? Faça o pagamento (Pix) antes de confirmar.`);
+        if (!confirmed) return;
+        setPayingCommissionId(c.id);
+        try {
+            const { error } = await supabase.from('referral_commissions')
+                .update({ status: 'paid', updated_at: new Date().toISOString() })
+                .eq('id', c.id);
+            if (error) throw error;
+            await supabase.from('admin_logs').insert([{
+                admin_id: currentUser.id,
+                action: 'PAY_COMMISSION',
+                target_type: 'referral_commission',
+                target_id: c.id,
+                description: `Marcou comissão de ${formatCurrency(c.amount)} como paga`,
+            }]);
+            toastSuccess('Comissão marcada como paga.');
+            await fetchDashboardData();
+        } catch (e: any) {
+            console.error(e);
+            toastError(`Erro ao marcar comissão: ${e.message}`);
+        } finally {
+            setPayingCommissionId(null);
+        }
     };
 
     const handleReprocessPayments = async () => {
@@ -650,9 +710,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                         </div>
                         <span className="text-sm font-bold text-white tracking-wide">CONTROL <span className="text-blue-400 font-normal">Admin</span></span>
                     </div>
-                    <button onClick={onBack} className="flex items-center gap-1 text-red-400 text-[11px] font-bold uppercase px-2 py-1">
-                        <ArrowLeft className="w-3.5 h-3.5" /> Sair
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button onClick={() => fetchDashboardData()} aria-label="Atualizar" className="text-slate-300 p-2">
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+                        <button onClick={onBack} className="flex items-center gap-1 text-red-400 text-[11px] font-bold uppercase px-2 py-1">
+                            <ArrowLeft className="w-3.5 h-3.5" /> Sair
+                        </button>
+                    </div>
                 </div>
                 <nav className="flex overflow-x-auto gap-1 px-3 pb-3 -mt-0.5">
                     {NAV_ITEMS.map(item => (
@@ -682,6 +747,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             Status do sistema: <span className="text-white">Online</span>
                         </span>
                     </div>
+                    <button onClick={() => fetchDashboardData()} className="flex items-center gap-2 text-xs font-bold uppercase text-slate-300 hover:text-white border border-white/10 px-3 py-1.5 rounded-md">
+                        <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+                    </button>
                 </header>
 
                 <div className="flex-1 overflow-auto p-4 md:p-8">
@@ -740,7 +808,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                     className="hover:bg-white/5 transition-colors group cursor-pointer"
                                                     onClick={() => {
                                                         setEditingUser(user);
-                                                        setSelectedPlan(user.is_premium ? 'pro' : 'free');
+                                                        setSelectedPlan(isProActive(user) ? 'pro' : 'free');
+                                                        setSelectedValidity('none');
                                                         setAdminNotesInput(user.admin_notes || '');
                                                     }}
                                                 >
@@ -756,8 +825,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        {user.is_premium ? (
+                                                        {isProActive(user) ? (
                                                             <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-2 py-1 border border-blue-500/20 rounded-sm">PRO</span>
+                                                        ) : isProExpired(user) ? (
+                                                            <span className="text-[10px] font-bold text-amber-400/80" title={user.premium_until ? `Venceu em ${formatDate(user.premium_until)}` : undefined}>PRO VENCIDO</span>
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-slate-500">FREE</span>
                                                         )}
@@ -899,7 +970,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                             <div className="text-right">
                                                 <div className="text-white text-sm font-mono font-bold">{formatCurrency(p.amount)}</div>
                                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase rounded-sm ${p.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/5 text-slate-400 border-white/10'}`}>
-                                                    {p.status}
+                                                    {PAYMENT_STATUS_LABELS[p.status] || p.status}
                                                 </span>
                                             </div>
                                         </div>
@@ -940,11 +1011,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                                 <div className="text-white text-xs font-bold">{referrer?.name || 'Desconhecido'} <span className="text-slate-500">indicou</span> {referred?.name || 'Desconhecido'}</div>
                                                 <div className="text-[10px] text-slate-500">{c.commission_percentage}% de {formatCurrency(c.base_amount)}</div>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right flex flex-col items-end gap-1.5">
                                                 <div className="text-white text-sm font-mono font-bold">{formatCurrency(c.amount)}</div>
                                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 border uppercase rounded-sm ${c.status === 'paid' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                                                    {c.status}
+                                                    {c.status === 'paid' ? 'Paga' : 'Pendente'}
                                                 </span>
+                                                {c.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => handleMarkCommissionPaid(c)}
+                                                        disabled={payingCommissionId === c.id}
+                                                        className="text-[9px] uppercase font-bold px-2 py-1 border border-green-500/30 text-green-400 hover:bg-green-500/10 rounded-sm disabled:opacity-50"
+                                                    >
+                                                        {payingCommissionId === c.id ? 'Salvando...' : 'Marcar como paga'}
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1245,6 +1325,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                     <option value="open">Aberto</option>
                                     <option value="in_progress">Em andamento</option>
                                     <option value="resolved">Resolvido</option>
+                                    <option value="closed">Fechado</option>
                                 </select>
                                 <div className="flex gap-2 justify-end">
                                     <button onClick={() => setEditingTicket(null)} className="px-4 py-2 text-xs uppercase font-bold text-slate-400 hover:text-white" disabled={isSavingTicket}>Cancelar</button>
@@ -1263,7 +1344,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                 <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-[#0F273F] border border-white/10 w-full max-w-lg p-4 md:p-6 shadow-2xl rounded-lg max-h-[90vh] overflow-y-auto">
                         <h3 className="text-white font-bold mb-6 flex items-center gap-2">
-                            <Megaphone className="w-4 h-4 text-blue-400" /> Novo Aviso da Plataforma
+                            <Megaphone className="w-4 h-4 text-blue-400" /> {editingNotice.id ? 'Editar Aviso' : 'Novo Aviso da Plataforma'}
                         </h3>
                         <div className="space-y-4">
                             <input
@@ -1557,6 +1638,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                             <div className="flex gap-4 mt-3 text-[10px] text-slate-400 flex-wrap">
                                 <span>Fretes: {editingUser.total_freights ?? 0}</span>
                                 <span>Desde: {formatDate(editingUser.created_at)}</span>
+                                {(isProActive(editingUser) || isProExpired(editingUser)) && (
+                                    <span className={isProActive(editingUser) ? 'text-blue-400' : 'text-amber-400'}>
+                                        PRO {editingUser.premium_until ? `${isProActive(editingUser) ? 'até' : 'venceu em'} ${formatDate(editingUser.premium_until)}` : 'sem prazo'}
+                                    </span>
+                                )}
                                 <span className={editingUser.account_status === 'banned' ? 'text-red-400' : 'text-green-400'}>
                                     {editingUser.account_status === 'banned' ? 'Banido' : 'Ativo'}
                                 </span>
@@ -1575,6 +1661,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, currentU
                                         <option value="free">FREE</option>
                                         <option value="pro">PRO</option>
                                     </select>
+                                    {selectedPlan === 'pro' && (
+                                        <select
+                                            value={selectedValidity}
+                                            onChange={e => setSelectedValidity(e.target.value as 'none' | '1m' | '1y')}
+                                            className="bg-[#0B1F33] border border-white/10 text-xs text-white p-2 outline-none flex-1 rounded-md"
+                                            title="Validade do PRO"
+                                        >
+                                            <option value="none">Sem prazo</option>
+                                            <option value="1m">1 mês</option>
+                                            <option value="1y">1 ano</option>
+                                        </select>
+                                    )}
                                     <button
                                         onClick={() => handleUpdatePlan(editingUser)}
                                         disabled={!!userAction}
